@@ -318,39 +318,156 @@ const styles = {
     background:"#4a505e",
     minHeight:"100vh",
     width:"100%",
-    padding:"20px",
+    maxWidth:"1200px",
+    margin:"0 auto",
+    padding:"40px 20px",
     color:"white",
     boxSizing:"border-box",
     overflowX:"hidden"
   },
-  title:{fontSize:"28px",marginBottom:"20px",textAlign:"center"},
-  selectorRow:{display:"flex",gap:"10px",marginBottom:"20px",flexWrap:"wrap",justifyContent:"center"},
-  select:{padding:"8px",borderRadius:"6px"},
+
+  title:{
+    fontSize:"28px",
+    marginBottom:"20px",
+    textAlign:"center"
+  },
+
+  selectorRow:{
+    display:"flex",
+    gap:"10px",
+    marginBottom:"20px",
+    flexWrap:"wrap",
+    justifyContent:"center"
+  },
+
+  select:{
+    padding:"8px",
+    borderRadius:"6px"
+  },
+
   balanceCard:{
     background:"#1e293b",
     padding:"20px",
     borderRadius:"10px",
     marginBottom:"30px",
     textAlign:"center",
-    maxWidth:"400px",
+    maxWidth:"500px",
     width:"100%",
     marginLeft:"auto",
     marginRight:"auto"
   },
-  cardFull:{background:"#1e293b",padding:"20px",borderRadius:"10px",marginBottom:"30px",textAlign:"center"},
-  formContainer:{maxWidth:"400px",width:"100%",marginLeft:"auto",marginRight:"auto"},
-  grid:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(250px, 1fr))",gap:"20px",marginBottom:"30px"},
-  card:{background:"#1e293b",padding:"20px",borderRadius:"10px",textAlign:"center"},
-  gastoItem:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"},
-  input:{display:"block",width:"100%",marginBottom:"10px",padding:"10px",borderRadius:"6px",border:"none"},
-  button:{background:"#3b82f6",color:"white",padding:"10px",border:"none",borderRadius:"6px",cursor:"pointer"},
-  buttonDanger:{background:"#ef4444",color:"white",padding:"10px 15px",border:"none",borderRadius:"6px",cursor:"pointer"},
-  buttonEdit:{background:"#facc15",border:"none",borderRadius:"5px",padding:"4px 8px",marginRight:"5px",cursor:"pointer"},
-  buttonDelete:{background:"#ef4444",border:"none",borderRadius:"5px",padding:"4px 8px",cursor:"pointer"},
-  buttonCenter:{display:"flex",justifyContent:"center"},
-  tabs:{display:"flex",justifyContent:"center",gap:"10px",marginBottom:"20px",flexWrap:"wrap"},
-  tab:{background:"#1e293b",color:"white",padding:"10px 20px",border:"none",borderRadius:"6px",cursor:"pointer"},
-  tabActive:{background:"#3b82f6",color:"white",padding:"10px 20px",border:"none",borderRadius:"6px",cursor:"pointer"},
+
+  cardFull:{
+    background:"#1e293b",
+    padding:"25px",
+    borderRadius:"12px",
+    marginBottom:"30px",
+    textAlign:"center"
+  },
+
+  formContainer:{
+    maxWidth:"450px",
+    width:"100%",
+    marginLeft:"auto",
+    marginRight:"auto"
+  },
+
+  grid:{
+    display:"grid",
+    gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))",
+    gap:"25px",
+    marginBottom:"40px"
+  },
+
+  card:{
+    background:"#1e293b",
+    padding:"25px",
+    borderRadius:"12px",
+    textAlign:"center"
+  },
+
+  gastoItem:{
+    display:"flex",
+    justifyContent:"space-between",
+    alignItems:"center",
+    marginBottom:"10px"
+  },
+
+  input:{
+    display:"block",
+    width:"100%",
+    marginBottom:"12px",
+    padding:"12px",
+    borderRadius:"6px",
+    border:"none"
+  },
+
+  button:{
+    background:"#3b82f6",
+    color:"white",
+    padding:"12px 16px",
+    border:"none",
+    borderRadius:"8px",
+    cursor:"pointer"
+  },
+
+  buttonDanger:{
+    background:"#ef4444",
+    color:"white",
+    padding:"12px 18px",
+    border:"none",
+    borderRadius:"8px",
+    cursor:"pointer"
+  },
+
+  buttonEdit:{
+    background:"#facc15",
+    border:"none",
+    borderRadius:"6px",
+    padding:"6px 10px",
+    marginRight:"6px",
+    cursor:"pointer"
+  },
+
+  buttonDelete:{
+    background:"#ef4444",
+    border:"none",
+    borderRadius:"6px",
+    padding:"6px 10px",
+    cursor:"pointer"
+  },
+
+  buttonCenter:{
+    display:"flex",
+    justifyContent:"center"
+  },
+
+  tabs:{
+    display:"flex",
+    justifyContent:"center",
+    gap:"10px",
+    marginBottom:"25px",
+    flexWrap:"wrap"
+  },
+
+  tab:{
+    background:"#1e293b",
+    color:"white",
+    padding:"10px 20px",
+    border:"none",
+    borderRadius:"8px",
+    cursor:"pointer"
+  },
+
+  tabActive:{
+    background:"#3b82f6",
+    color:"white",
+    padding:"10px 20px",
+    border:"none",
+    borderRadius:"8px",
+    cursor:"pointer"
+  },
+
   modalOverlay:{
     position:"fixed",
     inset:0,
@@ -359,7 +476,15 @@ const styles = {
     justifyContent:"center",
     alignItems:"center"
   },
-  modal:{background:"#1e293b",padding:"25px",borderRadius:"10px",width:"90%",maxWidth:"320px"}
+
+  modal:{
+    background:"#1e293b",
+    padding:"30px",
+    borderRadius:"12px",
+    width:"90%",
+    maxWidth:"400px"
+  }
 };
+
 
 export default App;
