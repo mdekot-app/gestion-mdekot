@@ -38,7 +38,6 @@ function App() {
   const [editImporte, setEditImporte] = useState("");
   const [editPagadoPor, setEditPagadoPor] = useState("");
 
-  // 🔥 NUEVO: confirmación elegante
   const [gastoAEliminar, setGastoAEliminar] = useState(null);
 
   const meses = [
@@ -251,7 +250,6 @@ function App() {
             <button onClick={liquidarMes} style={styles.buttonDanger}>Liquidar mes</button>
           </div>
 
-          {/* MODAL EDITAR */}
           {gastoEditando && (
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
@@ -270,7 +268,6 @@ function App() {
             </div>
           )}
 
-          {/* MODAL CONFIRMAR ELIMINAR */}
           {gastoAEliminar && (
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
@@ -317,27 +314,52 @@ function App() {
 }
 
 const styles = {
-  container:{background:"#4a505e",minHeight:"100vh",width:"100vw",padding:"40px",color:"white",boxSizing:"border-box"},
-  title:{fontSize:"32px",marginBottom:"20px",textAlign:"center"},
-  selectorRow:{display:"flex",gap:"10px",marginBottom:"20px"},
+  container:{
+    background:"#4a505e",
+    minHeight:"100vh",
+    width:"100%",
+    padding:"20px",
+    color:"white",
+    boxSizing:"border-box",
+    overflowX:"hidden"
+  },
+  title:{fontSize:"28px",marginBottom:"20px",textAlign:"center"},
+  selectorRow:{display:"flex",gap:"10px",marginBottom:"20px",flexWrap:"wrap",justifyContent:"center"},
   select:{padding:"8px",borderRadius:"6px"},
-  balanceCard:{background:"#1e293b",padding:"20px",borderRadius:"10px",marginBottom:"30px",textAlign:"center",width:"20%",marginLeft:"auto",marginRight:"auto"},
+  balanceCard:{
+    background:"#1e293b",
+    padding:"20px",
+    borderRadius:"10px",
+    marginBottom:"30px",
+    textAlign:"center",
+    maxWidth:"400px",
+    width:"100%",
+    marginLeft:"auto",
+    marginRight:"auto"
+  },
   cardFull:{background:"#1e293b",padding:"20px",borderRadius:"10px",marginBottom:"30px",textAlign:"center"},
-  formContainer:{width:"10%",marginLeft:"auto",marginRight:"auto"},
-  grid:{display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:"20px",marginBottom:"30px"},
+  formContainer:{maxWidth:"400px",width:"100%",marginLeft:"auto",marginRight:"auto"},
+  grid:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(250px, 1fr))",gap:"20px",marginBottom:"30px"},
   card:{background:"#1e293b",padding:"20px",borderRadius:"10px",textAlign:"center"},
   gastoItem:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"},
-  input:{display:"block",width:"100%",marginBottom:"10px",padding:"8px",borderRadius:"6px",border:"none"},
+  input:{display:"block",width:"100%",marginBottom:"10px",padding:"10px",borderRadius:"6px",border:"none"},
   button:{background:"#3b82f6",color:"white",padding:"10px",border:"none",borderRadius:"6px",cursor:"pointer"},
   buttonDanger:{background:"#ef4444",color:"white",padding:"10px 15px",border:"none",borderRadius:"6px",cursor:"pointer"},
   buttonEdit:{background:"#facc15",border:"none",borderRadius:"5px",padding:"4px 8px",marginRight:"5px",cursor:"pointer"},
   buttonDelete:{background:"#ef4444",border:"none",borderRadius:"5px",padding:"4px 8px",cursor:"pointer"},
   buttonCenter:{display:"flex",justifyContent:"center"},
-  tabs:{display:"flex",justifyContent:"center",gap:"10px",marginBottom:"20px"},
+  tabs:{display:"flex",justifyContent:"center",gap:"10px",marginBottom:"20px",flexWrap:"wrap"},
   tab:{background:"#1e293b",color:"white",padding:"10px 20px",border:"none",borderRadius:"6px",cursor:"pointer"},
   tabActive:{background:"#3b82f6",color:"white",padding:"10px 20px",border:"none",borderRadius:"6px",cursor:"pointer"},
-  modalOverlay:{position:"fixed",top:0,left:0,width:"100vw",height:"100vh",background:"rgba(0,0,0,0.6)",display:"flex",justifyContent:"center",alignItems:"center"},
-  modal:{background:"#1e293b",padding:"25px",borderRadius:"10px",width:"320px"}
+  modalOverlay:{
+    position:"fixed",
+    inset:0,
+    background:"rgba(0,0,0,0.6)",
+    display:"flex",
+    justifyContent:"center",
+    alignItems:"center"
+  },
+  modal:{background:"#1e293b",padding:"25px",borderRadius:"10px",width:"90%",maxWidth:"320px"}
 };
 
 export default App;
