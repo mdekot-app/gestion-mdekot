@@ -249,63 +249,6 @@ function App() {
           <div style={styles.buttonCenter}>
             <button onClick={liquidarMes} style={styles.buttonDanger}>Liquidar mes</button>
           </div>
-
-          {gastoEditando && (
-            <div style={styles.modalOverlay}>
-              <div style={styles.modal}>
-                <h3>✏ Editar Gasto</h3>
-                <input value={editComercio} onChange={(e) => setEditComercio(e.target.value)} style={styles.input}/>
-                <input type="number" value={editImporte} onChange={(e) => setEditImporte(e.target.value)} style={styles.input}/>
-                <select value={editPagadoPor} onChange={(e) => setEditPagadoPor(e.target.value)} style={styles.input}>
-                  <option value="mdekot@gmail.com">Mirko</option>
-                  <option value="jessica.alca87@gmail.com">Jessica</option>
-                </select>
-                <div style={{ display:"flex", justifyContent:"space-between", marginTop:"10px" }}>
-                  <button onClick={() => setGastoEditando(null)} style={styles.button}>Cancelar</button>
-                  <button onClick={guardarEdicion} style={styles.buttonDanger}>Guardar</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {gastoAEliminar && (
-            <div style={styles.modalOverlay}>
-              <div style={styles.modal}>
-                <h3>🗑 Confirmar eliminación</h3>
-                <p style={{marginBottom:"20px"}}>
-                  ¿Eliminar "{gastoAEliminar.comercio}" por {gastoAEliminar.importe} €?
-                </p>
-                <div style={{ display:"flex", justifyContent:"space-between" }}>
-                  <button onClick={() => setGastoAEliminar(null)} style={styles.button}>
-                    Cancelar
-                  </button>
-                  <button onClick={confirmarEliminar} style={styles.buttonDanger}>
-                    Eliminar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-        </>
-      )}
-
-      {vista === "grafico" && (
-        <>
-          <h1 style={styles.title}>📊 Gráfico Mensual</h1>
-          <div style={{ width: "100%", height: "500px" }}>
-            <ResponsiveContainer>
-              <BarChart data={datosGrafico}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#555" />
-                <XAxis dataKey="nombre" stroke="#fff" />
-                <YAxis stroke="#fff" />
-                <Tooltip />
-                <Bar dataKey="total" fill="#3b82f6">
-                  <LabelList position="center" formatter={(value) => `${value} €`} fill="#ffffff" />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
         </>
       )}
 
@@ -318,173 +261,32 @@ const styles = {
     background:"#4a505e",
     minHeight:"100vh",
     width:"100%",
-    maxWidth:"1200px",
+    maxWidth:"1500px",
     margin:"0 auto",
-    padding:"40px 20px",
+    padding:"40px",
     color:"white",
     boxSizing:"border-box",
     overflowX:"hidden"
   },
 
-  title:{
-    fontSize:"28px",
-    marginBottom:"20px",
-    textAlign:"center"
-  },
-
-  selectorRow:{
-    display:"flex",
-    gap:"10px",
-    marginBottom:"20px",
-    flexWrap:"wrap",
-    justifyContent:"center"
-  },
-
-  select:{
-    padding:"8px",
-    borderRadius:"6px"
-  },
-
-  balanceCard:{
-    background:"#1e293b",
-    padding:"20px",
-    borderRadius:"10px",
-    marginBottom:"30px",
-    textAlign:"center",
-    maxWidth:"500px",
-    width:"100%",
-    marginLeft:"auto",
-    marginRight:"auto"
-  },
-
-  cardFull:{
-    background:"#1e293b",
-    padding:"25px",
-    borderRadius:"12px",
-    marginBottom:"30px",
-    textAlign:"center"
-  },
-
-  formContainer:{
-    maxWidth:"450px",
-    width:"100%",
-    marginLeft:"auto",
-    marginRight:"auto"
-  },
-
-  grid:{
-    display:"grid",
-    gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))",
-    gap:"25px",
-    marginBottom:"40px"
-  },
-
-  card:{
-    background:"#1e293b",
-    padding:"25px",
-    borderRadius:"12px",
-    textAlign:"center"
-  },
-
-  gastoItem:{
-    display:"flex",
-    justifyContent:"space-between",
-    alignItems:"center",
-    marginBottom:"10px"
-  },
-
-  input:{
-    display:"block",
-    width:"100%",
-    marginBottom:"12px",
-    padding:"12px",
-    borderRadius:"6px",
-    border:"none"
-  },
-
-  button:{
-    background:"#3b82f6",
-    color:"white",
-    padding:"12px 16px",
-    border:"none",
-    borderRadius:"8px",
-    cursor:"pointer"
-  },
-
-  buttonDanger:{
-    background:"#ef4444",
-    color:"white",
-    padding:"12px 18px",
-    border:"none",
-    borderRadius:"8px",
-    cursor:"pointer"
-  },
-
-  buttonEdit:{
-    background:"#facc15",
-    border:"none",
-    borderRadius:"6px",
-    padding:"6px 10px",
-    marginRight:"6px",
-    cursor:"pointer"
-  },
-
-  buttonDelete:{
-    background:"#ef4444",
-    border:"none",
-    borderRadius:"6px",
-    padding:"6px 10px",
-    cursor:"pointer"
-  },
-
-  buttonCenter:{
-    display:"flex",
-    justifyContent:"center"
-  },
-
-  tabs:{
-    display:"flex",
-    justifyContent:"center",
-    gap:"10px",
-    marginBottom:"25px",
-    flexWrap:"wrap"
-  },
-
-  tab:{
-    background:"#1e293b",
-    color:"white",
-    padding:"10px 20px",
-    border:"none",
-    borderRadius:"8px",
-    cursor:"pointer"
-  },
-
-  tabActive:{
-    background:"#3b82f6",
-    color:"white",
-    padding:"10px 20px",
-    border:"none",
-    borderRadius:"8px",
-    cursor:"pointer"
-  },
-
-  modalOverlay:{
-    position:"fixed",
-    inset:0,
-    background:"rgba(0,0,0,0.6)",
-    display:"flex",
-    justifyContent:"center",
-    alignItems:"center"
-  },
-
-  modal:{
-    background:"#1e293b",
-    padding:"30px",
-    borderRadius:"12px",
-    width:"90%",
-    maxWidth:"400px"
-  }
+  title:{fontSize:"28px",marginBottom:"20px",textAlign:"center"},
+  selectorRow:{display:"flex",gap:"10px",marginBottom:"20px",flexWrap:"wrap",justifyContent:"center"},
+  select:{padding:"8px",borderRadius:"6px"},
+  balanceCard:{background:"#1e293b",padding:"20px",borderRadius:"10px",marginBottom:"30px",textAlign:"center"},
+  cardFull:{background:"#1e293b",padding:"25px",borderRadius:"12px",marginBottom:"30px",textAlign:"center"},
+  formContainer:{maxWidth:"450px",margin:"0 auto"},
+  grid:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))",gap:"25px",marginBottom:"40px"},
+  card:{background:"#1e293b",padding:"25px",borderRadius:"12px",textAlign:"center"},
+  gastoItem:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"},
+  input:{display:"block",width:"100%",marginBottom:"12px",padding:"12px",borderRadius:"6px",border:"none"},
+  button:{background:"#3b82f6",color:"white",padding:"12px 16px",border:"none",borderRadius:"8px",cursor:"pointer"},
+  buttonDanger:{background:"#ef4444",color:"white",padding:"12px 18px",border:"none",borderRadius:"8px",cursor:"pointer"},
+  buttonEdit:{background:"#facc15",border:"none",borderRadius:"6px",padding:"6px 10px",marginRight:"6px",cursor:"pointer"},
+  buttonDelete:{background:"#ef4444",border:"none",borderRadius:"6px",padding:"6px 10px",cursor:"pointer"},
+  buttonCenter:{display:"flex",justifyContent:"center"},
+  tabs:{display:"flex",justifyContent:"center",gap:"10px",marginBottom:"25px",flexWrap:"wrap"},
+  tab:{background:"#1e293b",color:"white",padding:"10px 20px",border:"none",borderRadius:"8px",cursor:"pointer"},
+  tabActive:{background:"#3b82f6",color:"white",padding:"10px 20px",border:"none",borderRadius:"8px",cursor:"pointer"}
 };
-
 
 export default App;
