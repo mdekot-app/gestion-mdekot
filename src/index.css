@@ -13,6 +13,12 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* 🔥 IMPORTANTE: asegurar pantalla completa */
+html, body, #root {
+  width: 100%;
+  height: 100%;
+}
+
 a {
   font-weight: 500;
   color: #646cff;
@@ -24,16 +30,17 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
 }
 
+/* Opcional: si no quieres que h1 global afecte tu layout, puedes quitarlo */
+/*
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
 }
+*/
 
 button {
   border-radius: 8px;
