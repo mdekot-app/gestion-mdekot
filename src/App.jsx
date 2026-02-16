@@ -294,7 +294,7 @@ function App() {
           <h1 style={styles.title}>📊 Gráfico Mensual</h1>
           <div style={{ width: "100%", height: "500px" }}>
             <ResponsiveContainer>
-              <BarChart data={datosGrafico}>
+              <BarChart data={datosGrafico} margin={{ top: 20, right: 20, left: 20, bottom: 130 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#555" />
                 <XAxis dataKey="nombre" stroke="#fff" interval={0} height={110} angle={-90} textAnchor="end" tick={{ fontSize: 12 }} />
                 <YAxis stroke="#fff" />
