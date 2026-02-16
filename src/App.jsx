@@ -296,7 +296,7 @@ function App() {
             <ResponsiveContainer>
               <BarChart data={datosGrafico} margin={{ top: 20, right: 20, left: 20, bottom: 130 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#555" />
-                <XAxis dataKey="nombre" stroke="#fff" interval={0} height={120} angle={-90} textAnchor="end" tick={{ fontSize: 12 }} dy={20} />
+                <XAxis dataKey="nombre" stroke="#fff" interval={0} height={120} angle={-90} textAnchor="end" tick={{ fontSize: 12 }} dy={30} />
                 <YAxis stroke="#fff" />
                 <Tooltip />
                 <Bar dataKey="total" fill="#3b82f6">
