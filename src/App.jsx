@@ -249,6 +249,43 @@ function App() {
             <button onClick={liquidarMes} style={styles.buttonDanger}>Liquidar mes</button>
           </div>
 
+          {gastoEditando && (
+            <div style={styles.modalOverlay}>
+              <div style={styles.modal}>
+                <h3>✏ Editar Gasto</h3>
+                <input value={editComercio} onChange={(e) => setEditComercio(e.target.value)} style={styles.input}/>
+                <input type="number" value={editImporte} onChange={(e) => setEditImporte(e.target.value)} style={styles.input}/>
+                <select value={editPagadoPor} onChange={(e) => setEditPagadoPor(e.target.value)} style={styles.input}>
+                  <option value="mdekot@gmail.com">Mirko</option>
+                  <option value="jessica.alca87@gmail.com">Jessica</option>
+                </select>
+                <div style={{ display:"flex", justifyContent:"space-between", marginTop:"10px" }}>
+                  <button onClick={() => setGastoEditando(null)} style={styles.button}>Cancelar</button>
+                  <button onClick={guardarEdicion} style={styles.buttonDanger}>Guardar</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {gastoAEliminar && (
+            <div style={styles.modalOverlay}>
+              <div style={styles.modal}>
+                <h3>🗑 Confirmar eliminación</h3>
+                <p style={{marginBottom:"20px"}}>
+                  ¿Eliminar "{gastoAEliminar.comercio}" por {gastoAEliminar.importe} €?
+                </p>
+                <div style={{ display:"flex", justifyContent:"space-between" }}>
+                  <button onClick={() => setGastoAEliminar(null)} style={styles.button}>
+                    Cancelar
+                  </button>
+                  <button onClick={confirmarEliminar} style={styles.buttonDanger}>
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
         </>
       )}
 
@@ -294,7 +331,9 @@ const styles = {
   buttonCenter:{display:"flex",justifyContent:"center"},
   tabs:{display:"flex",justifyContent:"center",gap:"10px",marginBottom:"20px",flexWrap:"wrap"},
   tab:{background:"#1e293b",color:"white",padding:"10px 20px",border:"none",borderRadius:"6px",cursor:"pointer"},
-  tabActive:{background:"#3b82f6",color:"white",padding:"10px 20px",border:"none",borderRadius:"6px",cursor:"pointer"}
+  tabActive:{background:"#3b82f6",color:"white",padding:"10px 20px",border:"none",borderRadius:"6px",cursor:"pointer"},
+  modalOverlay:{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",justifyContent:"center",alignItems:"center"},
+  modal:{background:"#1e293b",padding:"25px",borderRadius:"10px",width:"90%",maxWidth:"320px"}
 };
 
 export default App;
