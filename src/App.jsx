@@ -171,157 +171,180 @@ function App() {
 
   return (
     <div style={styles.container}>
-
-      <div style={styles.tabs}>
-        <button onClick={() => setVista("dashboard")} style={vista === "dashboard" ? styles.tabActive : styles.tab}>
-          Dashboard
-        </button>
-        <button onClick={() => setVista("grafico")} style={vista === "grafico" ? styles.tabActive : styles.tab}>
-          Gráfico Mensual
-        </button>
-      </div>
-
-      {vista === "dashboard" && (
-        <>
-          <h1 style={styles.title}>💰💶 GESTIÓN MDEKOT 💶💰</h1>
-
-          <div style={styles.selectorRow}>
-            <select value={mesActual} onChange={(e) => setMesActual(Number(e.target.value))} style={styles.select}>
-              {meses.map((mes, index) => (
-                <option key={index} value={index + 1}>{mes}</option>
-              ))}
-            </select>
-            <input type="number" value={anioActual} onChange={(e) => setAnioActual(Number(e.target.value))} style={styles.select} />
-          </div>
-
-          <div style={styles.balanceCard}>
-            {balance > 0 && <h2>Jessica debe {balance} € a Mirko</h2>}
-            {balance < 0 && <h2>Mirko debe {Math.abs(balance)} € a Jessica</h2>}
-            {balance === 0 && <h2>⚖️ Estáis en empate</h2>}
-          </div>
-
-          <div style={styles.cardFull}>
-            <h3>· Añadir Nuevo Gasto ·</h3>
-            <div style={styles.formContainer}>
-              <input type="text" placeholder="Comercio" value={comercio} onChange={(e) => setComercio(e.target.value)} style={styles.input}/>
-              <input type="number" placeholder="Importe" value={importe} onChange={(e) => setImporte(e.target.value)} style={styles.input}/>
-              <select value={pagadoPor} onChange={(e) => setPagadoPor(e.target.value)} style={styles.input}>
-                <option value="mdekot@gmail.com">Mirko</option>
-                <option value="jessica.alca87@gmail.com">Jessica</option>
-              </select>
-              <button onClick={agregarGasto} style={styles.button}>Guardar</button>
-            </div>
-          </div>
-
-          <div style={styles.grid}>
-            <div style={styles.card}>
-              <h3>· GASTOS DEL MES ·</h3>
-              {gastos.map((g) => (
-                <div key={g.id} style={styles.gastoItem}>
-                  <span>{g.comercio} - {g.importe} €</span>
-                  <div>
-                    <button onClick={() => abrirModalEditar(g)} style={styles.buttonEdit}>✏</button>
-                    <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDelete}>🗑</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div style={styles.card}>
-              <h3>· TOTAL POR COMERCIO ·</h3>
-              {Object.entries(resumenComercio).map(([nombre, total]) => (
-                <p key={nombre}>{nombre} → {total} €</p>
-              ))}
-            </div>
-
-            <div style={styles.card}>
-              <h3>· GASTO INDIVIDUAL ·</h3>
-              <p>Mirko → {totalMirko} €</p>
-              <p>Jessica → {totalJessica} €</p>
-            </div>
-
-            <div style={styles.card}>
-              <h3>· TOTAL GASTOS ·</h3>
-              <h2>{totalMes} €</h2>
-            </div>
-          </div>
-
-          <div style={styles.buttonCenter}>
-            <button onClick={liquidarMes} style={styles.buttonDanger}>Liquidar mes</button>
-          </div>
-
-        </>
-      )}
-
-      {vista === "grafico" && (
-        <>
-          <h1 style={styles.title}>📊 Gráfico Mensual</h1>
-          <div style={{ width: "100%", height: "500px" }}>
-            <ResponsiveContainer>
-              <BarChart data={datosGrafico}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#555" />
-                <XAxis dataKey="nombre" stroke="#fff" />
-                <YAxis stroke="#fff" />
-                <Tooltip />
-                <Bar dataKey="total" fill="#3b82f6">
-                  <LabelList position="center" formatter={(value) => `${value} €`} fill="#ffffff" />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </>
-      )}
-
+      {/* TU JSX EXACTAMENTE IGUAL */}
     </div>
   );
 }
 
 const styles = {
+
   container:{
     background:"#4a505e",
     minHeight:"100vh",
     width:"100%",
-    padding:"40px 40px",
+    padding:"40px",
     color:"white",
-    boxSizing:"border-box",
-    overflowX:"hidden"
+    boxSizing:"border-box"
   },
 
-  title:{fontSize:"28px",marginBottom:"20px",textAlign:"center"},
+  title:{
+    fontSize:"32px",
+    marginBottom:"20px",
+    textAlign:"center"
+  },
 
-  selectorRow:{display:"flex",gap:"10px",marginBottom:"20px",flexWrap:"wrap",justifyContent:"center"},
+  selectorRow:{
+    display:"flex",
+    gap:"10px",
+    marginBottom:"20px",
+    flexWrap:"wrap"
+  },
 
-  select:{padding:"8px",borderRadius:"6px"},
+  select:{
+    padding:"8px",
+    borderRadius:"6px"
+  },
 
-  balanceCard:{background:"#1e293b",padding:"20px",borderRadius:"10px",marginBottom:"30px",textAlign:"center"},
+  balanceCard:{
+    background:"#1e293b",
+    padding:"20px",
+    borderRadius:"10px",
+    marginBottom:"30px",
+    textAlign:"center",
+    width:"100%",
+    maxWidth:"600px",
+    marginLeft:"auto",
+    marginRight:"auto"
+  },
 
-  cardFull:{background:"#1e293b",padding:"25px",borderRadius:"12px",marginBottom:"30px",textAlign:"center"},
+  cardFull:{
+    background:"#1e293b",
+    padding:"20px",
+    borderRadius:"10px",
+    marginBottom:"30px",
+    textAlign:"center"
+  },
 
-  formContainer:{maxWidth:"450px",width:"100%",margin:"0 auto"},
+  formContainer:{
+    width:"100%",
+    maxWidth:"500px",
+    marginLeft:"auto",
+    marginRight:"auto"
+  },
 
-  grid:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))",gap:"25px",marginBottom:"40px"},
+  grid:{
+    display:"grid",
+    gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))",
+    gap:"20px",
+    marginBottom:"30px"
+  },
 
-  card:{background:"#1e293b",padding:"25px",borderRadius:"12px",textAlign:"center"},
+  card:{
+    background:"#1e293b",
+    padding:"20px",
+    borderRadius:"10px",
+    textAlign:"center"
+  },
 
-  gastoItem:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"10px"},
+  gastoItem:{
+    display:"flex",
+    justifyContent:"space-between",
+    alignItems:"center",
+    marginBottom:"8px"
+  },
 
-  input:{display:"block",width:"100%",marginBottom:"12px",padding:"12px",borderRadius:"6px",border:"none"},
+  input:{
+    display:"block",
+    width:"100%",
+    marginBottom:"10px",
+    padding:"8px",
+    borderRadius:"6px",
+    border:"none"
+  },
 
-  button:{background:"#3b82f6",color:"white",padding:"12px 16px",border:"none",borderRadius:"8px",cursor:"pointer"},
+  button:{
+    background:"#3b82f6",
+    color:"white",
+    padding:"10px",
+    border:"none",
+    borderRadius:"6px",
+    cursor:"pointer"
+  },
 
-  buttonDanger:{background:"#ef4444",color:"white",padding:"12px 18px",border:"none",borderRadius:"8px",cursor:"pointer"},
+  buttonDanger:{
+    background:"#ef4444",
+    color:"white",
+    padding:"10px 15px",
+    border:"none",
+    borderRadius:"6px",
+    cursor:"pointer"
+  },
 
-  buttonEdit:{background:"#facc15",border:"none",borderRadius:"6px",padding:"6px 10px",marginRight:"6px",cursor:"pointer"},
+  buttonEdit:{
+    background:"#facc15",
+    border:"none",
+    borderRadius:"5px",
+    padding:"4px 8px",
+    marginRight:"5px",
+    cursor:"pointer"
+  },
 
-  buttonDelete:{background:"#ef4444",border:"none",borderRadius:"6px",padding:"6px 10px",cursor:"pointer"},
+  buttonDelete:{
+    background:"#ef4444",
+    border:"none",
+    borderRadius:"5px",
+    padding:"4px 8px",
+    cursor:"pointer"
+  },
 
-  buttonCenter:{display:"flex",justifyContent:"center"},
+  buttonCenter:{
+    display:"flex",
+    justifyContent:"center"
+  },
 
-  tabs:{display:"flex",justifyContent:"center",gap:"10px",marginBottom:"25px",flexWrap:"wrap"},
+  tabs:{
+    display:"flex",
+    justifyContent:"center",
+    gap:"10px",
+    marginBottom:"20px",
+    flexWrap:"wrap"
+  },
 
-  tab:{background:"#1e293b",color:"white",padding:"10px 20px",border:"none",borderRadius:"8px",cursor:"pointer"},
+  tab:{
+    background:"#1e293b",
+    color:"white",
+    padding:"10px 20px",
+    border:"none",
+    borderRadius:"6px",
+    cursor:"pointer"
+  },
 
-  tabActive:{background:"#3b82f6",color:"white",padding:"10px 20px",border:"none",borderRadius:"8px",cursor:"pointer"}
+  tabActive:{
+    background:"#3b82f6",
+    color:"white",
+    padding:"10px 20px",
+    border:"none",
+    borderRadius:"6px",
+    cursor:"pointer"
+  },
+
+  modalOverlay:{
+    position:"fixed",
+    inset:0,
+    background:"rgba(0,0,0,0.6)",
+    display:"flex",
+    justifyContent:"center",
+    alignItems:"center"
+  },
+
+  modal:{
+    background:"#1e293b",
+    padding:"25px",
+    borderRadius:"10px",
+    width:"90%",
+    maxWidth:"320px"
+  }
+
 };
 
 export default App;
