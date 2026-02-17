@@ -44,10 +44,17 @@ function App() {
     "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
   ];
 
-  // 🔥 FUNCIÓN PARA FORMATEAR COMERCIO
+  // 🔥 FUNCIÓN PARA FORMATEAR COMERCIO (CAPITALIZA CADA PALABRA)
   const formatearComercio = (texto) => {
     if (!texto) return "";
-    return texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase();
+    return texto
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .map(palabra =>
+        palabra.charAt(0).toUpperCase() + palabra.slice(1)
+      )
+      .join(" ");
   };
 
   const calcularBalance = async () => {
