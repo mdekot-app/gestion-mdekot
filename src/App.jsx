@@ -72,6 +72,12 @@ function App() {
       }
     });
 
+    // 🔥 ORDENAR POR FECHA (más reciente arriba)
+    lista.sort((a, b) => {
+      if (!a.fecha || !b.fecha) return 0;
+      return b.fecha.seconds - a.fecha.seconds;
+    });
+
     setGastos(lista);
     setBalance(totalPagado - totalDebe);
   };
@@ -194,8 +200,8 @@ function App() {
           </div>
 
           <div style={styles.balanceCard}>
-            {balance > 0 && <h2>Jessica debe {balance} € a Mirko</h2>}
-            {balance < 0 && <h2>Mirko debe {Math.abs(balance)} € a Jessica</h2>}
+            {balance > 0 && <h2>Jessica debe {balance.toFixed(2)} € a Mirko</h2>}
+            {balance < 0 && <h2>Mirko debe {Math.abs(balance).toFixed(2)} € a Jessica</h2>}
             {balance === 0 && <h2>⚖️ Estáis en empate</h2>}
           </div>
 
@@ -217,7 +223,18 @@ function App() {
               <h3>· GASTOS DEL MES ·</h3>
               {gastos.map((g) => (
                 <div key={g.id} style={styles.gastoItem}>
-                  <span>{g.comercio} - {g.importe} €</span>
+                  <span>
+                    {g.fecha
+                      ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", {
+                          day: "2-digit",
+                          month: "2-digit"
+                        })
+                      : "--/--"}
+                    {" - "}
+                    {g.comercio}
+                    {" - "}
+                    {Number(g.importe).toFixed(2)} €
+                  </span>
                   <div>
                     <button onClick={() => abrirModalEditar(g)} style={styles.buttonEdit}>✏</button>
                     <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDelete}>🗑</button>
@@ -229,19 +246,19 @@ function App() {
             <div style={styles.card}>
               <h3>· TOTAL POR COMERCIO ·</h3>
               {Object.entries(resumenComercio).map(([nombre, total]) => (
-                <p key={nombre}>{nombre} → {total} €</p>
+                <p key={nombre}>{nombre} → {total.toFixed(2)} €</p>
               ))}
             </div>
 
             <div style={styles.card}>
               <h3>· GASTO INDIVIDUAL ·</h3>
-              <p>Mirko → {totalMirko} €</p>
-              <p>Jessica → {totalJessica} €</p>
+              <p>Mirko → {totalMirko.toFixed(2)} €</p>
+              <p>Jessica → {totalJessica.toFixed(2)} €</p>
             </div>
 
             <div style={styles.card}>
               <h3>· TOTAL GASTOS ·</h3>
-              <h2>{totalMes} €</h2>
+              <h2>{totalMes.toFixed(2)} €</h2>
             </div>
           </div>
 
@@ -272,7 +289,7 @@ function App() {
               <div style={styles.modal}>
                 <h3>🗑 Confirmar eliminación</h3>
                 <p style={{marginBottom:"20px"}}>
-                  ¿Eliminar "{gastoAEliminar.comercio}" por {gastoAEliminar.importe} €?
+                  ¿Eliminar "{gastoAEliminar.comercio}" por {Number(gastoAEliminar.importe).toFixed(2)} €?
                 </p>
                 <div style={{ display:"flex", justifyContent:"space-between" }}>
                   <button onClick={() => setGastoAEliminar(null)} style={styles.button}>
@@ -300,7 +317,7 @@ function App() {
                 <YAxis stroke="#fff" />
                 <Tooltip />
                 <Bar dataKey="total" fill="#3b82f6">
-                  <LabelList position="center" formatter={(value) => `${value} €`} fill="#ffffff" />
+                  <LabelList position="center" formatter={(value) => `${value.toFixed(2)} €`} fill="#ffffff" />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
