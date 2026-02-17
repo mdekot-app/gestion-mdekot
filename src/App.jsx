@@ -110,7 +110,6 @@ function App() {
         "mdekot@gmail.com",
         "jessica.alca87@gmail.com"
       ],
-      participantsCount: 2,
       participantesCount: 2,
       comercio: formatearComercio(comercio),
       fecha: new Date()
@@ -243,9 +242,7 @@ function App() {
                           day: "2-digit",
                           month: "2-digit"
                         })
-                      : "--/--"}
-                    {" - "}
-                    {g.comercio}
+                      : "--/--"}{" - "}{g.comercio}
                   </span>
 
                   <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -285,62 +282,6 @@ function App() {
             <button onClick={liquidarMes} style={styles.buttonDanger}>Liquidar mes</button>
           </div>
 
-          {gastoEditando && (
-            <div style={styles.modalOverlay}>
-              <div style={styles.modal}>
-                <h3>✏ Editar Gasto</h3>
-                <input value={editComercio} onChange={(e) => setEditComercio(e.target.value)} style={styles.input}/>
-                <input type="number" value={editImporte} onChange={(e) => setEditImporte(e.target.value)} style={styles.input}/>
-                <select value={editPagadoPor} onChange={(e) => setEditPagadoPor(e.target.value)} style={styles.input}>
-                  <option value="mdekot@gmail.com">Mirko</option>
-                  <option value="jessica.alca87@gmail.com">Jessica</option>
-                </select>
-                <div style={{ display:"flex", justifyContent:"space-between", marginTop:"10px" }}>
-                  <button onClick={() => setGastoEditando(null)} style={styles.button}>Cancelar</button>
-                  <button onClick={guardarEdicion} style={styles.buttonDanger}>Guardar</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {gastoAEliminar && (
-            <div style={styles.modalOverlay}>
-              <div style={styles.modal}>
-                <h3>🗑 Confirmar eliminación</h3>
-                <p style={{marginBottom:"20px"}}>
-                  ¿Eliminar "{gastoAEliminar.comercio}" por {Number(gastoAEliminar.importe).toFixed(2)} €?
-                </p>
-                <div style={{ display:"flex", justifyContent:"space-between" }}>
-                  <button onClick={() => setGastoAEliminar(null)} style={styles.button}>
-                    Cancelar
-                  </button>
-                  <button onClick={confirmarEliminar} style={styles.buttonDanger}>
-                    Eliminar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-        </>
-      )}
-
-      {vista === "grafico" && (
-        <>
-          <h1 style={styles.title}>📊 Gráfico Mensual</h1>
-          <div style={{ width: "100%", height: "500px" }}>
-            <ResponsiveContainer>
-              <BarChart data={datosGrafico} margin={{ top: 20, right: 20, left: 20, bottom: 130 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#555" />
-                <XAxis dataKey="nombre" stroke="#fff" interval={0} height={120} angle={-90} textAnchor="end" tick={{ fontSize: 12 }} dy={35} />
-                <YAxis stroke="#fff" />
-                <Tooltip />
-                <Bar dataKey="total" fill="#3b82f6">
-                  <LabelList position="center" formatter={(value) => `${value.toFixed(2)} €`} fill="#ffffff" />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
         </>
       )}
 
