@@ -50,9 +50,7 @@ function App() {
       .toLowerCase()
       .trim()
       .split(/\s+/)
-      .map(palabra =>
-        palabra.charAt(0).toUpperCase() + palabra.slice(1)
-      )
+      .map(p => p.charAt(0).toUpperCase() + p.slice(1))
       .join(" ");
   };
 
@@ -149,7 +147,6 @@ function App() {
 
     snapshot.forEach(async (documento) => {
       const data = documento.data();
-
       if (
         data.mes === mesActual &&
         data.anio === anioActual &&
@@ -169,11 +166,6 @@ function App() {
     if (!resumenComercio[g.comercio]) resumenComercio[g.comercio] = 0;
     resumenComercio[g.comercio] += g.importe;
   });
-
-  const datosGrafico = Object.entries(resumenComercio).map(([nombre, total]) => ({
-    nombre,
-    total
-  }));
 
   let totalMirko = 0;
   let totalJessica = 0;
@@ -235,13 +227,9 @@ function App() {
 
               {gastos.map((g) => (
                 <div key={g.id} style={styles.gastoItem}>
-
                   <span>
                     {g.fecha
-                      ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", {
-                          day: "2-digit",
-                          month: "2-digit"
-                        })
+                      ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" })
                       : "--/--"}{" - "}{g.comercio}
                   </span>
 
@@ -253,7 +241,6 @@ function App() {
                     <button onClick={() => abrirModalEditar(g)} style={styles.buttonEdit}>✏</button>
                     <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDelete}>🗑</button>
                   </div>
-
                 </div>
               ))}
 
@@ -281,6 +268,39 @@ function App() {
           <div style={styles.buttonCenter}>
             <button onClick={liquidarMes} style={styles.buttonDanger}>Liquidar mes</button>
           </div>
+
+          {gastoEditando && (
+            <div style={styles.modalOverlay}>
+              <div style={styles.modal}>
+                <h3>✏ Editar Gasto</h3>
+                <input value={editComercio} onChange={(e) => setEditComercio(e.target.value)} style={styles.input}/>
+                <input type="number" value={editImporte} onChange={(e) => setEditImporte(e.target.value)} style={styles.input}/>
+                <select value={editPagadoPor} onChange={(e) => setEditPagadoPor(e.target.value)} style={styles.input}>
+                  <option value="mdekot@gmail.com">Mirko</option>
+                  <option value="jessica.alca87@gmail.com">Jessica</option>
+                </select>
+                <div style={{ display:"flex", justifyContent:"space-between", marginTop:"10px" }}>
+                  <button onClick={() => setGastoEditando(null)} style={styles.button}>Cancelar</button>
+                  <button onClick={guardarEdicion} style={styles.buttonDanger}>Guardar</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {gastoAEliminar && (
+            <div style={styles.modalOverlay}>
+              <div style={styles.modal}>
+                <h3>🗑 Confirmar eliminación</h3>
+                <p style={{marginBottom:"20px"}}>
+                  ¿Eliminar "{gastoAEliminar.comercio}" por {Number(gastoAEliminar.importe).toFixed(2)} €?
+                </p>
+                <div style={{ display:"flex", justifyContent:"space-between" }}>
+                  <button onClick={() => setGastoAEliminar(null)} style={styles.button}>Cancelar</button>
+                  <button onClick={confirmarEliminar} style={styles.buttonDanger}>Eliminar</button>
+                </div>
+              </div>
+            </div>
+          )}
 
         </>
       )}
