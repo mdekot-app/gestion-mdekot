@@ -44,7 +44,6 @@ function App() {
     "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
   ];
 
-  // 🔥 FUNCIÓN PARA FORMATEAR COMERCIO (CAPITALIZA CADA PALABRA)
   const formatearComercio = (texto) => {
     if (!texto) return "";
     return texto
@@ -111,6 +110,7 @@ function App() {
         "mdekot@gmail.com",
         "jessica.alca87@gmail.com"
       ],
+      participantsCount: 2,
       participantesCount: 2,
       comercio: formatearComercio(comercio),
       fecha: new Date()
@@ -233,8 +233,10 @@ function App() {
           <div style={styles.grid}>
             <div style={styles.card}>
               <h3>· GASTOS DEL MES ·</h3>
+
               {gastos.map((g) => (
                 <div key={g.id} style={styles.gastoItem}>
+
                   <span>
                     {g.fecha
                       ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", {
@@ -244,15 +246,20 @@ function App() {
                       : "--/--"}
                     {" - "}
                     {g.comercio}
-                    {" - "}
-                    {Number(g.importe).toFixed(2)} €
                   </span>
-                  <div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <span style={{ minWidth: "90px", textAlign: "right", fontWeight: "600" }}>
+                      {Number(g.importe).toFixed(2)} €
+                    </span>
+
                     <button onClick={() => abrirModalEditar(g)} style={styles.buttonEdit}>✏</button>
                     <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDelete}>🗑</button>
                   </div>
+
                 </div>
               ))}
+
             </div>
 
             <div style={styles.card}>
