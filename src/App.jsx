@@ -44,6 +44,12 @@ function App() {
     "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
   ];
 
+  // 🔥 FUNCIÓN PARA FORMATEAR COMERCIO
+  const formatearComercio = (texto) => {
+    if (!texto) return "";
+    return texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase();
+  };
+
   const calcularBalance = async () => {
     const snapshot = await getDocs(collection(db, "gastos"));
 
@@ -72,7 +78,6 @@ function App() {
       }
     });
 
-    // 🔥 ORDENAR POR FECHA (más reciente arriba)
     lista.sort((a, b) => {
       if (!a.fecha || !b.fecha) return 0;
       return b.fecha.seconds - a.fecha.seconds;
@@ -100,7 +105,7 @@ function App() {
         "jessica.alca87@gmail.com"
       ],
       participantesCount: 2,
-      comercio,
+      comercio: formatearComercio(comercio),
       fecha: new Date()
     });
 
@@ -124,7 +129,7 @@ function App() {
 
   const guardarEdicion = async () => {
     await updateDoc(doc(db, "gastos", gastoEditando.id), {
-      comercio: editComercio,
+      comercio: formatearComercio(editComercio),
       importe: Number(editImporte),
       pagadoPor: editPagadoPor
     });
