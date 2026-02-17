@@ -227,20 +227,24 @@ function App() {
 
               {gastos.map((g) => (
                 <div key={g.id} style={styles.gastoItem}>
-                  <span>
-                    {g.fecha
-                      ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" })
-                      : "--/--"}{" - "}{g.comercio}
-                  </span>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <span style={{ minWidth: "90px", textAlign: "right", fontWeight: "600" }}>
-                      {Number(g.importe).toFixed(2)} €
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>
+                      {g.fecha
+                        ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" })
+                        : "--/--"}{" - "}{g.comercio}
                     </span>
 
+                    <span style={{ fontWeight: "600" }}>
+                      {Number(g.importe).toFixed(2)} €
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "4px" }}>
                     <button onClick={() => abrirModalEditar(g)} style={styles.buttonEdit}>✏</button>
                     <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDelete}>🗑</button>
                   </div>
+
                 </div>
               ))}
 
@@ -319,11 +323,11 @@ const styles = {
   formContainer:{width:"100%",maxWidth:"500px",margin:"0 auto"},
   grid:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))",gap:"20px",marginBottom:"30px"},
   card:{background:"#1e293b",padding:"20px",borderRadius:"10px",textAlign:"center"},
-  gastoItem:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"8px"},
+  gastoItem:{marginBottom:"12px"},
   input:{display:"block",width:"100%",marginBottom:"10px",padding:"8px",borderRadius:"6px",border:"none"},
   button:{background:"#3b82f6",color:"white",padding:"10px",border:"none",borderRadius:"6px",cursor:"pointer"},
   buttonDanger:{background:"#ef4444",color:"white",padding:"10px 15px",border:"none",borderRadius:"6px",cursor:"pointer"},
-  buttonEdit:{background:"#facc15",border:"none",borderRadius:"5px",padding:"4px 8px",marginRight:"5px",cursor:"pointer"},
+  buttonEdit:{background:"#facc15",border:"none",borderRadius:"5px",padding:"4px 8px",cursor:"pointer"},
   buttonDelete:{background:"#ef4444",border:"none",borderRadius:"5px",padding:"4px 8px",cursor:"pointer"},
   buttonCenter:{display:"flex",justifyContent:"center"},
   tabs:{display:"flex",justifyContent:"center",gap:"10px",marginBottom:"20px",flexWrap:"wrap"},
