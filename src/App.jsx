@@ -91,7 +91,9 @@ function App() {
 
     lista.sort((a, b) => {
       if (!a.fecha || !b.fecha) return 0;
-      return b.fecha.seconds - a.fecha.seconds;
+      const fechaA = a.fecha.seconds ? a.fecha.seconds * 1000 : a.fecha;
+      const fechaB = b.fecha.seconds ? b.fecha.seconds * 1000 : b.fecha;
+      return fechaB - fechaA;
     });
 
     setGastos(lista);
@@ -203,7 +205,29 @@ function App() {
 
       {vista === "dashboard" && (
         <>
-          {/* TU DASHBOARD COMPLETO SIN TOCAR */}
+          <h1 style={styles.title}>💰💶 GESTIÓN MDEKOT 💶💰</h1>
+
+          <div style={styles.selectorRow}>
+            <select value={mesActual} onChange={(e) => setMesActual(Number(e.target.value))} style={styles.select}>
+              {meses.map((mes, index) => (
+                <option key={index} value={index + 1}>{mes}</option>
+              ))}
+            </select>
+            <input type="number" value={anioActual} onChange={(e) => setAnioActual(Number(e.target.value))} style={styles.select} />
+          </div>
+
+          <div style={styles.balanceCard}>
+            {balance > 0 && <h2>Jessica debe {balance.toFixed(2)} € a Mirko</h2>}
+            {balance < 0 && <h2>Mirko debe {Math.abs(balance).toFixed(2)} € a Jessica</h2>}
+            {balance === 0 && <h2>⚖️ Estáis en empate</h2>}
+          </div>
+
+          <div style={styles.grid}>
+            <div style={styles.card}>
+              <h3>· TOTAL GASTOS ·</h3>
+              <h2>{totalMes.toFixed(2)} €</h2>
+            </div>
+          </div>
         </>
       )}
 
