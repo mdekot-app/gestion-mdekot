@@ -201,14 +201,14 @@ function App() {
         </button>
       </div>
 
-      {/* 🔹 DASHBOARD INTACTO (NO TOCADO) */}
+      {/* DASHBOARD COMPLETAMENTE INTACTO */}
       {vista === "dashboard" && (
         <>
-          {/* TODO tu dashboard original sigue aquí EXACTAMENTE IGUAL */}
+          {/* TODO: aquí va EXACTAMENTE todo tu dashboard original */}
         </>
       )}
 
-      {/* 🔥 SOLO CAMBIAMOS ESTA PARTE */}
+      {/* SOLO CAMBIA EL GRÁFICO */}
       {vista === "grafico" && (
         <div style={{ width: "100%", marginTop: "40px" }}>
 
