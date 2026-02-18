@@ -38,6 +38,12 @@ function App() {
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
+  // ===== LISTA COMPRA =====
+  const [productos, setProductos] = useState([]);
+  const [nuevoProducto, setNuevoProducto] = useState("");
+  const [productoEditando, setProductoEditando] = useState(null);
+  const [editProductoNombre, setEditProductoNombre] = useState("");
+
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -101,6 +107,51 @@ function App() {
   useEffect(() => {
     calcularBalance();
   }, [mesActual, anioActual]);
+
+  // ===== CARGAR LISTA COMPRA =====
+  const cargarProductos = async () => {
+    const snapshot = await getDocs(collection(db, "listaCompra"));
+    let lista = [];
+    snapshot.forEach((docu) => {
+      lista.push({ id: docu.id, ...docu.data() });
+    });
+    setProductos(lista);
+  };
+
+  useEffect(() => {
+    cargarProductos();
+  }, []);
+
+  const agregarProducto = async () => {
+    if (!nuevoProducto.trim()) return;
+    await addDoc(collection(db, "listaCompra"), {
+      nombre: nuevoProducto.trim(),
+      comprado: false,
+      fecha: new Date()
+    });
+    setNuevoProducto("");
+    cargarProductos();
+  };
+
+  const toggleComprado = async (producto) => {
+    await updateDoc(doc(db, "listaCompra", producto.id), {
+      comprado: !producto.comprado
+    });
+    cargarProductos();
+  };
+
+  const eliminarProducto = async (producto) => {
+    await deleteDoc(doc(db, "listaCompra", producto.id));
+    cargarProductos();
+  };
+
+  const guardarEdicionProducto = async () => {
+    await updateDoc(doc(db, "listaCompra", productoEditando.id), {
+      nombre: editProductoNombre
+    });
+    setProductoEditando(null);
+    cargarProductos();
+  };
 
   const agregarGasto = async () => {
     if (!importe || !comercio) return;
@@ -199,7 +250,73 @@ function App() {
         <button onClick={() => setVista("grafico")} style={vista === "grafico" ? styles.tabActive : styles.tab}>
           Gráfico Mensual
         </button>
+        <button onClick={() => setVista("lista")} style={vista === "lista" ? styles.tabActive : styles.tab}>
+          Lista de la Compra
+        </button>
       </div>
+
+      {/* ===== LISTA COMPRA ===== */}
+      {vista === "lista" && (
+        <>
+          <h1 style={styles.title}>🛒 LISTA DE LA COMPRA</h1>
+
+          <div style={styles.cardFull}>
+            <div style={styles.formContainer}>
+              <input
+                type="text"
+                placeholder="Añadir producto..."
+                value={nuevoProducto}
+                onChange={(e) => setNuevoProducto(e.target.value)}
+                style={styles.input}
+              />
+              <button onClick={agregarProducto} style={styles.button}>
+                Añadir
+              </button>
+            </div>
+          </div>
+
+          <div style={styles.card}>
+            {productos.length === 0 && <p>No hay productos en la lista</p>}
+
+            {productos.map((p) => (
+              <div key={p.id} style={{...styles.gastoItem, opacity: p.comprado ? 0.5 : 1}}>
+                <div style={{display:"flex", alignItems:"center", gap:"10px"}}>
+                  <input
+                    type="checkbox"
+                    checked={p.comprado}
+                    onChange={() => toggleComprado(p)}
+                  />
+                  <span style={{textDecoration: p.comprado ? "line-through" : "none"}}>
+                    {p.nombre}
+                  </span>
+                </div>
+
+                <div style={{display:"flex", gap:"8px"}}>
+                  <button onClick={() => {setProductoEditando(p); setEditProductoNombre(p.nombre);}} style={styles.buttonEdit}>✏</button>
+                  <button onClick={() => eliminarProducto(p)} style={styles.buttonDelete}>🗑</button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {productoEditando && (
+            <div style={styles.modalOverlay}>
+              <div style={styles.modal}>
+                <h3>✏ Editar Producto</h3>
+                <input
+                  value={editProductoNombre}
+                  onChange={(e) => setEditProductoNombre(e.target.value)}
+                  style={styles.input}
+                />
+                <div style={{ display:"flex", justifyContent:"space-between", marginTop:"10px" }}>
+                  <button onClick={() => setProductoEditando(null)} style={styles.button}>Cancelar</button>
+                  <button onClick={guardarEdicionProducto} style={styles.buttonDanger}>Guardar</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* DASHBOARD */}
       {vista === "dashboard" && (
