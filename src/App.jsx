@@ -177,6 +177,11 @@ function App() {
     resumenComercio[g.comercio] += g.importe;
   });
 
+  const dataGrafico = Object.entries(resumenComercio).map(([nombre, total]) => ({
+    nombre,
+    total
+  }));
+
   let totalMirko = 0;
   let totalJessica = 0;
 
@@ -234,10 +239,8 @@ function App() {
           <div style={styles.grid}>
             <div style={styles.card}>
               <h3>· GASTOS DEL MES ·</h3>
-
               {gastos.map((g) => (
                 <div key={g.id} style={{ ...styles.gastoItem, flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center" }}>
-
                   {isMobile ? (
                     <>
                       <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -250,7 +253,6 @@ function App() {
                           {Number(g.importe).toFixed(2)} €
                         </span>
                       </div>
-
                       <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "6px" }}>
                         <button onClick={() => abrirModalEditar(g)} style={styles.buttonEdit}>✏</button>
                         <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDelete}>🗑</button>
@@ -263,21 +265,17 @@ function App() {
                           ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" })
                           : "--/--"}{" - "}{g.comercio}
                       </span>
-
                       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <span style={{ minWidth: "90px", textAlign: "right", fontWeight: "600" }}>
                           {Number(g.importe).toFixed(2)} €
                         </span>
-
                         <button onClick={() => abrirModalEditar(g)} style={styles.buttonEdit}>✏</button>
                         <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDelete}>🗑</button>
                       </div>
                     </>
                   )}
-
                 </div>
               ))}
-
             </div>
 
             <div style={styles.card}>
@@ -335,8 +333,31 @@ function App() {
               </div>
             </div>
           )}
-
         </>
+      )}
+
+      {vista === "grafico" && (
+        <div style={{ width: "100%", height: "500px", marginTop: "40px" }}>
+          <h2 style={{ textAlign: "center", marginBottom: "20px" }}>
+            📊 Distribución por Comercio
+          </h2>
+
+          {dataGrafico.length === 0 ? (
+            <p style={{ textAlign: "center" }}>No hay datos este mes</p>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dataGrafico}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="nombre" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="total" fill="#3b82f6">
+                  <LabelList dataKey="total" position="top" />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
       )}
 
     </div>
