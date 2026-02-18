@@ -202,79 +202,151 @@ function App() {
       </div>
 
       {vista === "dashboard" && (
-        <>
-          {/* TODO: TU DASHBOARD ORIGINAL SIGUE EXACTAMENTE IGUAL */}
-        </>
-      )}
+  <>
+    <h1 style={styles.title}>💰💶 GESTIÓN MDEKOT 💶💰</h1>
 
-      {vista === "grafico" && (
-        <div style={{ width: "100%", marginTop: "40px" }}>
-
-          <h2 style={{ textAlign: "center", marginBottom: "30px" }}>
-            📊 Distribución por Comercio
-          </h2>
-
-          {dataGrafico.length === 0 ? (
-            <p style={{ textAlign: "center" }}>No hay datos este mes</p>
-          ) : (
-            <>
-              <div style={{ width: "100%", height: "400px" }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={dataGrafico}
-                      dataKey="total"
-                      nameKey="nombre"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={80}
-                      outerRadius={140}
-                      paddingAngle={3}
-                    >
-                      {dataGrafico.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={
-                            ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4"][index % 6]
-                          }
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div
-                style={{
-                  marginTop: "40px",
-                  display: "flex",
-                  justifyContent: "center",
-                  gap: "60px",
-                  flexWrap: "wrap"
-                }}
-              >
-                <div style={{ textAlign: "center" }}>
-                  <h3>Mirko</h3>
-                  <p style={{ fontSize: "20px", fontWeight: "600" }}>
-                    {totalMirko.toFixed(2)} €
-                  </p>
-                </div>
-
-                <div style={{ textAlign: "center" }}>
-                  <h3>Jessica</h3>
-                  <p style={{ fontSize: "20px", fontWeight: "600" }}>
-                    {totalJessica.toFixed(2)} €
-                  </p>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
+    <div style={styles.selectorRow}>
+      <select value={mesActual} onChange={(e) => setMesActual(Number(e.target.value))} style={styles.select}>
+        {meses.map((mes, index) => (
+          <option key={index} value={index + 1}>{mes}</option>
+        ))}
+      </select>
+      <input type="number" value={anioActual} onChange={(e) => setAnioActual(Number(e.target.value))} style={styles.select} />
     </div>
-  );
+
+    <div style={styles.balanceCard}>
+      {balance > 0 && <h2>Jessica debe {balance.toFixed(2)} € a Mirko</h2>}
+      {balance < 0 && <h2>Mirko debe {Math.abs(balance).toFixed(2)} € a Jessica</h2>}
+      {balance === 0 && <h2>⚖️ Estáis en empate</h2>}
+    </div>
+
+    <div style={styles.cardFull}>
+      <h3>· Añadir Nuevo Gasto ·</h3>
+      <div style={styles.formContainer}>
+        <input type="text" placeholder="Comercio" value={comercio} onChange={(e) => setComercio(e.target.value)} style={styles.input}/>
+        <input type="number" placeholder="Importe" value={importe} onChange={(e) => setImporte(e.target.value)} style={styles.input}/>
+        <select value={pagadoPor} onChange={(e) => setPagadoPor(e.target.value)} style={styles.input}>
+          <option value="mdekot@gmail.com">Mirko</option>
+          <option value="jessica.alca87@gmail.com">Jessica</option>
+        </select>
+        <button onClick={agregarGasto} style={styles.button}>Guardar</button>
+      </div>
+    </div>
+
+    <div style={styles.grid}>
+      <div style={styles.card}>
+        <h3>· GASTOS DEL MES ·</h3>
+        {gastos.map((g) => (
+          <div key={g.id} style={{ ...styles.gastoItem, flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "stretch" : "center" }}>
+            <span>
+              {g.fecha
+                ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" })
+                : "--/--"}{" - "}{g.comercio}
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <span style={{ minWidth: "90px", textAlign: "right", fontWeight: "600" }}>
+                {Number(g.importe).toFixed(2)} €
+              </span>
+              <button onClick={() => abrirModalEditar(g)} style={styles.buttonEdit}>✏</button>
+              <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDelete}>🗑</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={styles.card}>
+        <h3>· TOTAL POR COMERCIO ·</h3>
+        {Object.entries(resumenComercio).map(([nombre, total]) => (
+          <p key={nombre}>{nombre} → {total.toFixed(2)} €</p>
+        ))}
+      </div>
+
+      <div style={styles.card}>
+        <h3>· GASTO INDIVIDUAL ·</h3>
+        <p>Mirko → {totalMirko.toFixed(2)} €</p>
+        <p>Jessica → {totalJessica.toFixed(2)} €</p>
+      </div>
+
+      <div style={styles.card}>
+        <h3>· TOTAL GASTOS ·</h3>
+        <h2>{totalMes.toFixed(2)} €</h2>
+      </div>
+    </div>
+
+    <div style={styles.buttonCenter}>
+      <button onClick={liquidarMes} style={styles.buttonDanger}>Liquidar mes</button>
+    </div>
+  </>
+)}
+
+{vista === "grafico" && (
+  <div style={{ width: "100%", marginTop: "40px" }}>
+
+    <h2 style={{ textAlign: "center", marginBottom: "30px" }}>
+      📊 Distribución por Comercio
+    </h2>
+
+    {dataGrafico.length === 0 ? (
+      <p style={{ textAlign: "center" }}>No hay datos este mes</p>
+    ) : (
+      <>
+        <div style={{ width: "100%", height: "400px" }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={dataGrafico}
+                dataKey="total"
+                nameKey="nombre"
+                cx="50%"
+                cy="50%"
+                innerRadius={80}
+                outerRadius={140}
+                paddingAngle={3}
+              >
+                {dataGrafico.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={
+                      ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4"][index % 6]
+                    }
+                  />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div
+          style={{
+            marginTop: "40px",
+            display: "flex",
+            justifyContent: "center",
+            gap: "60px",
+            flexWrap: "wrap"
+          }}
+        >
+          <div style={{ textAlign: "center" }}>
+            <h3>Mirko</h3>
+            <p style={{ fontSize: "20px", fontWeight: "600" }}>
+              {totalMirko.toFixed(2)} €
+            </p>
+          </div>
+
+          <div style={{ textAlign: "center" }}>
+            <h3>Jessica</h3>
+            <p style={{ fontSize: "20px", fontWeight: "600" }}>
+              {totalJessica.toFixed(2)} €
+            </p>
+          </div>
+        </div>
+      </>
+    )}
+  </div>
+)}
+
+</div>
+);
 }
 
 const styles = {
