@@ -18,7 +18,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  Tooltip,
   ResponsiveContainer
 } from "recharts";
 
@@ -706,7 +705,6 @@ function App() {
                         />
                       ))}
                     </Pie>
-                    <Tooltip />
 
                     {/* ✅ Centro blanco + total gastado */}
                     <circle cx="50%" cy="50%" r="78" fill="white" />
