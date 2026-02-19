@@ -43,6 +43,7 @@ function App() {
   const [nuevoProducto, setNuevoProducto] = useState("");
   const [productoEditando, setProductoEditando] = useState(null);
   const [editProductoNombre, setEditProductoNombre] = useState("");
+  const [productoAEliminar, setProductoAEliminar] = useState(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -108,13 +109,14 @@ function App() {
     calcularBalance();
   }, [mesActual, anioActual]);
 
-  // ===== CARGAR LISTA COMPRA =====
+  // ===== LISTA COMPRA =====
   const cargarProductos = async () => {
     const snapshot = await getDocs(collection(db, "listaCompra"));
     let lista = [];
     snapshot.forEach((docu) => {
       lista.push({ id: docu.id, ...docu.data() });
     });
+    lista.sort((a, b) => b.fecha?.seconds - a.fecha?.seconds);
     setProductos(lista);
   };
 
@@ -142,6 +144,12 @@ function App() {
 
   const eliminarProducto = async (producto) => {
     await deleteDoc(doc(db, "listaCompra", producto.id));
+    cargarProductos();
+  };
+
+  const confirmarEliminarProducto = async () => {
+    await deleteDoc(doc(db, "listaCompra", productoAEliminar.id));
+    setProductoAEliminar(null);
     cargarProductos();
   };
 
@@ -293,7 +301,7 @@ function App() {
 
                 <div style={{display:"flex", gap:"8px"}}>
                   <button onClick={() => {setProductoEditando(p); setEditProductoNombre(p.nombre);}} style={styles.buttonEdit}>✏</button>
-                  <button onClick={() => eliminarProducto(p)} style={styles.buttonDelete}>🗑</button>
+                  <button onClick={() => setProductoAEliminar(p)} style={styles.buttonDelete}>🗑</button>
                 </div>
               </div>
             ))}
@@ -315,10 +323,25 @@ function App() {
               </div>
             </div>
           )}
+
+          {productoAEliminar && (
+            <div style={styles.modalOverlay}>
+              <div style={styles.modal}>
+                <h3>🗑 Confirmar eliminación</h3>
+                <p style={{marginBottom:"20px"}}>
+                  ¿Eliminar "{productoAEliminar.nombre}" de la lista?
+                </p>
+                <div style={{ display:"flex", justifyContent:"space-between" }}>
+                  <button onClick={() => setProductoAEliminar(null)} style={styles.button}>Cancelar</button>
+                  <button onClick={confirmarEliminarProducto} style={styles.buttonDanger}>Eliminar</button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
 
-      {/* DASHBOARD */}
+      {/* ===== DASHBOARD ORIGINAL ===== */}
       {vista === "dashboard" && (
         <>
           <h1 style={styles.title}>💰💶 GESTIÓN MDEKOT 💶💰</h1>
@@ -427,7 +450,6 @@ function App() {
             <button onClick={liquidarMes} style={styles.buttonDanger}>Liquidar mes</button>
           </div>
 
-          {/* MODALES */}
           {gastoEditando && (
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
@@ -460,11 +482,10 @@ function App() {
               </div>
             </div>
           )}
-
         </>
       )}
 
-      {/* GRAFICO DONUT */}
+      {/* ===== GRAFICO ORIGINAL ===== */}
       {vista === "grafico" && (
         <div style={{ width: "100%", marginTop: "40px" }}>
 
