@@ -417,12 +417,14 @@ function App() {
                   {lista.length === 0 && <p>No hay productos</p>}
 
                   {lista.map((p) => (
-                    <div key={p.id} style={{...styles.gastoItem, opacity: p.comprado ? 0.5 : 1}}>
-                      <div style={{display:"flex", alignItems:"center", gap:"10px"}}>
+                    <div key={p.id} style={styles.gastoItem}>
+                      {/* ✅ solo se “apaga” el lado izquierdo (check + texto), los botones quedan 100% */}
+                      <div style={{display:"flex", alignItems:"center", gap:"10px", opacity: p.comprado ? 0.5 : 1}}>
                         <input
                           type="checkbox"
                           checked={p.comprado}
                           onChange={() => toggleComprado(p)}
+                          style={{ accentColor: "#22c55e" }}   // ✅ check verde
                         />
                         <span style={{textDecoration: p.comprado ? "line-through" : "none"}}>
                           {p.nombre}
