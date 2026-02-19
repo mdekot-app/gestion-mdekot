@@ -5,7 +5,10 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  doc
+  doc,
+  onSnapshot,
+  query,
+  writeBatch
 } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -43,7 +46,16 @@ function App() {
   const [nuevoProducto, setNuevoProducto] = useState("");
   const [productoEditando, setProductoEditando] = useState(null);
   const [editProductoNombre, setEditProductoNombre] = useState("");
+  const [editProductoComercio, setEditProductoComercio] = useState("MERCADONA");
   const [productoAEliminar, setProductoAEliminar] = useState(null);
+  const [limpiarCompradosComercio, setLimpiarCompradosComercio] = useState(null);
+
+  const COMERCIOS = ["MERCADONA", "LIDL", "ALCAMPO", "CARREFOUR"];
+
+  const normalizarProducto = (p) => {
+    const comercioNormalizado = (p.comercio || "MERCADONA").toString().trim().toUpperCase();
+    return { ...p, comercio: COMERCIOS.includes(comercioNormalizado) ? comercioNormalizado : "MERCADONA" };
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -106,7 +118,44 @@ function App() {
   };
 
   useEffect(() => {
-    calcularBalance();
+    const q = query(collection(db, "gastos"));
+    const unsub = onSnapshot(q, (snapshot) => {
+
+      let totalPagado = 0;
+      let totalDebe = 0;
+      let lista = [];
+
+      snapshot.forEach((documento) => {
+        const data = documento.data();
+
+        if (
+          data.mes === mesActual &&
+          data.anio === anioActual &&
+          data.liquidado === false
+        ) {
+          lista.push({ id: documento.id, ...data });
+
+          const parte = data.importe / data.participantesCount;
+
+          if (data.pagadoPor === "mdekot@gmail.com") {
+            totalPagado += data.importe;
+            totalDebe += parte;
+          } else {
+            totalDebe += parte;
+          }
+        }
+      });
+
+      lista.sort((a, b) => {
+        if (!a.fecha || !b.fecha) return 0;
+        return b.fecha.seconds - a.fecha.seconds;
+      });
+
+      setGastos(lista);
+      setBalance(totalPagado - totalDebe);
+    });
+
+    return () => unsub();
   }, [mesActual, anioActual]);
 
   // ===== LISTA COMPRA =====
@@ -114,51 +163,81 @@ function App() {
     const snapshot = await getDocs(collection(db, "listaCompra"));
     let lista = [];
     snapshot.forEach((docu) => {
-      lista.push({ id: docu.id, ...docu.data() });
+      lista.push(normalizarProducto({ id: docu.id, ...docu.data() }));
     });
-    lista.sort((a, b) => b.fecha?.seconds - a.fecha?.seconds);
+    lista.sort((a, b) => (b.fecha?.seconds || 0) - (a.fecha?.seconds || 0));
     setProductos(lista);
   };
 
   useEffect(() => {
-    cargarProductos();
+    const q = query(collection(db, "listaCompra"));
+    const unsub = onSnapshot(q, (snapshot) => {
+      let lista = [];
+      snapshot.forEach((docu) => {
+        lista.push(normalizarProducto({ id: docu.id, ...docu.data() }));
+      });
+      lista.sort((a, b) => (b.fecha?.seconds || 0) - (a.fecha?.seconds || 0));
+      setProductos(lista);
+    });
+
+    return () => unsub();
   }, []);
 
-  const agregarProducto = async () => {
+  const agregarProductoPorComercio = async (comercioObjetivo) => {
     if (!nuevoProducto.trim()) return;
     await addDoc(collection(db, "listaCompra"), {
       nombre: nuevoProducto.trim(),
       comprado: false,
-      fecha: new Date()
+      fecha: new Date(),
+      comercio: comercioObjetivo
     });
     setNuevoProducto("");
-    cargarProductos();
   };
 
   const toggleComprado = async (producto) => {
     await updateDoc(doc(db, "listaCompra", producto.id), {
       comprado: !producto.comprado
     });
-    cargarProductos();
   };
 
   const eliminarProducto = async (producto) => {
     await deleteDoc(doc(db, "listaCompra", producto.id));
-    cargarProductos();
   };
 
   const confirmarEliminarProducto = async () => {
     await deleteDoc(doc(db, "listaCompra", productoAEliminar.id));
     setProductoAEliminar(null);
-    cargarProductos();
   };
 
   const guardarEdicionProducto = async () => {
     await updateDoc(doc(db, "listaCompra", productoEditando.id), {
-      nombre: editProductoNombre
+      nombre: editProductoNombre,
+      comercio: editProductoComercio
     });
     setProductoEditando(null);
-    cargarProductos();
+  };
+
+  const limpiarComprados = async (comercioObjetivo) => {
+    const comprados = productos.filter(p => p.comercio === comercioObjetivo && p.comprado);
+    if (comprados.length === 0) return;
+    setLimpiarCompradosComercio(comercioObjetivo);
+  };
+
+  const confirmarLimpiarComprados = async () => {
+    if (!limpiarCompradosComercio) return;
+
+    const comprados = productos.filter(p => p.comercio === limpiarCompradosComercio && p.comprado);
+    if (comprados.length === 0) {
+      setLimpiarCompradosComercio(null);
+      return;
+    }
+
+    const batch = writeBatch(db);
+    comprados.forEach((p) => {
+      batch.delete(doc(db, "listaCompra", p.id));
+    });
+    await batch.commit();
+    setLimpiarCompradosComercio(null);
   };
 
   const agregarGasto = async () => {
@@ -181,13 +260,11 @@ function App() {
 
     setImporte("");
     setComercio("");
-    calcularBalance();
   };
 
   const confirmarEliminar = async () => {
     await deleteDoc(doc(db, "gastos", gastoAEliminar.id));
     setGastoAEliminar(null);
-    calcularBalance();
   };
 
   const abrirModalEditar = (gasto) => {
@@ -205,7 +282,6 @@ function App() {
     });
 
     setGastoEditando(null);
-    calcularBalance();
   };
 
   const liquidarMes = async () => {
@@ -223,8 +299,6 @@ function App() {
         });
       }
     });
-
-    calcularBalance();
   };
 
   const resumenComercio = {};
@@ -248,6 +322,19 @@ function App() {
 
   const totalMes = totalMirko + totalJessica;
 
+  const ordenarProductos = (lista) => {
+    return [...lista].sort((a, b) => {
+      const aC = a.comprado ? 1 : 0;
+      const bC = b.comprado ? 1 : 0;
+      if (aC !== bC) return aC - bC;
+      return (b.fecha?.seconds || 0) - (a.fecha?.seconds || 0);
+    });
+  };
+
+  const totalCompradosPorComercio = limpiarCompradosComercio
+    ? productos.filter(p => p.comercio === limpiarCompradosComercio && p.comprado).length
+    : 0;
+
   return (
     <div style={styles.container}>
 
@@ -268,43 +355,55 @@ function App() {
         <>
           <h1 style={styles.title}>🛒 LISTA DE LA COMPRA</h1>
 
-          <div style={styles.cardFull}>
-            <div style={styles.formContainer}>
-              <input
-                type="text"
-                placeholder="Añadir producto..."
-                value={nuevoProducto}
-                onChange={(e) => setNuevoProducto(e.target.value)}
-                style={styles.input}
-              />
-              <button onClick={agregarProducto} style={styles.button}>
-                Añadir
-              </button>
-            </div>
-          </div>
+          <div style={{...styles.grid, gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)"}}>
+            {COMERCIOS.map((c) => {
+              const productosDeEste = ordenarProductos(productos.filter(p => p.comercio === c));
+              return (
+                <div key={c} style={styles.card}>
+                  <h3>· {c} ·</h3>
 
-          <div style={styles.card}>
-            {productos.length === 0 && <p>No hay productos en la lista</p>}
+                  <div style={{...styles.formContainer, maxWidth:"100%"}}>
+                    <input
+                      type="text"
+                      placeholder="Añadir producto..."
+                      value={nuevoProducto}
+                      onChange={(e) => setNuevoProducto(e.target.value)}
+                      style={styles.input}
+                    />
+                    <button onClick={() => agregarProductoPorComercio(c)} style={styles.button}>
+                      Añadir
+                    </button>
+                    <button onClick={() => limpiarComprados(c)} style={styles.buttonDanger}>
+                      Limpiar comprados
+                    </button>
+                  </div>
 
-            {productos.map((p) => (
-              <div key={p.id} style={{...styles.gastoItem, opacity: p.comprado ? 0.5 : 1}}>
-                <div style={{display:"flex", alignItems:"center", gap:"10px"}}>
-                  <input
-                    type="checkbox"
-                    checked={p.comprado}
-                    onChange={() => toggleComprado(p)}
-                  />
-                  <span style={{textDecoration: p.comprado ? "line-through" : "none"}}>
-                    {p.nombre}
-                  </span>
+                  <div style={{marginTop:"10px", textAlign:"left"}}>
+                    {productosDeEste.length === 0 && <p style={{textAlign:"center"}}>No hay productos</p>}
+
+                    {productosDeEste.map((p) => (
+                      <div key={p.id} style={{...styles.gastoItem, opacity: p.comprado ? 0.5 : 1}}>
+                        <div style={{display:"flex", alignItems:"center", gap:"10px"}}>
+                          <input
+                            type="checkbox"
+                            checked={p.comprado}
+                            onChange={() => toggleComprado(p)}
+                          />
+                          <span style={{textDecoration: p.comprado ? "line-through" : "none"}}>
+                            {p.nombre}
+                          </span>
+                        </div>
+
+                        <div style={{display:"flex", gap:"8px"}}>
+                          <button onClick={() => {setProductoEditando(p); setEditProductoNombre(p.nombre); setEditProductoComercio(p.comercio || "MERCADONA");}} style={styles.buttonEdit}>✏</button>
+                          <button onClick={() => setProductoAEliminar(p)} style={styles.buttonDelete}>🗑</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-
-                <div style={{display:"flex", gap:"8px"}}>
-                  <button onClick={() => {setProductoEditando(p); setEditProductoNombre(p.nombre);}} style={styles.buttonEdit}>✏</button>
-                  <button onClick={() => setProductoAEliminar(p)} style={styles.buttonDelete}>🗑</button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {productoEditando && (
@@ -316,6 +415,11 @@ function App() {
                   onChange={(e) => setEditProductoNombre(e.target.value)}
                   style={styles.input}
                 />
+                <select value={editProductoComercio} onChange={(e) => setEditProductoComercio(e.target.value)} style={styles.input}>
+                  {COMERCIOS.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
                 <div style={{ display:"flex", justifyContent:"space-between", marginTop:"10px" }}>
                   <button onClick={() => setProductoEditando(null)} style={styles.button}>Cancelar</button>
                   <button onClick={guardarEdicionProducto} style={styles.buttonDanger}>Guardar</button>
@@ -334,6 +438,21 @@ function App() {
                 <div style={{ display:"flex", justifyContent:"space-between" }}>
                   <button onClick={() => setProductoAEliminar(null)} style={styles.button}>Cancelar</button>
                   <button onClick={confirmarEliminarProducto} style={styles.buttonDanger}>Eliminar</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {limpiarCompradosComercio && (
+            <div style={styles.modalOverlay}>
+              <div style={styles.modal}>
+                <h3>🧹 Limpiar comprados</h3>
+                <p style={{marginBottom:"20px"}}>
+                  ¿Eliminar {totalCompradosPorComercio} producto(s) ya comprados de {limpiarCompradosComercio}?
+                </p>
+                <div style={{ display:"flex", justifyContent:"space-between" }}>
+                  <button onClick={() => setLimpiarCompradosComercio(null)} style={styles.button}>Cancelar</button>
+                  <button onClick={confirmarLimpiarComprados} style={styles.buttonDanger}>Eliminar</button>
                 </div>
               </div>
             </div>
