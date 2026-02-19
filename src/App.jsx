@@ -414,13 +414,6 @@ function App() {
                     </button>
                   </div>
 
-                  {/* LIMPIAR COMPRADOS ABAJO */}
-                  <div style={{display:"flex",justifyContent:"center",marginBottom:"12px"}}>
-                    <button onClick={() => limpiarComprados(s.key)} style={styles.buttonDanger}>
-                      Limpiar comprados
-                    </button>
-                  </div>
-
                   {lista.length === 0 && <p>No hay productos</p>}
 
                   {lista.map((p) => (
@@ -442,6 +435,13 @@ function App() {
                       </div>
                     </div>
                   ))}
+
+                  {/* ✅ LIMPIAR COMPRADOS ABAJO DE LA LISTA */}
+                  <div style={{display:"flex",justifyContent:"center",marginTop:"14px"}}>
+                    <button onClick={() => limpiarComprados(s.key)} style={styles.buttonDanger}>
+                      Limpiar comprados
+                    </button>
+                  </div>
 
                   {/* modal limpiar comprados (por super) */}
                   {limpiarCompradosConfirm.open && limpiarCompradosConfirm.superKey === s.key && (
