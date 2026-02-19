@@ -75,10 +75,13 @@ function App() {
   const [superEditando, setSuperEditando] = useState(null);
   const [editSuperNombre, setEditSuperNombre] = useState("");
 
-  // ===== LIQUIDACIÓN (NUEVO) =====
+  // ===== LIQUIDACIÓN =====
   const [liquidarConfirmOpen, setLiquidarConfirmOpen] = useState(false);
   // estadoDeuda: null | "paid" | "unpaid"
   const [estadoDeuda, setEstadoDeuda] = useState(null);
+
+  // ✅ Guardamos también lo que viene de Firestore para comparar con la deuda actual
+  const [liquidacionGuardada, setLiquidacionGuardada] = useState(null); // { status, debtor, creditor, amount }
 
   useEffect(() => {
     const handleResize = () => {
@@ -159,7 +162,7 @@ function App() {
     return () => unsub();
   }, [mesActual, anioActual]);
 
-  // ===== CARGAR ESTADO DE LIQUIDACIÓN POR MES/AÑO (NUEVO) =====
+  // ===== CARGAR ESTADO DE LIQUIDACIÓN POR MES/AÑO =====
   useEffect(() => {
     const cargarEstadoLiquidacion = async () => {
       try {
@@ -167,18 +170,51 @@ function App() {
         const snap = await getDoc(ref);
         if (snap.exists()) {
           const data = snap.data() || {};
-          setEstadoDeuda(data.status || null);
+          setLiquidacionGuardada({
+            status: data.status || null,
+            debtor: data.debtor || "",
+            creditor: data.creditor || "",
+            amount: typeof data.amount === "number" ? data.amount : 0
+          });
         } else {
-          setEstadoDeuda(null);
+          setLiquidacionGuardada(null);
         }
       } catch (e) {
         console.error(e);
-        setEstadoDeuda(null);
+        setLiquidacionGuardada(null);
       }
     };
     cargarEstadoLiquidacion();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mesActual, anioActual]);
+  }, [idLiquidacion]);
+
+  // ✅ CLAVE: si la deuda actual no coincide con la guardada, NO mostramos paid/unpaid
+  useEffect(() => {
+    if (balance === 0) {
+      setEstadoDeuda(null);
+      return;
+    }
+
+    if (!liquidacionGuardada || !liquidacionGuardada.status) {
+      setEstadoDeuda(null);
+      return;
+    }
+
+    const actual = getDebtInfo(balance);
+
+    const mismoDeudor = (liquidacionGuardada.debtor || "") === actual.debtorName;
+    const mismoAcreedor = (liquidacionGuardada.creditor || "") === actual.creditorName;
+
+    // Comparación segura de importes (dos decimales)
+    const actualAmount2 = Number(actual.amount.toFixed(2));
+    const guardadoAmount2 = Number(Number(liquidacionGuardada.amount || 0).toFixed(2));
+    const mismoImporte = actualAmount2 === guardadoAmount2;
+
+    if (mismoDeudor && mismoAcreedor && mismoImporte) {
+      setEstadoDeuda(liquidacionGuardada.status);
+    } else {
+      setEstadoDeuda(null);
+    }
+  }, [balance, liquidacionGuardada]);
 
   // ===== NOMBRES SUPERS (FIRESTORE CONFIG) =====
   useEffect(() => {
@@ -367,9 +403,9 @@ function App() {
     setGastoEditando(null);
   };
 
-  // ===== LIQUIDAR MES (NUEVO: NO BORRA NADA, SOLO PREGUNTA Y CAMBIA EL ESTADO) =====
+  // ===== LIQUIDAR MES (NO BORRA NADA) =====
   const liquidarMes = () => {
-    if (balance === 0) return; // si queréis, luego le metemos un modal de "no hay deuda"
+    if (balance === 0) return;
     setLiquidarConfirmOpen(true);
   };
 
@@ -377,11 +413,21 @@ function App() {
     const info = getDebtInfo(balance);
     if (!info.debtorName || info.amount === 0) {
       setEstadoDeuda(null);
+      setLiquidacionGuardada(null);
       setLiquidarConfirmOpen(false);
       return;
     }
 
+    // estado local inmediato
     setEstadoDeuda(status);
+
+    // también actualizamos el “guardado” local para que el efecto compare bien
+    setLiquidacionGuardada({
+      status,
+      debtor: info.debtorName,
+      creditor: info.creditorName,
+      amount: Number(Number(info.amount).toFixed(2))
+    });
 
     try {
       await setDoc(
@@ -392,7 +438,7 @@ function App() {
           anio: anioActual,
           debtor: info.debtorName,
           creditor: info.creditorName,
-          amount: Number(info.amount),
+          amount: Number(Number(info.amount).toFixed(2)),
           updatedAt: new Date()
         },
         { merge: true }
@@ -425,7 +471,6 @@ function App() {
 
   const totalMes = totalMirko + totalJessica;
 
-  // ===== TEXTO + ESTILO DE LA TARJETA DE BALANCE (NUEVO) =====
   const debtInfo = getDebtInfo(balance);
 
   const getBalanceCardStyle = () => {
@@ -438,11 +483,10 @@ function App() {
   const renderBalanceText = () => {
     if (balance === 0) return <h2>⚖️ Estáis en empate</h2>;
 
-    // Si hay estado guardado, mostramos el mensaje en MAYÚSCULAS y texto negro
     if (estadoDeuda === "paid") {
       return (
         <h2 style={styles.balanceCardBigText}>
-          {`${debtInfo.debtorName} A PAGADO LA DEUDA DE ${debtInfo.amount.toFixed(2)} €`}
+          {`${debtInfo.debtorName} HA PAGADO LA DEUDA DE ${debtInfo.amount.toFixed(2)} €`}
         </h2>
       );
     }
@@ -450,12 +494,11 @@ function App() {
     if (estadoDeuda === "unpaid") {
       return (
         <h2 style={styles.balanceCardBigText}>
-          {`${debtInfo.debtorName} NO A PAGADO LA DEUDA DE ${debtInfo.amount.toFixed(2)} €`}
+          {`${debtInfo.debtorName} NO HA PAGADO LA DEUDA DE ${debtInfo.amount.toFixed(2)} €`}
         </h2>
       );
     }
 
-    // Estado normal (sin confirmar)
     if (balance > 0) return <h2>Jessica debe {balance.toFixed(2)} € a Mirko</h2>;
     return <h2>Mirko debe {Math.abs(balance).toFixed(2)} € a Jessica</h2>;
   };
@@ -619,7 +662,6 @@ function App() {
             <input type="number" value={anioActual} onChange={(e) => setAnioActual(Number(e.target.value))} style={styles.select} />
           </div>
 
-          {/* ✅ BALANCE CARD con estado pagado/no pagado */}
           <div style={getBalanceCardStyle()}>
             {renderBalanceText()}
           </div>
@@ -731,7 +773,6 @@ function App() {
             </button>
           </div>
 
-          {/* ✅ MODAL SÍ/NO PARA LIQUIDACIÓN (NUEVO) */}
           {liquidarConfirmOpen && balance !== 0 && (
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
@@ -816,7 +857,6 @@ function App() {
                       ))}
                     </Pie>
 
-                    {/* ✅ Centro blanco + total gastado */}
                     <circle cx="50%" cy="50%" r="78" fill="white" />
                     <text
                       x="50%"
@@ -841,7 +881,6 @@ function App() {
                 </ResponsiveContainer>
               </div>
 
-              {/* ✅ LISTA CON COLORES */}
               <div style={styles.legendBox}>
                 {dataGrafico
                   .slice()
