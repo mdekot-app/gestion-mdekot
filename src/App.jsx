@@ -160,7 +160,6 @@ function App() {
           setNombresSupers(defaults);
         }
       } catch (e) {
-        // si no hay permisos o falla, no rompe la app
         console.error(e);
       }
     };
@@ -352,9 +351,16 @@ function App() {
     resumenComercio[g.comercio] += g.importe;
   });
 
+  const COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4"];
+
   const dataGrafico = Object.entries(resumenComercio).map(([nombre, total]) => ({
     nombre,
     total
+  })).sort((a, b) => b.total - a.total);
+
+  const dataGraficoConColor = dataGrafico.map((d, i) => ({
+    ...d,
+    color: COLORS[i % COLORS.length]
   }));
 
   let totalMirko = 0;
@@ -400,7 +406,6 @@ function App() {
                     <button onClick={() => abrirEditarSuper(s.key)} style={styles.buttonSuperEdit} title="Renombrar supermercado">✎</button>
                   </div>
 
-                  {/* INPUT + AÑADIR EN LA MISMA LÍNEA */}
                   <div style={styles.superFormRow}>
                     <input
                       type="text"
@@ -417,14 +422,12 @@ function App() {
                   {lista.length === 0 && <p>No hay productos</p>}
 
                   {lista.map((p) => (
-                    <div key={p.id} style={styles.gastoItem}>
-                      {/* ✅ solo se “apaga” el lado izquierdo (check + texto), los botones quedan 100% */}
-                      <div style={{display:"flex", alignItems:"center", gap:"10px", opacity: p.comprado ? 0.5 : 1}}>
+                    <div key={p.id} style={{...styles.gastoItem, opacity: p.comprado ? 0.5 : 1}}>
+                      <div style={{display:"flex", alignItems:"center", gap:"10px"}}>
                         <input
                           type="checkbox"
                           checked={p.comprado}
                           onChange={() => toggleComprado(p)}
-                          style={{ accentColor: "#22c55e" }}   // ✅ check verde
                         />
                         <span style={{textDecoration: p.comprado ? "line-through" : "none"}}>
                           {p.nombre}
@@ -438,14 +441,12 @@ function App() {
                     </div>
                   ))}
 
-                  {/* ✅ LIMPIAR COMPRADOS ABAJO DE LA LISTA */}
                   <div style={{display:"flex",justifyContent:"center",marginTop:"14px"}}>
                     <button onClick={() => limpiarComprados(s.key)} style={styles.buttonDanger}>
                       Limpiar comprados
                     </button>
                   </div>
 
-                  {/* modal limpiar comprados (por super) */}
                   {limpiarCompradosConfirm.open && limpiarCompradosConfirm.superKey === s.key && (
                     <div style={styles.modalOverlay}>
                       <div style={styles.modal}>
@@ -465,7 +466,6 @@ function App() {
             })}
           </div>
 
-          {/* modal editar producto */}
           {productoEditando && (
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
@@ -483,7 +483,6 @@ function App() {
             </div>
           )}
 
-          {/* modal borrar producto */}
           {productoAEliminar && (
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
@@ -499,7 +498,6 @@ function App() {
             </div>
           )}
 
-          {/* modal renombrar super */}
           {superEditando && (
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
@@ -671,7 +669,7 @@ function App() {
             📊 Distribución por Comercio
           </h2>
 
-          {dataGrafico.length === 0 ? (
+          {dataGraficoConColor.length === 0 ? (
             <p style={{ textAlign: "center" }}>No hay datos este mes</p>
           ) : (
             <>
@@ -679,7 +677,7 @@ function App() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={dataGrafico}
+                      data={dataGraficoConColor}
                       dataKey="total"
                       nameKey="nombre"
                       cx="50%"
@@ -688,18 +686,49 @@ function App() {
                       outerRadius={140}
                       paddingAngle={3}
                     >
-                      {dataGrafico.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={
-                            ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4"][index % 6]
-                          }
-                        />
+                      {dataGraficoConColor.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
+
+                    {/* ✅ Centro blanco + total gastado */}
+                    <circle cx="50%" cy="50%" r="68" fill="white" />
+                    <text
+                      x="50%"
+                      y="50%"
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      style={{ fill: "#111827", fontSize: "18px", fontWeight: 800 }}
+                    >
+                      {totalMes.toFixed(2)} €
+                    </text>
+                    <text
+                      x="50%"
+                      y="50%"
+                      dy={24}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      style={{ fill: "#111827", fontSize: "12px", fontWeight: 600 }}
+                    >
+                      Total mes
+                    </text>
+
                     <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
+              </div>
+
+              {/* ✅ Lista detallada con color + nombre + total */}
+              <div style={styles.legendBox}>
+                {dataGraficoConColor.map((item) => (
+                  <div key={item.nombre} style={styles.legendRow}>
+                    <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+                      <span style={{ ...styles.legendDot, background: item.color }} />
+                      <span style={styles.legendName}>{item.nombre}</span>
+                    </div>
+                    <span style={styles.legendValue}>{item.total.toFixed(2)} €</span>
+                  </div>
+                ))}
               </div>
 
               <div style={{ marginTop: "40px", display: "flex", justifyContent: "center", gap: "60px", flexWrap: "wrap" }}>
@@ -739,11 +768,9 @@ const styles = {
   gastoItem:{display:"flex",justifyContent:"space-between",marginBottom:"8px"},
   input:{display:"block",width:"100%",marginBottom:"10px",padding:"8px",borderRadius:"6px",border:"none"},
 
-  // ✅ header centrado + botón a la derecha sin mover el texto
   cardHeaderRow:{position:"relative",display:"flex",alignItems:"center",justifyContent:"flex-end",marginBottom:"10px",minHeight:"34px"},
   cardTitle:{position:"absolute",left:"50%",transform:"translateX(-50%)",margin:0,width:"100%",textAlign:"center",pointerEvents:"none"},
 
-  // ✅ input + añadir en la misma línea (y input más estrecho)
   superFormRow:{display:"flex",justifyContent:"center",alignItems:"center",gap:"10px",marginBottom:"10px"},
   inputSuper:{display:"block",width:"70%",maxWidth:"260px",padding:"8px",borderRadius:"6px",border:"none"},
   buttonAddInline:{background:"#3b82f6",color:"white",padding:"10px 14px",border:"none",borderRadius:"6px",cursor:"pointer",whiteSpace:"nowrap"},
@@ -759,8 +786,14 @@ const styles = {
   modalOverlay:{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",justifyContent:"center",alignItems:"center"},
   modal:{background:"#1e293b",padding:"25px",borderRadius:"10px",width:"90%",maxWidth:"320px"},
 
-  // botón turquesa para renombrar súper (distinto al amarillo)
-  buttonSuperEdit:{background:"#06b6d4",color:"white",border:"none",borderRadius:"999px",width:"34px",height:"34px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}
+  buttonSuperEdit:{background:"#06b6d4",color:"white",border:"none",borderRadius:"999px",width:"34px",height:"34px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+
+  // ✅ Leyenda del gráfico
+  legendBox:{maxWidth:"520px",margin:"20px auto 0 auto",background:"#1e293b",padding:"14px 16px",borderRadius:"10px"},
+  legendRow:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.10)"},
+  legendDot:{width:"12px",height:"12px",borderRadius:"999px",display:"inline-block"},
+  legendName:{fontWeight:600},
+  legendValue:{fontWeight:700}
 };
 
 export default App;
