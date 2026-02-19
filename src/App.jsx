@@ -43,7 +43,6 @@ function App() {
 
   // ===== LISTA COMPRA =====
   const [productos, setProductos] = useState([]);
-  const [nuevoProducto, setNuevoProducto] = useState("");
   const [productoEditando, setProductoEditando] = useState(null);
   const [editProductoNombre, setEditProductoNombre] = useState("");
   const [editProductoComercio, setEditProductoComercio] = useState("MERCADONA");
@@ -51,6 +50,25 @@ function App() {
   const [limpiarCompradosComercio, setLimpiarCompradosComercio] = useState(null);
 
   const COMERCIOS = ["MERCADONA", "LIDL", "ALCAMPO", "CARREFOUR"];
+
+  // ✅ NUEVO: input independiente por súper
+  const [nuevoProductoPorComercio, setNuevoProductoPorComercio] = useState({
+    MERCADONA: "",
+    LIDL: "",
+    ALCAMPO: "",
+    CARREFOUR: ""
+  });
+
+  // ✅ NUEVO: nombres editables (solo display, el "key" interno se mantiene)
+  const [nombreComercio, setNombreComercio] = useState({
+    MERCADONA: "MERCADONA",
+    LIDL: "LIDL",
+    ALCAMPO: "ALCAMPO",
+    CARREFOUR: "CARREFOUR"
+  });
+
+  const [superEditandoKey, setSuperEditandoKey] = useState(null);
+  const [editSuperNombre, setEditSuperNombre] = useState("");
 
   const normalizarProducto = (p) => {
     const comercioNormalizado = (p.comercio || "MERCADONA").toString().trim().toUpperCase();
@@ -183,15 +201,22 @@ function App() {
     return () => unsub();
   }, []);
 
+  const cambiarInputComercio = (key, value) => {
+    setNuevoProductoPorComercio((prev) => ({ ...prev, [key]: value }));
+  };
+
   const agregarProductoPorComercio = async (comercioObjetivo) => {
-    if (!nuevoProducto.trim()) return;
+    const texto = (nuevoProductoPorComercio[comercioObjetivo] || "").trim();
+    if (!texto) return;
+
     await addDoc(collection(db, "listaCompra"), {
-      nombre: nuevoProducto.trim(),
+      nombre: texto,
       comprado: false,
       fecha: new Date(),
       comercio: comercioObjetivo
     });
-    setNuevoProducto("");
+
+    setNuevoProductoPorComercio((prev) => ({ ...prev, [comercioObjetivo]: "" }));
   };
 
   const toggleComprado = async (producto) => {
@@ -238,6 +263,17 @@ function App() {
     });
     await batch.commit();
     setLimpiarCompradosComercio(null);
+  };
+
+  const abrirEditarSuper = (key) => {
+    setSuperEditandoKey(key);
+    setEditSuperNombre(nombreComercio[key] || key);
+  };
+
+  const guardarEditarSuper = () => {
+    const limpio = (editSuperNombre || "").trim();
+    setNombreComercio((prev) => ({ ...prev, [superEditandoKey]: limpio ? limpio : superEditandoKey }));
+    setSuperEditandoKey(null);
   };
 
   const agregarGasto = async () => {
@@ -358,16 +394,20 @@ function App() {
           <div style={{...styles.grid, gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)"}}>
             {COMERCIOS.map((c) => {
               const productosDeEste = ordenarProductos(productos.filter(p => p.comercio === c));
+              const nombreVisible = nombreComercio[c] || c;
               return (
                 <div key={c} style={styles.card}>
-                  <h3>· {c} ·</h3>
+                  <div style={styles.cardHeaderRow}>
+                    <h3 style={{margin:0}}>· {nombreVisible} ·</h3>
+                    <button onClick={() => abrirEditarSuper(c)} style={styles.buttonSuperEdit} title="Renombrar supermercado">✎</button>
+                  </div>
 
                   <div style={{...styles.formContainer, maxWidth:"100%"}}>
                     <input
                       type="text"
                       placeholder="Añadir producto..."
-                      value={nuevoProducto}
-                      onChange={(e) => setNuevoProducto(e.target.value)}
+                      value={nuevoProductoPorComercio[c]}
+                      onChange={(e) => cambiarInputComercio(c, e.target.value)}
                       style={styles.input}
                     />
                     <button onClick={() => agregarProductoPorComercio(c)} style={styles.button}>
@@ -417,7 +457,7 @@ function App() {
                 />
                 <select value={editProductoComercio} onChange={(e) => setEditProductoComercio(e.target.value)} style={styles.input}>
                   {COMERCIOS.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>{nombreComercio[c] || c}</option>
                   ))}
                 </select>
                 <div style={{ display:"flex", justifyContent:"space-between", marginTop:"10px" }}>
@@ -448,11 +488,28 @@ function App() {
               <div style={styles.modal}>
                 <h3>🧹 Limpiar comprados</h3>
                 <p style={{marginBottom:"20px"}}>
-                  ¿Eliminar {totalCompradosPorComercio} producto(s) ya comprados de {limpiarCompradosComercio}?
+                  ¿Eliminar {totalCompradosPorComercio} producto(s) ya comprados de {nombreComercio[limpiarCompradosComercio] || limpiarCompradosComercio}?
                 </p>
                 <div style={{ display:"flex", justifyContent:"space-between" }}>
                   <button onClick={() => setLimpiarCompradosComercio(null)} style={styles.button}>Cancelar</button>
                   <button onClick={confirmarLimpiarComprados} style={styles.buttonDanger}>Eliminar</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {superEditandoKey && (
+            <div style={styles.modalOverlay}>
+              <div style={styles.modal}>
+                <h3>🏪 Renombrar Supermercado</h3>
+                <input
+                  value={editSuperNombre}
+                  onChange={(e) => setEditSuperNombre(e.target.value)}
+                  style={styles.input}
+                />
+                <div style={{ display:"flex", justifyContent:"space-between", marginTop:"10px" }}>
+                  <button onClick={() => setSuperEditandoKey(null)} style={styles.button}>Cancelar</button>
+                  <button onClick={guardarEditarSuper} style={styles.buttonDanger}>Guardar</button>
                 </div>
               </div>
             </div>
@@ -677,12 +734,14 @@ const styles = {
   formContainer:{width:"100%",maxWidth:"500px",margin:"0 auto"},
   grid:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))",gap:"20px",marginBottom:"30px"},
   card:{background:"#1e293b",padding:"20px",borderRadius:"10px",textAlign:"center"},
+  cardHeaderRow:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"10px"},
   gastoItem:{display:"flex",justifyContent:"space-between",marginBottom:"8px"},
   input:{display:"block",width:"100%",marginBottom:"10px",padding:"8px",borderRadius:"6px",border:"none"},
   button:{background:"#3b82f6",color:"white",padding:"10px",border:"none",borderRadius:"6px",cursor:"pointer"},
   buttonDanger:{background:"#ef4444",color:"white",padding:"10px 15px",border:"none",borderRadius:"6px",cursor:"pointer"},
   buttonEdit:{background:"#facc15",border:"none",borderRadius:"5px",padding:"4px 8px",marginRight:"5px",cursor:"pointer"},
   buttonDelete:{background:"#ef4444",border:"none",borderRadius:"5px",padding:"4px 8px",cursor:"pointer"},
+  buttonSuperEdit:{background:"#06b6d4",color:"white",border:"none",borderRadius:"999px",width:"30px",height:"30px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
   buttonCenter:{display:"flex",justifyContent:"center"},
   tabs:{display:"flex",justifyContent:"center",gap:"10px",marginBottom:"20px",flexWrap:"wrap"},
   tab:{background:"#1e293b",color:"white",padding:"10px 20px",border:"none",borderRadius:"6px",cursor:"pointer"},
