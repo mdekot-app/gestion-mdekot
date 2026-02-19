@@ -75,6 +75,11 @@ function App() {
   const [superEditando, setSuperEditando] = useState(null);
   const [editSuperNombre, setEditSuperNombre] = useState("");
 
+  // ===== LIQUIDACIÓN (NUEVO) =====
+  const [liquidarConfirmOpen, setLiquidarConfirmOpen] = useState(false);
+  // estadoDeuda: null | "paid" | "unpaid"
+  const [estadoDeuda, setEstadoDeuda] = useState(null);
+
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -99,6 +104,18 @@ function App() {
   };
 
   const COLORES_GRAFICO = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4"];
+
+  const getDebtInfo = (bal) => {
+    if (bal > 0) {
+      return { debtorName: "Jessica", creditorName: "Mirko", amount: bal };
+    }
+    if (bal < 0) {
+      return { debtorName: "Mirko", creditorName: "Jessica", amount: Math.abs(bal) };
+    }
+    return { debtorName: "", creditorName: "", amount: 0 };
+  };
+
+  const idLiquidacion = `${anioActual}-${String(mesActual).padStart(2, "0")}`;
 
   // ===== GASTOS (TIEMPO REAL) =====
   useEffect(() => {
@@ -140,6 +157,27 @@ function App() {
     });
 
     return () => unsub();
+  }, [mesActual, anioActual]);
+
+  // ===== CARGAR ESTADO DE LIQUIDACIÓN POR MES/AÑO (NUEVO) =====
+  useEffect(() => {
+    const cargarEstadoLiquidacion = async () => {
+      try {
+        const ref = doc(db, "liquidaciones", idLiquidacion);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data() || {};
+          setEstadoDeuda(data.status || null);
+        } else {
+          setEstadoDeuda(null);
+        }
+      } catch (e) {
+        console.error(e);
+        setEstadoDeuda(null);
+      }
+    };
+    cargarEstadoLiquidacion();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mesActual, anioActual]);
 
   // ===== NOMBRES SUPERS (FIRESTORE CONFIG) =====
@@ -329,21 +367,41 @@ function App() {
     setGastoEditando(null);
   };
 
-  const liquidarMes = async () => {
-    const snapshot = await getDocs(collection(db, "gastos"));
+  // ===== LIQUIDAR MES (NUEVO: NO BORRA NADA, SOLO PREGUNTA Y CAMBIA EL ESTADO) =====
+  const liquidarMes = () => {
+    if (balance === 0) return; // si queréis, luego le metemos un modal de "no hay deuda"
+    setLiquidarConfirmOpen(true);
+  };
 
-    snapshot.forEach(async (documento) => {
-      const data = documento.data();
-      if (
-        data.mes === mesActual &&
-        data.anio === anioActual &&
-        data.liquidado === false
-      ) {
-        await updateDoc(doc(db, "gastos", documento.id), {
-          liquidado: true
-        });
-      }
-    });
+  const guardarEstadoLiquidacion = async (status) => {
+    const info = getDebtInfo(balance);
+    if (!info.debtorName || info.amount === 0) {
+      setEstadoDeuda(null);
+      setLiquidarConfirmOpen(false);
+      return;
+    }
+
+    setEstadoDeuda(status);
+
+    try {
+      await setDoc(
+        doc(db, "liquidaciones", idLiquidacion),
+        {
+          status,
+          mes: mesActual,
+          anio: anioActual,
+          debtor: info.debtorName,
+          creditor: info.creditorName,
+          amount: Number(info.amount),
+          updatedAt: new Date()
+        },
+        { merge: true }
+      );
+    } catch (e) {
+      console.error(e);
+    }
+
+    setLiquidarConfirmOpen(false);
   };
 
   const resumenComercio = {};
@@ -366,6 +424,41 @@ function App() {
   });
 
   const totalMes = totalMirko + totalJessica;
+
+  // ===== TEXTO + ESTILO DE LA TARJETA DE BALANCE (NUEVO) =====
+  const debtInfo = getDebtInfo(balance);
+
+  const getBalanceCardStyle = () => {
+    if (balance === 0) return styles.balanceCard;
+    if (estadoDeuda === "paid") return { ...styles.balanceCard, ...styles.balanceCardPaid };
+    if (estadoDeuda === "unpaid") return { ...styles.balanceCard, ...styles.balanceCardUnpaid };
+    return styles.balanceCard;
+  };
+
+  const renderBalanceText = () => {
+    if (balance === 0) return <h2>⚖️ Estáis en empate</h2>;
+
+    // Si hay estado guardado, mostramos el mensaje en MAYÚSCULAS y texto negro
+    if (estadoDeuda === "paid") {
+      return (
+        <h2 style={styles.balanceCardBigText}>
+          {`${debtInfo.debtorName} A PAGADO LA DEUDA DE ${debtInfo.amount.toFixed(2)} €`}
+        </h2>
+      );
+    }
+
+    if (estadoDeuda === "unpaid") {
+      return (
+        <h2 style={styles.balanceCardBigText}>
+          {`${debtInfo.debtorName} NO A PAGADO LA DEUDA DE ${debtInfo.amount.toFixed(2)} €`}
+        </h2>
+      );
+    }
+
+    // Estado normal (sin confirmar)
+    if (balance > 0) return <h2>Jessica debe {balance.toFixed(2)} € a Mirko</h2>;
+    return <h2>Mirko debe {Math.abs(balance).toFixed(2)} € a Jessica</h2>;
+  };
 
   return (
     <div style={styles.container}>
@@ -417,13 +510,12 @@ function App() {
 
                   {lista.map((p) => (
                     <div key={p.id} style={styles.gastoItem}>
-                      {/* ✅ solo baja la “intensidad” del lado izquierdo, NO de los botones */}
                       <div style={{display:"flex", alignItems:"center", gap:"10px", opacity: p.comprado ? 0.55 : 1}}>
                         <input
                           type="checkbox"
                           checked={p.comprado}
                           onChange={() => toggleComprado(p)}
-                          style={{ accentColor: "#22c55e" }}  // ✅ checkbox verde
+                          style={{ accentColor: "#22c55e" }}
                         />
                         <span style={{textDecoration: p.comprado ? "line-through" : "none"}}>
                           {p.nombre}
@@ -513,7 +605,7 @@ function App() {
         </>
       )}
 
-      {/* ===== DASHBOARD ORIGINAL ===== */}
+      {/* ===== DASHBOARD ===== */}
       {vista === "dashboard" && (
         <>
           <h1 style={styles.title}>💰💶 GESTIÓN MDEKOT 💶💰</h1>
@@ -527,10 +619,9 @@ function App() {
             <input type="number" value={anioActual} onChange={(e) => setAnioActual(Number(e.target.value))} style={styles.select} />
           </div>
 
-          <div style={styles.balanceCard}>
-            {balance > 0 && <h2>Jessica debe {balance.toFixed(2)} € a Mirko</h2>}
-            {balance < 0 && <h2>Mirko debe {Math.abs(balance).toFixed(2)} € a Jessica</h2>}
-            {balance === 0 && <h2>⚖️ Estáis en empate</h2>}
+          {/* ✅ BALANCE CARD con estado pagado/no pagado */}
+          <div style={getBalanceCardStyle()}>
+            {renderBalanceText()}
           </div>
 
           <div style={styles.cardFull}>
@@ -635,8 +726,27 @@ function App() {
           </div>
 
           <div style={styles.buttonCenter}>
-            <button onClick={liquidarMes} style={styles.buttonDanger}>Liquidar mes</button>
+            <button onClick={liquidarMes} style={styles.buttonDanger} disabled={balance === 0}>
+              Liquidar mes
+            </button>
           </div>
+
+          {/* ✅ MODAL SÍ/NO PARA LIQUIDACIÓN (NUEVO) */}
+          {liquidarConfirmOpen && balance !== 0 && (
+            <div style={styles.modalOverlay}>
+              <div style={styles.modal}>
+                <h3>💸 LIQUIDAR MES</h3>
+                <p style={{marginBottom:"18px"}}>
+                  ¿{debtInfo.debtorName.toUpperCase()} HA PAGADO LA DEUDA DE {debtInfo.amount.toFixed(2)} €?
+                </p>
+                <div style={{ display:"flex", justifyContent:"space-between", gap:"10px" }}>
+                  <button onClick={() => setLiquidarConfirmOpen(false)} style={styles.button}>Cancelar</button>
+                  <button onClick={() => guardarEstadoLiquidacion("unpaid")} style={styles.buttonDanger}>NO</button>
+                  <button onClick={() => guardarEstadoLiquidacion("paid")} style={styles.buttonPaid}>SÍ</button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {gastoEditando && (
             <div style={styles.modalOverlay}>
@@ -673,7 +783,7 @@ function App() {
         </>
       )}
 
-      {/* ===== GRAFICO ORIGINAL ===== */}
+      {/* ===== GRAFICO ===== */}
       {vista === "grafico" && (
         <div style={{ width: "100%", marginTop: "40px" }}>
 
@@ -731,7 +841,7 @@ function App() {
                 </ResponsiveContainer>
               </div>
 
-              {/* ✅ LISTA CON COLORES (como antes) */}
+              {/* ✅ LISTA CON COLORES */}
               <div style={styles.legendBox}>
                 {dataGrafico
                   .slice()
@@ -781,7 +891,12 @@ const styles = {
   title:{fontSize:"32px",marginBottom:"20px",textAlign:"center"},
   selectorRow:{display:"flex",gap:"10px",marginBottom:"20px",flexWrap:"wrap"},
   select:{padding:"8px",borderRadius:"6px"},
+
   balanceCard:{background:"#1e293b",padding:"20px",borderRadius:"10px",marginBottom:"30px",textAlign:"center",maxWidth:"600px",margin:"0 auto 30px auto"},
+  balanceCardPaid:{background:"#22c55e"},
+  balanceCardUnpaid:{background:"#ef4444"},
+  balanceCardBigText:{color:"#111827",textTransform:"uppercase",fontWeight:900},
+
   cardFull:{background:"#1e293b",padding:"20px",borderRadius:"10px",marginBottom:"30px",textAlign:"center"},
   formContainer:{width:"100%",maxWidth:"500px",margin:"0 auto"},
   grid:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))",gap:"20px",marginBottom:"30px"},
@@ -798,6 +913,8 @@ const styles = {
 
   button:{background:"#3b82f6",color:"white",padding:"10px",border:"none",borderRadius:"6px",cursor:"pointer"},
   buttonDanger:{background:"#ef4444",color:"white",padding:"10px 15px",border:"none",borderRadius:"6px",cursor:"pointer"},
+  buttonPaid:{background:"#22c55e",color:"#111827",padding:"10px 15px",border:"none",borderRadius:"6px",cursor:"pointer",fontWeight:800},
+
   buttonEdit:{background:"#facc15",border:"none",borderRadius:"5px",padding:"4px 8px",marginRight:"5px",cursor:"pointer"},
   buttonDelete:{background:"#ef4444",border:"none",borderRadius:"5px",padding:"4px 8px",cursor:"pointer"},
   buttonCenter:{display:"flex",justifyContent:"center"},
@@ -805,7 +922,7 @@ const styles = {
   tab:{background:"#1e293b",color:"white",padding:"10px 20px",border:"none",borderRadius:"6px",cursor:"pointer"},
   tabActive:{background:"#3b82f6",color:"white",padding:"10px 20px",border:"none",borderRadius:"6px",cursor:"pointer"},
   modalOverlay:{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",justifyContent:"center",alignItems:"center"},
-  modal:{background:"#1e293b",padding:"25px",borderRadius:"10px",width:"90%",maxWidth:"320px"},
+  modal:{background:"#1e293b",padding:"25px",borderRadius:"10px",width:"90%",maxWidth:"340px"},
 
   buttonSuperEdit:{background:"#06b6d4",color:"white",border:"none",borderRadius:"999px",width:"34px",height:"34px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
 
@@ -813,7 +930,6 @@ const styles = {
   payMirko:{background:"#22c55e",color:"white"},
   payJessica:{background:"#ec4899",color:"white"},
 
-  // ✅ leyenda comercios (lista con bolita color + total)
   legendBox:{maxWidth:"650px",margin:"28px auto 0 auto",background:"#1e293b",padding:"18px",borderRadius:"10px"},
   legendRow:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.08)"},
   legendDot:{width:"14px",height:"14px",borderRadius:"999px",display:"inline-block"}
