@@ -42,6 +42,9 @@ function App() {
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
+  // ✅ SOLO MOVIL: selector para elegir supermercado
+  const [superMobile, setSuperMobile] = useState("MERCADONA");
+
   // ===== LISTA COMPRA (4 SUPERS) =====
   const SUPERS = [
     { key: "MERCADONA", defaultName: "MERCADONA" },
@@ -358,6 +361,9 @@ function App() {
 
   const totalCompradosSuper = (superKey) => productos.filter(p => (p.super || "MERCADONA") === superKey && p.comprado).length;
 
+  // ✅ SOLO MOVIL: contador de pendientes para mostrar en el desplegable
+  const totalPendientesSuper = (superKey) => productos.filter(p => (p.super || "MERCADONA") === superKey && !p.comprado).length;
+
   // ===== GASTOS =====
   const agregarGasto = async () => {
     if (!importe || !comercio) return;
@@ -523,79 +529,171 @@ function App() {
         <>
           <h1 style={styles.title}>🛒 LISTA DE LA COMPRA</h1>
 
-          <div style={styles.grid}>
-            {SUPERS.map((s) => {
-              const lista = productosOrdenadosPorSuper(s.key);
-              const nombreVisible = nombresSupers[s.key] || s.defaultName;
-              const totalComprados = totalCompradosSuper(s.key);
+          {isMobile ? (
+            <>
+              <div style={{ display:"flex", justifyContent:"center", marginBottom:"14px" }}>
+                <select value={superMobile} onChange={(e) => setSuperMobile(e.target.value)} style={styles.select}>
+                  {SUPERS.map((s) => {
+                    const nombreVisible = nombresSupers[s.key] || s.defaultName;
+                    const pendientes = totalPendientesSuper(s.key);
+                    return (
+                      <option key={s.key} value={s.key}>
+                        {nombreVisible} ({pendientes})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
 
-              return (
-                <div key={s.key} style={styles.card}>
-                  <div style={styles.cardHeaderRow}>
-                    <h3 style={styles.cardTitle}>· {nombreVisible} ·</h3>
-                    <button onClick={() => abrirEditarSuper(s.key)} style={styles.buttonSuperEdit} title="Renombrar supermercado">✎</button>
-                  </div>
+              <div style={styles.grid}>
+                {SUPERS.filter(s => s.key === superMobile).map((s) => {
+                  const lista = productosOrdenadosPorSuper(s.key);
+                  const nombreVisible = nombresSupers[s.key] || s.defaultName;
+                  const totalComprados = totalCompradosSuper(s.key);
 
-                  <div style={styles.superFormRow}>
-                    <input
-                      type="text"
-                      placeholder="Añadir producto..."
-                      value={inputsSuper[s.key] || ""}
-                      onChange={(e) => setInputSuper(s.key, e.target.value)}
-                      style={styles.inputSuper}
-                    />
-                    <button onClick={() => agregarProducto(s.key)} style={styles.buttonAddInline}>
-                      Añadir
-                    </button>
-                  </div>
+                  return (
+                    <div key={s.key} style={styles.card}>
+                      <div style={styles.cardHeaderRow}>
+                        <h3 style={styles.cardTitle}>· {nombreVisible} ·</h3>
+                        <button onClick={() => abrirEditarSuper(s.key)} style={styles.buttonSuperEdit} title="Renombrar supermercado">✎</button>
+                      </div>
 
-                  {lista.length === 0 && <p>No hay productos</p>}
-
-                  {lista.map((p) => (
-                    <div key={p.id} style={styles.gastoItem}>
-                      <div style={{display:"flex", alignItems:"center", gap:"10px", opacity: p.comprado ? 0.55 : 1}}>
+                      <div style={styles.superFormRow}>
                         <input
-                          type="checkbox"
-                          checked={p.comprado}
-                          onChange={() => toggleComprado(p)}
-                          style={{ accentColor: "#22c55e" }}
+                          type="text"
+                          placeholder="Añadir producto..."
+                          value={inputsSuper[s.key] || ""}
+                          onChange={(e) => setInputSuper(s.key, e.target.value)}
+                          style={styles.inputSuper}
                         />
-                        <span style={{textDecoration: p.comprado ? "line-through" : "none"}}>
-                          {p.nombre}
-                        </span>
+                        <button onClick={() => agregarProducto(s.key)} style={styles.buttonAddInline}>
+                          Añadir
+                        </button>
                       </div>
 
-                      <div style={{display:"flex", gap:"8px"}}>
-                        <button onClick={() => {setProductoEditando(p); setEditProductoNombre(p.nombre);}} style={styles.buttonEdit}>✏</button>
-                        <button onClick={() => setProductoAEliminar(p)} style={styles.buttonDelete}>🗑</button>
+                      {lista.length === 0 && <p>No hay productos</p>}
+
+                      {lista.map((p) => (
+                        <div key={p.id} style={styles.gastoItem}>
+                          <div style={{display:"flex", alignItems:"center", gap:"10px", opacity: p.comprado ? 0.55 : 1}}>
+                            <input
+                              type="checkbox"
+                              checked={p.comprado}
+                              onChange={() => toggleComprado(p)}
+                              style={{ accentColor: "#22c55e" }}
+                            />
+                            <span style={{textDecoration: p.comprado ? "line-through" : "none"}}>
+                              {p.nombre}
+                            </span>
+                          </div>
+
+                          <div style={{display:"flex", gap:"8px"}}>
+                            <button onClick={() => {setProductoEditando(p); setEditProductoNombre(p.nombre);}} style={styles.buttonEdit}>✏</button>
+                            <button onClick={() => setProductoAEliminar(p)} style={styles.buttonDelete}>🗑</button>
+                          </div>
+                        </div>
+                      ))}
+
+                      <div style={{display:"flex",justifyContent:"center",marginTop:"14px"}}>
+                        <button onClick={() => limpiarComprados(s.key)} style={styles.buttonDanger}>
+                          Limpiar comprados
+                        </button>
                       </div>
+
+                      {limpiarCompradosConfirm.open && limpiarCompradosConfirm.superKey === s.key && (
+                        <div style={styles.modalOverlay}>
+                          <div style={styles.modal}>
+                            <h3>🧹 Limpiar comprados</h3>
+                            <p style={{marginBottom:"20px"}}>
+                              ¿Eliminar {totalComprados} producto(s) ya comprados de {nombreVisible}?
+                            </p>
+                            <div style={{ display:"flex", justifyContent:"space-between" }}>
+                              <button onClick={() => setLimpiarCompradosConfirm({ open:false, superKey:null })} style={styles.button}>Cancelar</button>
+                              <button onClick={confirmarLimpiarComprados} style={styles.buttonDanger}>Eliminar</button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  ))}
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <div style={styles.grid}>
+              {SUPERS.map((s) => {
+                const lista = productosOrdenadosPorSuper(s.key);
+                const nombreVisible = nombresSupers[s.key] || s.defaultName;
+                const totalComprados = totalCompradosSuper(s.key);
 
-                  <div style={{display:"flex",justifyContent:"center",marginTop:"14px"}}>
-                    <button onClick={() => limpiarComprados(s.key)} style={styles.buttonDanger}>
-                      Limpiar comprados
-                    </button>
-                  </div>
+                return (
+                  <div key={s.key} style={styles.card}>
+                    <div style={styles.cardHeaderRow}>
+                      <h3 style={styles.cardTitle}>· {nombreVisible} ·</h3>
+                      <button onClick={() => abrirEditarSuper(s.key)} style={styles.buttonSuperEdit} title="Renombrar supermercado">✎</button>
+                    </div>
 
-                  {limpiarCompradosConfirm.open && limpiarCompradosConfirm.superKey === s.key && (
-                    <div style={styles.modalOverlay}>
-                      <div style={styles.modal}>
-                        <h3>🧹 Limpiar comprados</h3>
-                        <p style={{marginBottom:"20px"}}>
-                          ¿Eliminar {totalComprados} producto(s) ya comprados de {nombreVisible}?
-                        </p>
-                        <div style={{ display:"flex", justifyContent:"space-between" }}>
-                          <button onClick={() => setLimpiarCompradosConfirm({ open:false, superKey:null })} style={styles.button}>Cancelar</button>
-                          <button onClick={confirmarLimpiarComprados} style={styles.buttonDanger}>Eliminar</button>
+                    <div style={styles.superFormRow}>
+                      <input
+                        type="text"
+                        placeholder="Añadir producto..."
+                        value={inputsSuper[s.key] || ""}
+                        onChange={(e) => setInputSuper(s.key, e.target.value)}
+                        style={styles.inputSuper}
+                      />
+                      <button onClick={() => agregarProducto(s.key)} style={styles.buttonAddInline}>
+                        Añadir
+                      </button>
+                    </div>
+
+                    {lista.length === 0 && <p>No hay productos</p>}
+
+                    {lista.map((p) => (
+                      <div key={p.id} style={styles.gastoItem}>
+                        <div style={{display:"flex", alignItems:"center", gap:"10px", opacity: p.comprado ? 0.55 : 1}}>
+                          <input
+                            type="checkbox"
+                            checked={p.comprado}
+                            onChange={() => toggleComprado(p)}
+                            style={{ accentColor: "#22c55e" }}
+                          />
+                          <span style={{textDecoration: p.comprado ? "line-through" : "none"}}>
+                            {p.nombre}
+                          </span>
+                        </div>
+
+                        <div style={{display:"flex", gap:"8px"}}>
+                          <button onClick={() => {setProductoEditando(p); setEditProductoNombre(p.nombre);}} style={styles.buttonEdit}>✏</button>
+                          <button onClick={() => setProductoAEliminar(p)} style={styles.buttonDelete}>🗑</button>
                         </div>
                       </div>
+                    ))}
+
+                    <div style={{display:"flex",justifyContent:"center",marginTop:"14px"}}>
+                      <button onClick={() => limpiarComprados(s.key)} style={styles.buttonDanger}>
+                        Limpiar comprados
+                      </button>
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+
+                    {limpiarCompradosConfirm.open && limpiarCompradosConfirm.superKey === s.key && (
+                      <div style={styles.modalOverlay}>
+                        <div style={styles.modal}>
+                          <h3>🧹 Limpiar comprados</h3>
+                          <p style={{marginBottom:"20px"}}>
+                            ¿Eliminar {totalComprados} producto(s) ya comprados de {nombreVisible}?
+                          </p>
+                          <div style={{ display:"flex", justifyContent:"space-between" }}>
+                            <button onClick={() => setLimpiarCompradosConfirm({ open:false, superKey:null })} style={styles.button}>Cancelar</button>
+                            <button onClick={confirmarLimpiarComprados} style={styles.buttonDanger}>Eliminar</button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {productoEditando && (
             <div style={styles.modalOverlay}>
