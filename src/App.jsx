@@ -111,6 +111,15 @@ function App() {
 
   const COLORES_GRAFICO = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4"];
 
+  // ✅ Color dinámico para evitar repeticiones cuando haya más comercios que colores base
+  const generarColorGrafico = (index, total) => {
+    if (index < COLORES_GRAFICO.length) return COLORES_GRAFICO[index];
+    const offset = index - COLORES_GRAFICO.length;
+    const totalExtra = Math.max(total - COLORES_GRAFICO.length, 1);
+    const hue = Math.round((offset * 360) / totalExtra);
+    return `hsl(${hue}, 68%, 56%)`;
+  };
+
   const getDebtInfo = (bal) => {
     if (bal > 0) {
       return { debtorName: "Jessica", creditorName: "Mirko", amount: bal };
@@ -462,10 +471,19 @@ function App() {
     resumenComercio[g.comercio] += g.importe;
   });
 
-  const dataGrafico = Object.entries(resumenComercio).map(([nombre, total]) => ({
-    nombre,
-    total
+  // ✅ Asignamos color UNA SOLA VEZ por item y lo reutilizamos tanto en donut como en leyenda
+  const dataGraficoBase = Object.entries(resumenComercio)
+    .map(([nombre, total]) => ({ nombre, total }))
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }));
+
+  const dataGrafico = dataGraficoBase.map((item, index) => ({
+    ...item,
+    color: generarColorGrafico(index, dataGraficoBase.length)
   }));
+
+  const dataGraficoOrdenado = dataGrafico
+    .slice()
+    .sort((a, b) => b.total - a.total);
 
   let totalMirko = 0;
   let totalJessica = 0;
@@ -508,6 +526,14 @@ function App() {
     if (balance > 0) return <h2>Jessica debe {balance.toFixed(2)} € a Mirko</h2>;
     return <h2>Mirko debe {Math.abs(balance).toFixed(2)} € a Jessica</h2>;
   };
+
+  // ✅ Mejora visual donut móvil/PC
+  const chartHeight = isMobile ? 320 : 440;
+  const innerRadius = isMobile ? 62 : 96;
+  const outerRadius = isMobile ? 102 : 148;
+  const centerHoleRadius = innerRadius - 10;
+  const centerMainFont = isMobile ? 18 : 24;
+  const centerSubFont = isMobile ? 12 : 14;
 
   return (
     <div style={styles.container}>
@@ -934,7 +960,7 @@ function App() {
             <p style={{ textAlign: "center" }}>No hay datos este mes</p>
           ) : (
             <>
-              <div style={{ width: "100%", height: "400px" }}>
+              <div style={{ width: "100%", height: `${chartHeight}px`, maxWidth: isMobile ? "100%" : "860px", margin: "0 auto" }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -943,35 +969,37 @@ function App() {
                       nameKey="nombre"
                       cx="50%"
                       cy="50%"
-                      innerRadius={90}
-                      outerRadius={140}
-                      paddingAngle={3}
+                      innerRadius={innerRadius}
+                      outerRadius={outerRadius}
+                      paddingAngle={2}
+                      stroke="#ffffff"
+                      strokeWidth={2}
                     >
                       {dataGrafico.map((entry, index) => (
                         <Cell
                           key={`cell-${index}`}
-                          fill={COLORES_GRAFICO[index % COLORES_GRAFICO.length]}
+                          fill={entry.color}
                         />
                       ))}
                     </Pie>
 
-                    <circle cx="50%" cy="50%" r="78" fill="white" />
+                    <circle cx="50%" cy="50%" r={centerHoleRadius} fill="white" />
                     <text
                       x="50%"
                       y="50%"
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      style={{ fill: "#111827", fontSize: "24px", fontWeight: 800 }}
+                      style={{ fill: "#111827", fontSize: `${centerMainFont}px`, fontWeight: 800 }}
                     >
                       {totalMes.toFixed(2)} €
                     </text>
                     <text
                       x="50%"
                       y="50%"
-                      dy={28}
+                      dy={isMobile ? 22 : 28}
                       textAnchor="middle"
                       dominantBaseline="middle"
-                      style={{ fill: "#111827", fontSize: "14px", fontWeight: 600 }}
+                      style={{ fill: "#111827", fontSize: `${centerSubFont}px`, fontWeight: 600 }}
                     >
                       Total gastado
                     </text>
@@ -980,23 +1008,20 @@ function App() {
               </div>
 
               <div style={styles.legendBox}>
-                {dataGrafico
-                  .slice()
-                  .sort((a, b) => b.total - a.total)
-                  .map((item, idx) => (
-                    <div key={item.nombre} style={styles.legendRow}>
-                      <div style={{display:"flex", alignItems:"center", gap:"10px"}}>
-                        <span
-                          style={{
-                            ...styles.legendDot,
-                            background: COLORES_GRAFICO[idx % COLORES_GRAFICO.length]
-                          }}
-                        />
-                        <span style={{fontWeight:700}}>{item.nombre}</span>
-                      </div>
-                      <span style={{fontWeight:700}}>{Number(item.total).toFixed(2)} €</span>
+                {dataGraficoOrdenado.map((item) => (
+                  <div key={item.nombre} style={styles.legendRow}>
+                    <div style={{display:"flex", alignItems:"center", gap:"10px"}}>
+                      <span
+                        style={{
+                          ...styles.legendDot,
+                          background: item.color
+                        }}
+                      />
+                      <span style={{fontWeight:700}}>{item.nombre}</span>
                     </div>
-                  ))}
+                    <span style={{fontWeight:700}}>{Number(item.total).toFixed(2)} €</span>
+                  </div>
+                ))}
               </div>
 
               <div style={{ marginTop: "40px", display: "flex", justifyContent: "center", gap: "60px", flexWrap: "wrap" }}>
