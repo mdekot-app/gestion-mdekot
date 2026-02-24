@@ -684,7 +684,6 @@ function App() {
     return <h2>Mirko debe {Math.abs(balance).toFixed(2)} € a Jessica</h2>;
   };
 
-  // ✅ Mejora visual donut móvil/PC
   const chartHeight = isMobile ? 320 : 440;
   const innerRadius = isMobile ? 62 : 96;
   const outerRadius = isMobile ? 102 : 148;
@@ -692,12 +691,11 @@ function App() {
   const centerMainFont = isMobile ? 18 : 24;
   const centerSubFont = isMobile ? 12 : 14;
 
-  // ===== CALENDARIO UI HELPERS =====
   const diasSemana = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
   const { lastDay } = getMonthRange(calAnio, calMes);
 
-  const firstDowNative = new Date(calAnio, calMes - 1, 1).getDay(); // 0=Dom..6=Sáb
-  const firstDowMonday0 = (firstDowNative + 6) % 7; // 0=Lun..6=Dom
+  const firstDowNative = new Date(calAnio, calMes - 1, 1).getDay();
+  const firstDowMonday0 = (firstDowNative + 6) % 7;
   const totalCeldas = Math.ceil((firstDowMonday0 + lastDay) / 7) * 7;
 
   const buildCalendarCells = () => {
@@ -720,21 +718,12 @@ function App() {
   return (
     <div style={{ ...styles.container, padding: isMobile ? "16px" : "40px" }}>
       <div style={styles.tabs}>
-        <button onClick={() => setVista("dashboard")} style={vista === "dashboard" ? styles.tabActive : styles.tab}>
-          Dashboard
-        </button>
-        <button onClick={() => setVista("grafico")} style={vista === "grafico" ? styles.tabActive : styles.tab}>
-          Gráfico Mensual
-        </button>
-        <button onClick={() => setVista("lista")} style={vista === "lista" ? styles.tabActive : styles.tab}>
-          Lista de la Compra
-        </button>
-        <button onClick={() => setVista("calendario")} style={vista === "calendario" ? styles.tabActive : styles.tab}>
-          Calendario
-        </button>
+        <button onClick={() => setVista("dashboard")} style={vista === "dashboard" ? styles.tabActive : styles.tab}>Dashboard</button>
+        <button onClick={() => setVista("grafico")} style={vista === "grafico" ? styles.tabActive : styles.tab}>Gráfico Mensual</button>
+        <button onClick={() => setVista("lista")} style={vista === "lista" ? styles.tabActive : styles.tab}>Lista de la Compra</button>
+        <button onClick={() => setVista("calendario")} style={vista === "calendario" ? styles.tabActive : styles.tab}>Calendario</button>
       </div>
 
-      {/* ===== CALENDARIO ===== */}
       {vista === "calendario" && (
         <>
           <h1 style={styles.title}>📅 CALENDARIO</h1>
@@ -749,18 +738,14 @@ function App() {
 
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <select value={calMes} onChange={(e) => setCalMes(Number(e.target.value))} style={styles.select}>
-                      {meses.map((m, idx) => (
-                        <option key={m} value={idx + 1}>{m}</option>
-                      ))}
+                      {meses.map((m, idx) => (<option key={m} value={idx + 1}>{m}</option>))}
                     </select>
                     <input type="number" value={calAnio} onChange={(e) => setCalAnio(Number(e.target.value))} style={styles.select} />
                   </div>
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "center" }}>
-                  <button onClick={() => abrirNuevoEvento(ymd(calAnio, calMes, 1))} style={styles.buttonAddCalendar}>
-                    + Nuevo evento
-                  </button>
+                  <button onClick={() => abrirNuevoEvento(ymd(calAnio, calMes, 1))} style={styles.buttonAddCalendar}>+ Nuevo evento</button>
                 </div>
               </div>
             </div>
@@ -782,19 +767,11 @@ function App() {
                   const hasEvents = evs.length > 0;
 
                   return (
-                    <div
-                      key={c.key}
-                      style={{ ...baseCellStyle, ...(c.esHoy ? styles.calCellToday : {}) }}
-                      onClick={() => abrirDetalleDia(c.fechaStr)}
-                      title="Click para ver detalle del día"
-                    >
+                    <div key={c.key} style={{ ...baseCellStyle, ...(c.esHoy ? styles.calCellToday : {}) }} onClick={() => abrirDetalleDia(c.fechaStr)} title="Click para ver detalle del día">
                       <div style={styles.calCellDotTop}>
-                        <span style={{ ...styles.calDayNumber, ...(c.esHoy ? styles.calDayNumberToday : {}) }}>
-                          {c.dayNum}
-                        </span>
+                        <span style={{ ...styles.calDayNumber, ...(c.esHoy ? styles.calDayNumberToday : {}) }}>{c.dayNum}</span>
                       </div>
 
-                      {/* ✅ SOLO 1 PUNTITO VERDE CENTRADO */}
                       {hasEvents ? (
                         <div style={styles.dotCenterWrap}>
                           <span style={isMobile ? styles.dotGreenMobile : styles.dotGreenPc} />
@@ -805,15 +782,10 @@ function App() {
                 })}
               </div>
 
-              {!isMobile && (
-                <div style={{ marginTop: "12px", opacity: 0.8, fontSize: "13px" }}>
-                  Tip: click en un día para ver detalle.
-                </div>
-              )}
+              {!isMobile && <div style={{ marginTop: "12px", opacity: 0.8, fontSize: "13px" }}>Tip: click en un día para ver detalle.</div>}
             </div>
           </div>
 
-          {/* ✅ DETALLE DEL DÍA */}
           {diaDetalleOpen && (
             <div style={styles.modalOverlay}>
               <div style={{ ...styles.modal, maxWidth: "420px" }}>
@@ -825,9 +797,7 @@ function App() {
                 </h3>
 
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px" }}>
-                  <button onClick={() => abrirNuevoEvento(diaDetalleFecha)} style={styles.buttonAddCalendar}>
-                    + Añadir evento a este día
-                  </button>
+                  <button onClick={() => abrirNuevoEvento(diaDetalleFecha)} style={styles.buttonAddCalendar}>+ Añadir evento a este día</button>
                 </div>
 
                 {eventosDelDiaDetalle.length === 0 ? (
@@ -835,23 +805,12 @@ function App() {
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                     {eventosDelDiaDetalle.map((ev, idx) => (
-                      <div
-                        key={ev.id}
-                        style={{ ...styles.dayDetailRow, borderLeft: `10px solid ${colorEventoPorIndice(idx)}` }}
-                      >
+                      <div key={ev.id} style={{ ...styles.dayDetailRow, borderLeft: `10px solid ${colorEventoPorIndice(idx)}` }}>
                         <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "center" }}>
                           <div style={{ minWidth: 0 }}>
-                            <div style={{ fontWeight: 900, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {ev.titulo}
-                            </div>
-                            <div style={{ opacity: 0.9, fontSize: "13px", textAlign: "left" }}>
-                              {ev.hora ? `${ev.hora}` : "00:00"}
-                            </div>
-                            {ev.notas ? (
-                              <div style={{ opacity: 0.9, fontSize: "13px", textAlign: "left", marginTop: "6px" }}>
-                                {ev.notas}
-                              </div>
-                            ) : null}
+                            <div style={{ fontWeight: 900, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ev.titulo}</div>
+                            <div style={{ opacity: 0.9, fontSize: "13px", textAlign: "left" }}>{ev.hora ? `${ev.hora}` : "00:00"}</div>
+                            {ev.notas ? <div style={{ opacity: 0.9, fontSize: "13px", textAlign: "left", marginTop: "6px" }}>{ev.notas}</div> : null}
                           </div>
 
                           <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
@@ -871,7 +830,6 @@ function App() {
             </div>
           )}
 
-          {/* ===== MODAL NUEVO EVENTO (SIN SELECTOR DE TIPO) ===== */}
           {eventoNuevoOpen && (
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
@@ -888,7 +846,6 @@ function App() {
             </div>
           )}
 
-          {/* ===== MODAL EDITAR EVENTO (SIN SELECTOR DE TIPO) ===== */}
           {eventoEditando && (
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
@@ -957,13 +914,7 @@ function App() {
                       </div>
 
                       <div style={styles.superFormRow}>
-                        <input
-                          type="text"
-                          placeholder="Añadir producto..."
-                          value={inputsSuper[s.key] || ""}
-                          onChange={(e) => setInputSuper(s.key, e.target.value)}
-                          style={{ ...styles.inputSuper, width: "100%", maxWidth: "none", minWidth: 0 }}
-                        />
+                        <input type="text" placeholder="Añadir producto..." value={inputsSuper[s.key] || ""} onChange={(e) => setInputSuper(s.key, e.target.value)} style={{ ...styles.inputSuper, width: "100%", maxWidth: "none", minWidth: 0 }} />
                         <button onClick={() => agregarProducto(s.key)} style={styles.buttonAddInline}>Añadir</button>
                       </div>
 
@@ -973,10 +924,7 @@ function App() {
                         <div key={p.id} style={{ ...styles.gastoItem, alignItems: "center", gap: "8px", flexWrap: "nowrap" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "8px", opacity: p.comprado ? 0.55 : 1, flex: 1, minWidth: 0 }}>
                             <input type="checkbox" checked={p.comprado} onChange={() => toggleComprado(p)} style={{ accentColor: "#22c55e", flexShrink: 0 }} />
-                            <span
-                              title={p.nombre}
-                              style={{ textDecoration: p.comprado ? "line-through" : "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: 1, textAlign: "left", fontSize: "14px", lineHeight: 1.2 }}
-                            >
+                            <span title={p.nombre} style={{ textDecoration: p.comprado ? "line-through" : "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: 1, textAlign: "left", fontSize: "14px", lineHeight: 1.2 }}>
                               {p.nombre}
                             </span>
                           </div>
@@ -1107,16 +1055,13 @@ function App() {
         </>
       )}
 
-      {/* ===== DASHBOARD ===== */}
       {vista === "dashboard" && (
         <>
           <h1 style={styles.title}>💰💶 GESTIÓN MDEKOT 💶💰</h1>
 
           <div style={styles.selectorRow}>
             <select value={mesActual} onChange={(e) => setMesActual(Number(e.target.value))} style={styles.select}>
-              {meses.map((mes, index) => (
-                <option key={index} value={index + 1}>{mes}</option>
-              ))}
+              {meses.map((mes, index) => (<option key={index} value={index + 1}>{mes}</option>))}
             </select>
             <input type="number" value={anioActual} onChange={(e) => setAnioActual(Number(e.target.value))} style={styles.select} />
           </div>
@@ -1139,7 +1084,6 @@ function App() {
           <div style={styles.grid}>
             <div style={styles.card}>
               <h3>· GASTOS DEL MES ·</h3>
-
               {gastos.map((g) => {
                 const esMirko = g.pagadoPor === "mdekot@gmail.com";
                 const badgeStyle = esMirko ? styles.payMirko : styles.payJessica;
@@ -1152,10 +1096,7 @@ function App() {
                       <>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0 }}>
                           <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle, flexShrink: 0 }}>{badgeIcon}</span>
-                          <span
-                            title={`${g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"} - ${g.comercio}`}
-                            style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: 1, textAlign: "left", fontSize: "14px", lineHeight: 1.2 }}
-                          >
+                          <span title={`${g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"} - ${g.comercio}`} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: 1, textAlign: "left", fontSize: "14px", lineHeight: 1.2 }}>
                             {g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"}{" "}
                             - {g.comercio}
                           </span>
@@ -1189,9 +1130,7 @@ function App() {
 
             <div style={styles.card}>
               <h3>· TOTAL POR COMERCIO ·</h3>
-              {Object.entries(resumenComercio).map(([nombre, total]) => (
-                <p key={nombre}>{nombre} → {total.toFixed(2)} €</p>
-              ))}
+              {Object.entries(resumenComercio).map(([nombre, total]) => (<p key={nombre}>{nombre} → {total.toFixed(2)} €</p>))}
             </div>
 
             <div style={styles.card}>
@@ -1222,9 +1161,7 @@ function App() {
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
                 <h3>💸 LIQUIDAR MES</h3>
-                <p style={{ marginBottom: "18px" }}>
-                  ¿{debtInfo.debtorName.toUpperCase()} HA PAGADO LA DEUDA DE {debtInfo.amount.toFixed(2)} €?
-                </p>
+                <p style={{ marginBottom: "18px" }}>¿{debtInfo.debtorName.toUpperCase()} HA PAGADO LA DEUDA DE {debtInfo.amount.toFixed(2)} €?</p>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "10px" }}>
                   <button onClick={() => setLiquidarConfirmOpen(false)} style={styles.button}>Cancelar</button>
                   <button onClick={() => guardarEstadoLiquidacion("unpaid")} style={styles.buttonDanger}>NO</button>
@@ -1256,9 +1193,7 @@ function App() {
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
                 <h3>🗑 Confirmar eliminación</h3>
-                <p style={{ marginBottom: "20px" }}>
-                  ¿Eliminar "{gastoAEliminar.comercio}" por {Number(gastoAEliminar.importe).toFixed(2)} €?
-                </p>
+                <p style={{ marginBottom: "20px" }}>¿Eliminar "{gastoAEliminar.comercio}" por {Number(gastoAEliminar.importe).toFixed(2)} €?</p>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <button onClick={() => setGastoAEliminar(null)} style={styles.button}>Cancelar</button>
                   <button onClick={confirmarEliminar} style={styles.buttonDanger}>Eliminar</button>
@@ -1269,7 +1204,6 @@ function App() {
         </>
       )}
 
-      {/* ===== GRAFICO ===== */}
       {vista === "grafico" && (
         <div style={{ width: "100%", marginTop: "40px" }}>
           <h2 style={{ textAlign: "center", marginBottom: "30px" }}>📊 Distribución por Comercio</h2>
@@ -1281,30 +1215,13 @@ function App() {
               <div style={{ width: "100%", height: `${chartHeight}px`, maxWidth: isMobile ? "100%" : "860px", margin: "0 auto" }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie
-                      data={dataGrafico}
-                      dataKey="total"
-                      nameKey="nombre"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={innerRadius}
-                      outerRadius={outerRadius}
-                      paddingAngle={2}
-                      stroke="#ffffff"
-                      strokeWidth={2}
-                    >
-                      {dataGrafico.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
+                    <Pie data={dataGrafico} dataKey="total" nameKey="nombre" cx="50%" cy="50%" innerRadius={innerRadius} outerRadius={outerRadius} paddingAngle={2} stroke="#ffffff" strokeWidth={2}>
+                      {dataGrafico.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.color} />))}
                     </Pie>
 
                     <circle cx="50%" cy="50%" r={centerHoleRadius} fill="white" />
-                    <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" style={{ fill: "#111827", fontSize: `${centerMainFont}px`, fontWeight: 800 }}>
-                      {totalMes.toFixed(2)} €
-                    </text>
-                    <text x="50%" y="50%" dy={isMobile ? 22 : 28} textAnchor="middle" dominantBaseline="middle" style={{ fill: "#111827", fontSize: `${centerSubFont}px`, fontWeight: 600 }}>
-                      Total gastado
-                    </text>
+                    <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" style={{ fill: "#111827", fontSize: `${centerMainFont}px`, fontWeight: 800 }}>{totalMes.toFixed(2)} €</text>
+                    <text x="50%" y="50%" dy={isMobile ? 22 : 28} textAnchor="middle" dominantBaseline="middle" style={{ fill: "#111827", fontSize: `${centerSubFont}px`, fontWeight: 600 }}>Total gastado</text>
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -1399,7 +1316,8 @@ const styles = {
   calendarCardMobile: { padding: "14px 10px", borderRadius: "10px", width: "100vw" },
 
   calWeekHeaderUnified: { display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "6px", marginBottom: "8px" },
-  calWeekHeaderCellUnified: { background: "rgba(255,255,255,0.06)", borderRadius: "8px", padding: "8px 0", fontWeight: 900, fontSize: "12px" },
+  // ✅ centrado
+  calWeekHeaderCellUnified: { background: "rgba(255,255,255,0.06)", borderRadius: "8px", padding: "8px 0", fontWeight: 900, fontSize: "12px", textAlign: "center" },
 
   calGridUnified: { display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "6px" },
 
@@ -1409,8 +1327,9 @@ const styles = {
   calCellEmpty: { background: "rgba(255,255,255,0.03)" },
   calCellToday: { outline: "2px solid rgba(34,197,94,0.9)" },
 
-  calCellDotTop: { display: "flex", alignItems: "flex-start", justifyContent: "flex-start" },
-  calDayNumber: { fontWeight: 900, opacity: 0.9, fontSize: "13px" },
+  // ✅ número del día centrado arriba
+  calCellDotTop: { display: "flex", alignItems: "flex-start", justifyContent: "center" },
+  calDayNumber: { fontWeight: 900, opacity: 0.9, fontSize: "13px", textAlign: "center", width: "100%" },
   calDayNumberToday: { color: "#22c55e" },
 
   dotCenterWrap: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center" },
