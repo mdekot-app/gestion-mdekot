@@ -909,10 +909,25 @@ function App() {
               ))}
             </div>
 
+            {/* ✅ CORREGIDO: emoticonos también en GASTO INDIVIDUAL (PC y móvil) */}
             <div style={styles.card}>
               <h3>· GASTO INDIVIDUAL ·</h3>
-              <p>Mirko → {totalMirko.toFixed(2)} €</p>
-              <p>Jessica → {totalJessica.toFixed(2)} €</p>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "10px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+                  <span title="Pagó Mirko" style={{ ...styles.payIcon, ...styles.payMirko }}>
+                    👨
+                  </span>
+                  <span style={{ fontWeight: "600" }}>Mirko → {totalMirko.toFixed(2)} €</span>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+                  <span title="Pagó Jessica" style={{ ...styles.payIcon, ...styles.payJessica }}>
+                    👩
+                  </span>
+                  <span style={{ fontWeight: "600" }}>Jessica → {totalJessica.toFixed(2)} €</span>
+                </div>
+              </div>
             </div>
 
             <div style={styles.card}>
