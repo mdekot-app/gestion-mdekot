@@ -536,7 +536,7 @@ function App() {
   const centerSubFont = isMobile ? 12 : 14;
 
   return (
-    <div style={styles.container}>
+    <div style={{ ...styles.container, padding: isMobile ? "16px" : "40px" }}>
 
       <div style={styles.tabs}>
         <button onClick={() => setVista("dashboard")} style={vista === "dashboard" ? styles.tabActive : styles.tab}>
@@ -571,14 +571,14 @@ function App() {
                 </select>
               </div>
 
-              <div style={{ ...styles.grid, gridTemplateColumns: "1fr" }}>
+              <div style={{ ...styles.grid, gridTemplateColumns: "1fr", width: "100%", maxWidth: "100%", margin: "0 auto 30px auto" }}>
                 {SUPERS.filter(s => s.key === superMobile).map((s) => {
                   const lista = productosOrdenadosPorSuper(s.key);
                   const nombreVisible = nombresSupers[s.key] || s.defaultName;
                   const totalComprados = totalCompradosSuper(s.key);
 
                   return (
-                    <div key={s.key} style={{ ...styles.card, width: "100%", padding: "16px 12px" }}>
+                    <div key={s.key} style={{ ...styles.card, padding: "16px 12px", margin: "0 auto" }}>
                       <div style={styles.cardHeaderRow}>
                         <h3 style={styles.cardTitle}>· {nombreVisible} ·</h3>
                         <button onClick={() => abrirEditarSuper(s.key)} style={styles.buttonSuperEdit} title="Renombrar supermercado">✎</button>
@@ -1092,14 +1092,14 @@ const styles = {
   cardFull:{background:"#1e293b",padding:"20px",borderRadius:"10px",marginBottom:"30px",textAlign:"center"},
   formContainer:{width:"100%",maxWidth:"500px",margin:"0 auto"},
   grid:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))",gap:"20px",marginBottom:"30px"},
-  card:{background:"#1e293b",padding:"20px",borderRadius:"10px",textAlign:"center"},
+  card:{background:"#1e293b",padding:"20px",borderRadius:"10px",textAlign:"center",boxSizing:"border-box",width:"100%"},
   gastoItem:{display:"flex",justifyContent:"space-between",marginBottom:"8px"},
   input:{display:"block",width:"100%",marginBottom:"10px",padding:"8px",borderRadius:"6px",border:"none"},
 
   cardHeaderRow:{position:"relative",display:"flex",alignItems:"center",justifyContent:"flex-end",marginBottom:"10px",minHeight:"34px"},
   cardTitle:{position:"absolute",left:"50%",transform:"translateX(-50%)",margin:0,width:"100%",textAlign:"center",pointerEvents:"none"},
 
-  superFormRow:{display:"flex",justifyContent:"center",alignItems:"center",gap:"10px",marginBottom:"10px"},
+  superFormRow:{display:"flex",justifyContent:"center",alignItems:"center",gap:"10px",marginBottom:"10px",width:"100%",boxSizing:"border-box"},
   inputSuper:{display:"block",width:"70%",maxWidth:"260px",padding:"8px",borderRadius:"6px",border:"none"},
   buttonAddInline:{background:"#3b82f6",color:"white",padding:"10px 14px",border:"none",borderRadius:"6px",cursor:"pointer",whiteSpace:"nowrap"},
 
