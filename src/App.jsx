@@ -10,7 +10,9 @@ import {
   query,
   writeBatch,
   setDoc,
-  getDoc
+  getDoc,
+  where,
+  orderBy
 } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -85,6 +87,22 @@ function App() {
 
   // ✅ Guardamos también lo que viene de Firestore para comparar con la deuda actual
   const [liquidacionGuardada, setLiquidacionGuardada] = useState(null); // { status, debtor, creditor, amount }
+
+  // ===== CALENDARIO =====
+  const hoy = new Date();
+  const [calMes, setCalMes] = useState(hoy.getMonth() + 1);
+  const [calAnio, setCalAnio] = useState(hoy.getFullYear());
+  const [eventos, setEventos] = useState([]);
+
+  const [eventoNuevoOpen, setEventoNuevoOpen] = useState(false);
+  const [eventoEditando, setEventoEditando] = useState(null);
+  const [eventoAEliminar, setEventoAEliminar] = useState(null);
+
+  const [evTitulo, setEvTitulo] = useState("");
+  const [evTipo, setEvTipo] = useState("CUMPLEAÑOS");
+  const [evFecha, setEvFecha] = useState("");
+  const [evHora, setEvHora] = useState("");
+  const [evNotas, setEvNotas] = useState("");
 
   useEffect(() => {
     const handleResize = () => {
@@ -465,6 +483,135 @@ function App() {
     setLiquidarConfirmOpen(false);
   };
 
+  // ===== CALENDARIO (TIEMPO REAL POR MES) =====
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const ymd = (y, m, d) => `${y}-${pad2(m)}-${pad2(d)}`;
+
+  const getMonthRange = (y, m) => {
+    const start = `${y}-${pad2(m)}-01`;
+    const lastDay = new Date(y, m, 0).getDate();
+    const end = `${y}-${pad2(m)}-${pad2(lastDay)}`;
+    return { start, end, lastDay };
+  };
+
+  useEffect(() => {
+    const { start, end } = getMonthRange(calAnio, calMes);
+    const qEv = query(
+      collection(db, "eventos"),
+      where("fecha", ">=", start),
+      where("fecha", "<=", end),
+      orderBy("fecha", "asc"),
+      orderBy("hora", "asc")
+    );
+
+    const unsub = onSnapshot(qEv, (snapshot) => {
+      let lista = [];
+      snapshot.forEach((docu) => {
+        lista.push({ id: docu.id, ...docu.data() });
+      });
+      setEventos(lista);
+    });
+
+    return () => unsub();
+  }, [calMes, calAnio]);
+
+  const abrirNuevoEvento = (fechaPreseleccionada) => {
+    setEvTitulo("");
+    setEvTipo("CUMPLEAÑOS");
+    setEvNotas("");
+    setEvHora("");
+    setEvFecha(fechaPreseleccionada || ymd(calAnio, calMes, new Date().getDate()));
+    setEventoNuevoOpen(true);
+  };
+
+  const guardarNuevoEvento = async () => {
+    const t = (evTitulo || "").trim();
+    const f = (evFecha || "").trim();
+    if (!t || !f) return;
+
+    await addDoc(collection(db, "eventos"), {
+      titulo: t,
+      tipo: (evTipo || "OTRO").trim(),
+      fecha: f, // YYYY-MM-DD
+      hora: (evHora || "").trim(), // HH:MM opcional
+      notas: (evNotas || "").trim(),
+      createdAt: new Date()
+    });
+
+    setEventoNuevoOpen(false);
+  };
+
+  const abrirEditarEvento = (ev) => {
+    setEventoEditando(ev);
+    setEvTitulo(ev.titulo || "");
+    setEvTipo(ev.tipo || "OTRO");
+    setEvFecha(ev.fecha || "");
+    setEvHora(ev.hora || "");
+    setEvNotas(ev.notas || "");
+  };
+
+  const guardarEdicionEvento = async () => {
+    if (!eventoEditando) return;
+    const t = (evTitulo || "").trim();
+    const f = (evFecha || "").trim();
+    if (!t || !f) return;
+
+    await updateDoc(doc(db, "eventos", eventoEditando.id), {
+      titulo: t,
+      tipo: (evTipo || "OTRO").trim(),
+      fecha: f,
+      hora: (evHora || "").trim(),
+      notas: (evNotas || "").trim(),
+      updatedAt: new Date()
+    });
+
+    setEventoEditando(null);
+  };
+
+  const confirmarEliminarEvento = async () => {
+    if (!eventoAEliminar) return;
+    await deleteDoc(doc(db, "eventos", eventoAEliminar.id));
+    setEventoAEliminar(null);
+  };
+
+  const tipoColor = (tipo) => {
+    const t = (tipo || "").toUpperCase();
+    if (t.includes("CUMPLE")) return "#a855f7";
+    if (t.includes("MÉD") || t.includes("MED")) return "#ef4444";
+    if (t.includes("CITA")) return "#3b82f6";
+    if (t.includes("TRABA")) return "#f59e0b";
+    return "#22c55e";
+  };
+
+  const eventosPorFecha = {};
+  eventos.forEach((ev) => {
+    const f = ev.fecha || "";
+    if (!eventosPorFecha[f]) eventosPorFecha[f] = [];
+    eventosPorFecha[f].push(ev);
+  });
+
+  const irMesAnterior = () => {
+    let m = calMes - 1;
+    let y = calAnio;
+    if (m < 1) { m = 12; y -= 1; }
+    setCalMes(m);
+    setCalAnio(y);
+  };
+
+  const irMesSiguiente = () => {
+    let m = calMes + 1;
+    let y = calAnio;
+    if (m > 12) { m = 1; y += 1; }
+    setCalMes(m);
+    setCalAnio(y);
+  };
+
+  const irHoy = () => {
+    const now = new Date();
+    setCalMes(now.getMonth() + 1);
+    setCalAnio(now.getFullYear());
+  };
+
   const resumenComercio = {};
   gastos.forEach((g) => {
     if (!resumenComercio[g.comercio]) resumenComercio[g.comercio] = 0;
@@ -535,6 +682,31 @@ function App() {
   const centerMainFont = isMobile ? 18 : 24;
   const centerSubFont = isMobile ? 12 : 14;
 
+  // ===== CALENDARIO UI HELPERS =====
+  const diasSemana = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+  const { lastDay } = getMonthRange(calAnio, calMes);
+
+  const firstDowNative = new Date(calAnio, calMes - 1, 1).getDay(); // 0=Dom..6=Sáb
+  const firstDowMonday0 = (firstDowNative + 6) % 7; // 0=Lun..6=Dom
+  const totalCeldas = Math.ceil((firstDowMonday0 + lastDay) / 7) * 7;
+
+  const buildCalendarCells = () => {
+    const celdas = [];
+    for (let i = 0; i < totalCeldas; i++) {
+      const dayNum = i - firstDowMonday0 + 1;
+      if (dayNum < 1 || dayNum > lastDay) {
+        celdas.push({ empty: true, key: `e-${i}` });
+      } else {
+        const fechaStr = ymd(calAnio, calMes, dayNum);
+        const esHoy = fechaStr === ymd(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate());
+        celdas.push({ empty: false, key: fechaStr, dayNum, fechaStr, esHoy });
+      }
+    }
+    return celdas;
+  };
+
+  const calendarCells = buildCalendarCells();
+
   return (
     <div style={{ ...styles.container, padding: isMobile ? "16px" : "40px" }}>
 
@@ -548,7 +720,215 @@ function App() {
         <button onClick={() => setVista("lista")} style={vista === "lista" ? styles.tabActive : styles.tab}>
           Lista de la Compra
         </button>
+        <button onClick={() => setVista("calendario")} style={vista === "calendario" ? styles.tabActive : styles.tab}>
+          Calendario
+        </button>
       </div>
+
+      {/* ===== CALENDARIO ===== */}
+      {vista === "calendario" && (
+        <>
+          <h1 style={styles.title}>📅 CALENDARIO</h1>
+
+          <div style={{ ...styles.cardFull, padding: isMobile ? "14px 12px" : "18px" }}>
+            <div style={{ ...styles.calHeader, flexDirection: isMobile ? "column" : "row", gap: isMobile ? "10px" : "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "center" }}>
+                <button onClick={irMesAnterior} style={styles.button}>◀</button>
+                <button onClick={irHoy} style={styles.button}>Hoy</button>
+                <button onClick={irMesSiguiente} style={styles.button}>▶</button>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <select value={calMes} onChange={(e) => setCalMes(Number(e.target.value))} style={styles.select}>
+                    {meses.map((m, idx) => (
+                      <option key={m} value={idx + 1}>{m}</option>
+                    ))}
+                  </select>
+                  <input type="number" value={calAnio} onChange={(e) => setCalAnio(Number(e.target.value))} style={styles.select} />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                <button onClick={() => abrirNuevoEvento(ymd(calAnio, calMes, 1))} style={styles.buttonAddCalendar}>+ Nuevo evento</button>
+              </div>
+            </div>
+          </div>
+
+          {isMobile ? (
+            <div style={{ ...styles.card, padding: "16px 12px" }}>
+              <h3 style={{ marginTop: 0 }}>· Agenda del mes ·</h3>
+
+              {eventos.length === 0 ? (
+                <p>No hay eventos este mes</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "10px" }}>
+                  {eventos.map((ev) => {
+                    const color = tipoColor(ev.tipo);
+                    const fechaBonita = ev.fecha
+                      ? new Date(ev.fecha + "T00:00:00").toLocaleDateString("es-ES", { weekday: "short", day: "2-digit", month: "short" })
+                      : "";
+                    return (
+                      <div key={ev.id} style={styles.mobileEventCard}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                            <span style={{ ...styles.eventPill, background: color }} title={ev.tipo || ""}>
+                              {(ev.tipo || "OTRO").toUpperCase().slice(0, 3)}
+                            </span>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 800, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {ev.titulo}
+                              </div>
+                              <div style={{ opacity: 0.85, fontSize: "13px", textAlign: "left" }}>
+                                {fechaBonita}{ev.hora ? ` · ${ev.hora}` : ""}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+                            <button onClick={() => abrirEditarEvento(ev)} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>✏</button>
+                            <button onClick={() => setEventoAEliminar(ev)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>🗑</button>
+                          </div>
+                        </div>
+
+                        {ev.notas ? (
+                          <div style={{ marginTop: "8px", opacity: 0.9, fontSize: "13px", textAlign: "left" }}>
+                            {ev.notas}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ ...styles.card, padding: "18px" }}>
+              <div style={styles.calWeekHeader}>
+                {diasSemana.map((d) => (
+                  <div key={d} style={styles.calWeekHeaderCell}>{d}</div>
+                ))}
+              </div>
+
+              <div style={styles.calGrid}>
+                {calendarCells.map((c) => {
+                  if (c.empty) {
+                    return <div key={c.key} style={{ ...styles.calCell, ...styles.calCellEmpty }} />;
+                  }
+
+                  const evs = eventosPorFecha[c.fechaStr] || [];
+                  const cap = 4;
+
+                  return (
+                    <div
+                      key={c.key}
+                      style={{ ...styles.calCell, ...(c.esHoy ? styles.calCellToday : {}) }}
+                      onDoubleClick={() => abrirNuevoEvento(c.fechaStr)}
+                      title="Doble click para añadir evento"
+                    >
+                      <div style={styles.calCellTopRow}>
+                        <span style={{ ...styles.calDayNumber, ...(c.esHoy ? styles.calDayNumberToday : {}) }}>
+                          {c.dayNum}
+                        </span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); abrirNuevoEvento(c.fechaStr); }}
+                          style={styles.calAddMini}
+                          title="Añadir evento"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <div style={styles.calEventsBox}>
+                        {evs.slice(0, cap).map((ev) => (
+                          <div
+                            key={ev.id}
+                            style={{ ...styles.eventChip, background: tipoColor(ev.tipo) }}
+                            onClick={(e) => { e.stopPropagation(); abrirEditarEvento(ev); }}
+                            title={`${ev.titulo}${ev.hora ? ` (${ev.hora})` : ""}`}
+                          >
+                            {ev.hora ? `${ev.hora} ` : ""}{ev.titulo}
+                          </div>
+                        ))}
+                        {evs.length > cap ? (
+                          <div style={styles.moreEvents}>
+                            +{evs.length - cap} más
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ marginTop: "12px", opacity: 0.8, fontSize: "13px" }}>
+                Tip: doble click en un día para añadir evento. Click en un evento para editar.
+              </div>
+            </div>
+          )}
+
+          {eventoNuevoOpen && (
+            <div style={styles.modalOverlay}>
+              <div style={styles.modal}>
+                <h3>📌 Nuevo Evento</h3>
+                <input value={evTitulo} onChange={(e) => setEvTitulo(e.target.value)} style={styles.input} placeholder="Título (ej: Cumpleaños mamá)" />
+                <select value={evTipo} onChange={(e) => setEvTipo(e.target.value)} style={styles.input}>
+                  <option value="CUMPLEAÑOS">Cumpleaños</option>
+                  <option value="CITA">Cita</option>
+                  <option value="MÉDICO">Médico</option>
+                  <option value="TRABAJO">Trabajo</option>
+                  <option value="OTRO">Otro</option>
+                </select>
+                <input type="date" value={evFecha} onChange={(e) => setEvFecha(e.target.value)} style={styles.input} />
+                <input type="time" value={evHora} onChange={(e) => setEvHora(e.target.value)} style={styles.input} />
+                <input value={evNotas} onChange={(e) => setEvNotas(e.target.value)} style={styles.input} placeholder="Notas (opcional)" />
+                <div style={{ display:"flex", justifyContent:"space-between", marginTop:"10px" }}>
+                  <button onClick={() => setEventoNuevoOpen(false)} style={styles.button}>Cancelar</button>
+                  <button onClick={guardarNuevoEvento} style={styles.buttonPaid}>Guardar</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {eventoEditando && (
+            <div style={styles.modalOverlay}>
+              <div style={styles.modal}>
+                <h3>✏ Editar Evento</h3>
+                <input value={evTitulo} onChange={(e) => setEvTitulo(e.target.value)} style={styles.input} placeholder="Título" />
+                <select value={evTipo} onChange={(e) => setEvTipo(e.target.value)} style={styles.input}>
+                  <option value="CUMPLEAÑOS">Cumpleaños</option>
+                  <option value="CITA">Cita</option>
+                  <option value="MÉDICO">Médico</option>
+                  <option value="TRABAJO">Trabajo</option>
+                  <option value="OTRO">Otro</option>
+                </select>
+                <input type="date" value={evFecha} onChange={(e) => setEvFecha(e.target.value)} style={styles.input} />
+                <input type="time" value={evHora} onChange={(e) => setEvHora(e.target.value)} style={styles.input} />
+                <input value={evNotas} onChange={(e) => setEvNotas(e.target.value)} style={styles.input} placeholder="Notas (opcional)" />
+
+                <div style={{ display:"flex", justifyContent:"space-between", marginTop:"10px", gap:"10px" }}>
+                  <button onClick={() => setEventoEditando(null)} style={styles.button}>Cancelar</button>
+                  <button onClick={() => { setEventoAEliminar(eventoEditando); setEventoEditando(null); }} style={styles.buttonDanger}>Eliminar</button>
+                  <button onClick={guardarEdicionEvento} style={styles.buttonPaid}>Guardar</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {eventoAEliminar && (
+            <div style={styles.modalOverlay}>
+              <div style={styles.modal}>
+                <h3>🗑 Confirmar eliminación</h3>
+                <p style={{marginBottom:"20px"}}>
+                  ¿Eliminar "{eventoAEliminar.titulo}"?
+                </p>
+                <div style={{ display:"flex", justifyContent:"space-between" }}>
+                  <button onClick={() => setEventoAEliminar(null)} style={styles.button}>Cancelar</button>
+                  <button onClick={confirmarEliminarEvento} style={styles.buttonDanger}>Eliminar</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* ===== LISTA COMPRA ===== */}
       {vista === "lista" && (
@@ -1161,7 +1541,30 @@ const styles = {
 
   legendBox:{maxWidth:"650px",margin:"28px auto 0 auto",background:"#1e293b",padding:"18px",borderRadius:"10px"},
   legendRow:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.08)"},
-  legendDot:{width:"14px",height:"14px",borderRadius:"999px",display:"inline-block"}
+  legendDot:{width:"14px",height:"14px",borderRadius:"999px",display:"inline-block"},
+
+  // ===== CALENDARIO STYLES =====
+  calHeader:{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap"},
+  buttonAddCalendar:{background:"#06b6d4",color:"white",padding:"10px 14px",border:"none",borderRadius:"6px",cursor:"pointer",fontWeight:800},
+
+  calWeekHeader:{display:"grid",gridTemplateColumns:"repeat(7, 1fr)",gap:"8px",marginBottom:"10px"},
+  calWeekHeaderCell:{background:"rgba(255,255,255,0.06)",borderRadius:"8px",padding:"10px 0",fontWeight:900},
+
+  calGrid:{display:"grid",gridTemplateColumns:"repeat(7, 1fr)",gap:"8px"},
+  calCell:{background:"rgba(255,255,255,0.06)",borderRadius:"10px",padding:"10px",minHeight:"110px",boxSizing:"border-box",cursor:"default",display:"flex",flexDirection:"column"},
+  calCellEmpty:{background:"rgba(255,255,255,0.03)"},
+  calCellToday:{outline:"2px solid rgba(34,197,94,0.9)"},
+  calCellTopRow:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"},
+  calDayNumber:{fontWeight:900,opacity:0.9},
+  calDayNumberToday:{color:"#22c55e"},
+  calAddMini:{background:"rgba(59,130,246,0.9)",color:"white",border:"none",borderRadius:"8px",width:"26px",height:"26px",cursor:"pointer",fontWeight:900},
+
+  calEventsBox:{display:"flex",flexDirection:"column",gap:"6px",overflow:"hidden"},
+  eventChip:{color:"#111827",fontWeight:900,borderRadius:"8px",padding:"6px 8px",fontSize:"12px",textAlign:"left",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",cursor:"pointer"},
+  moreEvents:{opacity:0.9,fontSize:"12px",textAlign:"left",paddingLeft:"2px"},
+
+  mobileEventCard:{background:"rgba(255,255,255,0.06)",borderRadius:"10px",padding:"12px"},
+  eventPill:{width:"40px",height:"28px",borderRadius:"999px",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:"12px",fontWeight:900,color:"#111827"}
 };
 
 export default App;
