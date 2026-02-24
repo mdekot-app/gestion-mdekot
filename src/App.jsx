@@ -16,15 +16,9 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer
-} from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
 function App() {
-
   const [vista, setVista] = useState("dashboard");
   const [balance, setBalance] = useState(0);
   const [importe, setImporte] = useState("");
@@ -68,7 +62,10 @@ function App() {
   const [editProductoNombre, setEditProductoNombre] = useState("");
   const [productoAEliminar, setProductoAEliminar] = useState(null);
 
-  const [limpiarCompradosConfirm, setLimpiarCompradosConfirm] = useState({ open: false, superKey: null });
+  const [limpiarCompradosConfirm, setLimpiarCompradosConfirm] = useState({
+    open: false,
+    superKey: null
+  });
 
   const [nombresSupers, setNombresSupers] = useState({
     MERCADONA: "MERCADONA",
@@ -101,20 +98,28 @@ function App() {
   const [evTitulo, setEvTitulo] = useState("");
   const [evTipo, setEvTipo] = useState("CUMPLEAÑOS");
   const [evFecha, setEvFecha] = useState("");
-  const [evHora, setEvHora] = useState("");
+  const [evHora, setEvHora] = useState("00:00"); // ✅ para que en móvil se vea 00:00
   const [evNotas, setEvNotas] = useState("");
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const meses = [
-    "Enero","Febrero","Marzo","Abril","Mayo","Junio",
-    "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre"
   ];
 
   const formatearComercio = (texto) => {
@@ -123,11 +128,18 @@ function App() {
       .toLowerCase()
       .trim()
       .split(/\s+/)
-      .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+      .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
       .join(" ");
   };
 
-  const COLORES_GRAFICO = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4"];
+  const COLORES_GRAFICO = [
+    "#3b82f6",
+    "#22c55e",
+    "#f59e0b",
+    "#ef4444",
+    "#a855f7",
+    "#06b6d4"
+  ];
 
   // ✅ Color dinámico para evitar repeticiones cuando haya más comercios que colores base
   const generarColorGrafico = (index, total) => {
@@ -139,12 +151,8 @@ function App() {
   };
 
   const getDebtInfo = (bal) => {
-    if (bal > 0) {
-      return { debtorName: "Jessica", creditorName: "Mirko", amount: bal };
-    }
-    if (bal < 0) {
-      return { debtorName: "Mirko", creditorName: "Jessica", amount: Math.abs(bal) };
-    }
+    if (bal > 0) return { debtorName: "Jessica", creditorName: "Mirko", amount: bal };
+    if (bal < 0) return { debtorName: "Mirko", creditorName: "Jessica", amount: Math.abs(bal) };
     return { debtorName: "", creditorName: "", amount: 0 };
   };
 
@@ -154,7 +162,6 @@ function App() {
   useEffect(() => {
     const q = query(collection(db, "gastos"));
     const unsub = onSnapshot(q, (snapshot) => {
-
       let totalPagado = 0;
       let totalDebe = 0;
       let lista = [];
@@ -162,11 +169,7 @@ function App() {
       snapshot.forEach((documento) => {
         const data = documento.data();
 
-        if (
-          data.mes === mesActual &&
-          data.anio === anioActual &&
-          data.liquidado === false
-        ) {
+        if (data.mes === mesActual && data.anio === anioActual && data.liquidado === false) {
           lista.push({ id: documento.id, ...data });
 
           const parte = data.importe / data.participantesCount;
@@ -234,16 +237,12 @@ function App() {
     const mismoDeudor = (liquidacionGuardada.debtor || "") === actual.debtorName;
     const mismoAcreedor = (liquidacionGuardada.creditor || "") === actual.creditorName;
 
-    // Comparación segura de importes (dos decimales)
     const actualAmount2 = Number(actual.amount.toFixed(2));
     const guardadoAmount2 = Number(Number(liquidacionGuardada.amount || 0).toFixed(2));
     const mismoImporte = actualAmount2 === guardadoAmount2;
 
-    if (mismoDeudor && mismoAcreedor && mismoImporte) {
-      setEstadoDeuda(liquidacionGuardada.status);
-    } else {
-      setEstadoDeuda(null);
-    }
+    if (mismoDeudor && mismoAcreedor && mismoImporte) setEstadoDeuda(liquidacionGuardada.status);
+    else setEstadoDeuda(null);
   }, [balance, liquidacionGuardada]);
 
   // ===== NOMBRES SUPERS (FIRESTORE CONFIG) =====
@@ -255,13 +254,13 @@ function App() {
         if (snap.exists()) {
           const data = snap.data() || {};
           const merged = { ...nombresSupers };
-          SUPERS.forEach(s => {
+          SUPERS.forEach((s) => {
             merged[s.key] = data[s.key] || s.defaultName;
           });
           setNombresSupers(merged);
         } else {
           const defaults = {};
-          SUPERS.forEach(s => defaults[s.key] = s.defaultName);
+          SUPERS.forEach((s) => (defaults[s.key] = s.defaultName));
           setNombresSupers(defaults);
         }
       } catch (e) {
@@ -300,17 +299,14 @@ function App() {
     const q = query(collection(db, "listaCompra"));
     const unsub = onSnapshot(q, (snapshot) => {
       let lista = [];
-      snapshot.forEach((docu) => {
-        lista.push({ id: docu.id, ...docu.data() });
-      });
+      snapshot.forEach((docu) => lista.push({ id: docu.id, ...docu.data() }));
       setProductos(lista);
     });
-
     return () => unsub();
   }, []);
 
   const setInputSuper = (superKey, value) => {
-    setInputsSuper(prev => ({ ...prev, [superKey]: value }));
+    setInputsSuper((prev) => ({ ...prev, [superKey]: value }));
   };
 
   const agregarProducto = async (superKey) => {
@@ -328,9 +324,7 @@ function App() {
   };
 
   const toggleComprado = async (producto) => {
-    await updateDoc(doc(db, "listaCompra", producto.id), {
-      comprado: !producto.comprado
-    });
+    await updateDoc(doc(db, "listaCompra", producto.id), { comprado: !producto.comprado });
   };
 
   const confirmarEliminarProducto = async () => {
@@ -341,14 +335,12 @@ function App() {
 
   const guardarEdicionProducto = async () => {
     if (!productoEditando) return;
-    await updateDoc(doc(db, "listaCompra", productoEditando.id), {
-      nombre: editProductoNombre
-    });
+    await updateDoc(doc(db, "listaCompra", productoEditando.id), { nombre: editProductoNombre });
     setProductoEditando(null);
   };
 
   const limpiarComprados = (superKey) => {
-    const comprados = productos.filter(p => (p.super || "MERCADONA") === superKey && p.comprado);
+    const comprados = productos.filter((p) => (p.super || "MERCADONA") === superKey && p.comprado);
     if (comprados.length === 0) return;
     setLimpiarCompradosConfirm({ open: true, superKey });
   };
@@ -360,36 +352,34 @@ function App() {
       return;
     }
 
-    const comprados = productos.filter(p => (p.super || "MERCADONA") === superKey && p.comprado);
+    const comprados = productos.filter((p) => (p.super || "MERCADONA") === superKey && p.comprado);
     if (comprados.length === 0) {
       setLimpiarCompradosConfirm({ open: false, superKey: null });
       return;
     }
 
     const batch = writeBatch(db);
-    comprados.forEach((p) => {
-      batch.delete(doc(db, "listaCompra", p.id));
-    });
+    comprados.forEach((p) => batch.delete(doc(db, "listaCompra", p.id)));
     await batch.commit();
     setLimpiarCompradosConfirm({ open: false, superKey: null });
   };
 
   const productosOrdenadosPorSuper = (superKey) => {
-    const lista = productos
-      .filter(p => (p.super || "MERCADONA") === superKey)
+    return productos
+      .filter((p) => (p.super || "MERCADONA") === superKey)
       .sort((a, b) => {
         const aC = a.comprado ? 1 : 0;
         const bC = b.comprado ? 1 : 0;
         if (aC !== bC) return aC - bC;
         return (b.fecha?.seconds || 0) - (a.fecha?.seconds || 0);
       });
-    return lista;
   };
 
-  const totalCompradosSuper = (superKey) => productos.filter(p => (p.super || "MERCADONA") === superKey && p.comprado).length;
+  const totalCompradosSuper = (superKey) =>
+    productos.filter((p) => (p.super || "MERCADONA") === superKey && p.comprado).length;
 
-  // ✅ SOLO MOVIL: contador de pendientes para mostrar en el desplegable
-  const totalPendientesSuper = (superKey) => productos.filter(p => (p.super || "MERCADONA") === superKey && !p.comprado).length;
+  const totalPendientesSuper = (superKey) =>
+    productos.filter((p) => (p.super || "MERCADONA") === superKey && !p.comprado).length;
 
   // ===== GASTOS =====
   const agregarGasto = async () => {
@@ -401,10 +391,7 @@ function App() {
       mes: mesActual,
       anio: anioActual,
       liquidado: false,
-      divididoEntre: [
-        "mdekot@gmail.com",
-        "jessica.alca87@gmail.com"
-      ],
+      divididoEntre: ["mdekot@gmail.com", "jessica.alca87@gmail.com"],
       participantesCount: 2,
       comercio: formatearComercio(comercio),
       fecha: new Date()
@@ -432,7 +419,6 @@ function App() {
       importe: Number(editImporte),
       pagadoPor: editPagadoPor
     });
-
     setGastoEditando(null);
   };
 
@@ -451,10 +437,8 @@ function App() {
       return;
     }
 
-    // estado local inmediato
     setEstadoDeuda(status);
 
-    // también actualizamos el “guardado” local para que el efecto compare bien
     setLiquidacionGuardada({
       status,
       debtor: info.debtorName,
@@ -494,23 +478,40 @@ function App() {
     return { start, end, lastDay };
   };
 
+  // ✅ CORREGIDO: consulta SIN índice (quitamos orderBy("hora"))
   useEffect(() => {
     const { start, end } = getMonthRange(calAnio, calMes);
+
     const qEv = query(
       collection(db, "eventos"),
       where("fecha", ">=", start),
       where("fecha", "<=", end),
-      orderBy("fecha", "asc"),
-      orderBy("hora", "asc")
+      orderBy("fecha", "asc")
     );
 
-    const unsub = onSnapshot(qEv, (snapshot) => {
-      let lista = [];
-      snapshot.forEach((docu) => {
-        lista.push({ id: docu.id, ...docu.data() });
-      });
-      setEventos(lista);
-    });
+    const unsub = onSnapshot(
+      qEv,
+      (snapshot) => {
+        let lista = [];
+        snapshot.forEach((docu) => lista.push({ id: docu.id, ...docu.data() }));
+
+        // ✅ Ordenamos en JS por fecha + hora (sin necesitar índice)
+        lista.sort((a, b) => {
+          const fa = a.fecha || "";
+          const fb = b.fecha || "";
+          if (fa !== fb) return fa.localeCompare(fb);
+          const ha = (a.hora || "99:99");
+          const hb = (b.hora || "99:99");
+          return ha.localeCompare(hb);
+        });
+
+        setEventos(lista);
+      },
+      (err) => {
+        console.error("Calendario snapshot error:", err);
+        setEventos([]);
+      }
+    );
 
     return () => unsub();
   }, [calMes, calAnio]);
@@ -519,7 +520,7 @@ function App() {
     setEvTitulo("");
     setEvTipo("CUMPLEAÑOS");
     setEvNotas("");
-    setEvHora("");
+    setEvHora("00:00"); // ✅ para que en móvil no se vea en blanco
     setEvFecha(fechaPreseleccionada || ymd(calAnio, calMes, new Date().getDate()));
     setEventoNuevoOpen(true);
   };
@@ -529,11 +530,13 @@ function App() {
     const f = (evFecha || "").trim();
     if (!t || !f) return;
 
+    const horaFinal = (evHora || "").trim() || "00:00";
+
     await addDoc(collection(db, "eventos"), {
       titulo: t,
       tipo: (evTipo || "OTRO").trim(),
       fecha: f, // YYYY-MM-DD
-      hora: (evHora || "").trim(), // HH:MM opcional
+      hora: horaFinal, // ✅ siempre visible
       notas: (evNotas || "").trim(),
       createdAt: new Date()
     });
@@ -546,7 +549,7 @@ function App() {
     setEvTitulo(ev.titulo || "");
     setEvTipo(ev.tipo || "OTRO");
     setEvFecha(ev.fecha || "");
-    setEvHora(ev.hora || "");
+    setEvHora((ev.hora && ev.hora.trim()) ? ev.hora : "00:00"); // ✅ si viene vacío, mostrar 00:00
     setEvNotas(ev.notas || "");
   };
 
@@ -556,11 +559,13 @@ function App() {
     const f = (evFecha || "").trim();
     if (!t || !f) return;
 
+    const horaFinal = (evHora || "").trim() || "00:00";
+
     await updateDoc(doc(db, "eventos", eventoEditando.id), {
       titulo: t,
       tipo: (evTipo || "OTRO").trim(),
       fecha: f,
-      hora: (evHora || "").trim(),
+      hora: horaFinal,
       notas: (evNotas || "").trim(),
       updatedAt: new Date()
     });
@@ -590,10 +595,18 @@ function App() {
     eventosPorFecha[f].push(ev);
   });
 
+  // ✅ Por si Firestore devuelve sin ordenar por hora, ordenamos dentro de cada día
+  Object.keys(eventosPorFecha).forEach((f) => {
+    eventosPorFecha[f].sort((a, b) => (a.hora || "99:99").localeCompare(b.hora || "99:99"));
+  });
+
   const irMesAnterior = () => {
     let m = calMes - 1;
     let y = calAnio;
-    if (m < 1) { m = 12; y -= 1; }
+    if (m < 1) {
+      m = 12;
+      y -= 1;
+    }
     setCalMes(m);
     setCalAnio(y);
   };
@@ -601,7 +614,10 @@ function App() {
   const irMesSiguiente = () => {
     let m = calMes + 1;
     let y = calAnio;
-    if (m > 12) { m = 1; y += 1; }
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    }
     setCalMes(m);
     setCalAnio(y);
   };
@@ -618,7 +634,6 @@ function App() {
     resumenComercio[g.comercio] += g.importe;
   });
 
-  // ✅ Asignamos color UNA SOLA VEZ por item y lo reutilizamos tanto en donut como en leyenda
   const dataGraficoBase = Object.entries(resumenComercio)
     .map(([nombre, total]) => ({ nombre, total }))
     .sort((a, b) => a.nombre.localeCompare(b.nombre, "es", { sensitivity: "base" }));
@@ -628,9 +643,7 @@ function App() {
     color: generarColorGrafico(index, dataGraficoBase.length)
   }));
 
-  const dataGraficoOrdenado = dataGrafico
-    .slice()
-    .sort((a, b) => b.total - a.total);
+  const dataGraficoOrdenado = dataGrafico.slice().sort((a, b) => b.total - a.total);
 
   let totalMirko = 0;
   let totalJessica = 0;
@@ -709,7 +722,6 @@ function App() {
 
   return (
     <div style={{ ...styles.container, padding: isMobile ? "16px" : "40px" }}>
-
       <div style={styles.tabs}>
         <button onClick={() => setVista("dashboard")} style={vista === "dashboard" ? styles.tabActive : styles.tab}>
           Dashboard
@@ -731,16 +743,30 @@ function App() {
           <h1 style={styles.title}>📅 CALENDARIO</h1>
 
           <div style={{ ...styles.cardFull, padding: isMobile ? "14px 12px" : "18px" }}>
-            <div style={{ ...styles.calHeader, flexDirection: isMobile ? "column" : "row", gap: isMobile ? "10px" : "12px" }}>
+            <div
+              style={{
+                ...styles.calHeader,
+                flexDirection: isMobile ? "column" : "row",
+                gap: isMobile ? "10px" : "12px"
+              }}
+            >
               <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "center" }}>
-                <button onClick={irMesAnterior} style={styles.button}>◀</button>
-                <button onClick={irHoy} style={styles.button}>Hoy</button>
-                <button onClick={irMesSiguiente} style={styles.button}>▶</button>
+                <button onClick={irMesAnterior} style={styles.button}>
+                  ◀
+                </button>
+                <button onClick={irHoy} style={styles.button}>
+                  Hoy
+                </button>
+                <button onClick={irMesSiguiente} style={styles.button}>
+                  ▶
+                </button>
 
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   <select value={calMes} onChange={(e) => setCalMes(Number(e.target.value))} style={styles.select}>
                     {meses.map((m, idx) => (
-                      <option key={m} value={idx + 1}>{m}</option>
+                      <option key={m} value={idx + 1}>
+                        {m}
+                      </option>
                     ))}
                   </select>
                   <input type="number" value={calAnio} onChange={(e) => setCalAnio(Number(e.target.value))} style={styles.select} />
@@ -748,128 +774,105 @@ function App() {
               </div>
 
               <div style={{ display: "flex", justifyContent: "center" }}>
-                <button onClick={() => abrirNuevoEvento(ymd(calAnio, calMes, 1))} style={styles.buttonAddCalendar}>+ Nuevo evento</button>
+                <button onClick={() => abrirNuevoEvento(ymd(calAnio, calMes, 1))} style={styles.buttonAddCalendar}>
+                  + Nuevo evento
+                </button>
               </div>
             </div>
           </div>
 
-          {isMobile ? (
-            <div style={{ ...styles.card, padding: "16px 12px" }}>
-              <h3 style={{ marginTop: 0 }}>· Agenda del mes ·</h3>
-
-              {eventos.length === 0 ? (
-                <p>No hay eventos este mes</p>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "10px" }}>
-                  {eventos.map((ev) => {
-                    const color = tipoColor(ev.tipo);
-                    const fechaBonita = ev.fecha
-                      ? new Date(ev.fecha + "T00:00:00").toLocaleDateString("es-ES", { weekday: "short", day: "2-digit", month: "short" })
-                      : "";
-                    return (
-                      <div key={ev.id} style={styles.mobileEventCard}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
-                            <span style={{ ...styles.eventPill, background: color }} title={ev.tipo || ""}>
-                              {(ev.tipo || "OTRO").toUpperCase().slice(0, 3)}
-                            </span>
-                            <div style={{ minWidth: 0 }}>
-                              <div style={{ fontWeight: 800, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                {ev.titulo}
-                              </div>
-                              <div style={{ opacity: 0.85, fontSize: "13px", textAlign: "left" }}>
-                                {fechaBonita}{ev.hora ? ` · ${ev.hora}` : ""}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
-                            <button onClick={() => abrirEditarEvento(ev)} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>✏</button>
-                            <button onClick={() => setEventoAEliminar(ev)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>🗑</button>
-                          </div>
-                        </div>
-
-                        {ev.notas ? (
-                          <div style={{ marginTop: "8px", opacity: 0.9, fontSize: "13px", textAlign: "left" }}>
-                            {ev.notas}
-                          </div>
-                        ) : null}
-                      </div>
-                    );
-                  })}
+          {/* ✅ CORREGIDO: en móvil también mostramos CUADRÍCULA */}
+          <div style={{ ...styles.card, padding: isMobile ? "14px 10px" : "18px" }}>
+            <div style={isMobile ? styles.calWeekHeaderMobile : styles.calWeekHeader}>
+              {diasSemana.map((d) => (
+                <div key={d} style={isMobile ? styles.calWeekHeaderCellMobile : styles.calWeekHeaderCell}>
+                  {d}
                 </div>
-              )}
+              ))}
             </div>
-          ) : (
-            <div style={{ ...styles.card, padding: "18px" }}>
-              <div style={styles.calWeekHeader}>
-                {diasSemana.map((d) => (
-                  <div key={d} style={styles.calWeekHeaderCell}>{d}</div>
-                ))}
-              </div>
 
-              <div style={styles.calGrid}>
-                {calendarCells.map((c) => {
-                  if (c.empty) {
-                    return <div key={c.key} style={{ ...styles.calCell, ...styles.calCellEmpty }} />;
-                  }
+            <div style={isMobile ? styles.calGridMobile : styles.calGrid}>
+              {calendarCells.map((c) => {
+                if (c.empty) {
+                  return <div key={c.key} style={{ ...(isMobile ? styles.calCellMobile : styles.calCell), ...styles.calCellEmpty }} />;
+                }
 
-                  const evs = eventosPorFecha[c.fechaStr] || [];
-                  const cap = 4;
+                const evs = eventosPorFecha[c.fechaStr] || [];
+                const cap = isMobile ? 2 : 4;
 
-                  return (
-                    <div
-                      key={c.key}
-                      style={{ ...styles.calCell, ...(c.esHoy ? styles.calCellToday : {}) }}
-                      onDoubleClick={() => abrirNuevoEvento(c.fechaStr)}
-                      title="Doble click para añadir evento"
-                    >
-                      <div style={styles.calCellTopRow}>
-                        <span style={{ ...styles.calDayNumber, ...(c.esHoy ? styles.calDayNumberToday : {}) }}>
-                          {c.dayNum}
-                        </span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); abrirNuevoEvento(c.fechaStr); }}
-                          style={styles.calAddMini}
-                          title="Añadir evento"
-                        >
-                          +
-                        </button>
-                      </div>
-
-                      <div style={styles.calEventsBox}>
-                        {evs.slice(0, cap).map((ev) => (
-                          <div
-                            key={ev.id}
-                            style={{ ...styles.eventChip, background: tipoColor(ev.tipo) }}
-                            onClick={(e) => { e.stopPropagation(); abrirEditarEvento(ev); }}
-                            title={`${ev.titulo}${ev.hora ? ` (${ev.hora})` : ""}`}
-                          >
-                            {ev.hora ? `${ev.hora} ` : ""}{ev.titulo}
-                          </div>
-                        ))}
-                        {evs.length > cap ? (
-                          <div style={styles.moreEvents}>
-                            +{evs.length - cap} más
-                          </div>
-                        ) : null}
-                      </div>
+                return (
+                  <div
+                    key={c.key}
+                    style={{
+                      ...(isMobile ? styles.calCellMobile : styles.calCell),
+                      ...(c.esHoy ? styles.calCellToday : {})
+                    }}
+                    onDoubleClick={() => abrirNuevoEvento(c.fechaStr)}
+                    title="Doble click para añadir evento"
+                  >
+                    <div style={styles.calCellTopRow}>
+                      <span style={{ ...styles.calDayNumber, ...(c.esHoy ? styles.calDayNumberToday : {}) }}>{c.dayNum}</span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          abrirNuevoEvento(c.fechaStr);
+                        }}
+                        style={isMobile ? styles.calAddMiniMobile : styles.calAddMini}
+                        title="Añadir evento"
+                      >
+                        +
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
 
+                    <div style={styles.calEventsBox}>
+                      {evs.slice(0, cap).map((ev) => (
+                        <div
+                          key={ev.id}
+                          style={{
+                            ...styles.eventChip,
+                            ...(isMobile ? styles.eventChipMobile : {}),
+                            background: tipoColor(ev.tipo)
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            abrirEditarEvento(ev);
+                          }}
+                          title={`${ev.titulo}${ev.hora ? ` (${ev.hora})` : ""}`}
+                        >
+                          {isMobile ? (
+                            <span style={{ fontWeight: 900 }}>{ev.titulo}</span>
+                          ) : (
+                            <>
+                              {ev.hora ? `${ev.hora} ` : ""}
+                              {ev.titulo}
+                            </>
+                          )}
+                        </div>
+                      ))}
+                      {evs.length > cap ? <div style={styles.moreEvents}>+{evs.length - cap} más</div> : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {!isMobile && (
               <div style={{ marginTop: "12px", opacity: 0.8, fontSize: "13px" }}>
                 Tip: doble click en un día para añadir evento. Click en un evento para editar.
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {eventoNuevoOpen && (
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
                 <h3>📌 Nuevo Evento</h3>
-                <input value={evTitulo} onChange={(e) => setEvTitulo(e.target.value)} style={styles.input} placeholder="Título (ej: Cumpleaños mamá)" />
+                <input
+                  value={evTitulo}
+                  onChange={(e) => setEvTitulo(e.target.value)}
+                  style={styles.input}
+                  placeholder="Título (ej: Cumpleaños mamá)"
+                />
                 <select value={evTipo} onChange={(e) => setEvTipo(e.target.value)} style={styles.input}>
                   <option value="CUMPLEAÑOS">Cumpleaños</option>
                   <option value="CITA">Cita</option>
@@ -878,11 +881,20 @@ function App() {
                   <option value="OTRO">Otro</option>
                 </select>
                 <input type="date" value={evFecha} onChange={(e) => setEvFecha(e.target.value)} style={styles.input} />
-                <input type="time" value={evHora} onChange={(e) => setEvHora(e.target.value)} style={styles.input} />
+                <input
+                  type="time"
+                  value={evHora}
+                  onChange={(e) => setEvHora(e.target.value || "00:00")}
+                  style={styles.input}
+                />
                 <input value={evNotas} onChange={(e) => setEvNotas(e.target.value)} style={styles.input} placeholder="Notas (opcional)" />
-                <div style={{ display:"flex", justifyContent:"space-between", marginTop:"10px" }}>
-                  <button onClick={() => setEventoNuevoOpen(false)} style={styles.button}>Cancelar</button>
-                  <button onClick={guardarNuevoEvento} style={styles.buttonPaid}>Guardar</button>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px" }}>
+                  <button onClick={() => setEventoNuevoOpen(false)} style={styles.button}>
+                    Cancelar
+                  </button>
+                  <button onClick={guardarNuevoEvento} style={styles.buttonPaid}>
+                    Guardar
+                  </button>
                 </div>
               </div>
             </div>
@@ -901,13 +913,30 @@ function App() {
                   <option value="OTRO">Otro</option>
                 </select>
                 <input type="date" value={evFecha} onChange={(e) => setEvFecha(e.target.value)} style={styles.input} />
-                <input type="time" value={evHora} onChange={(e) => setEvHora(e.target.value)} style={styles.input} />
+                <input
+                  type="time"
+                  value={evHora}
+                  onChange={(e) => setEvHora(e.target.value || "00:00")}
+                  style={styles.input}
+                />
                 <input value={evNotas} onChange={(e) => setEvNotas(e.target.value)} style={styles.input} placeholder="Notas (opcional)" />
 
-                <div style={{ display:"flex", justifyContent:"space-between", marginTop:"10px", gap:"10px" }}>
-                  <button onClick={() => setEventoEditando(null)} style={styles.button}>Cancelar</button>
-                  <button onClick={() => { setEventoAEliminar(eventoEditando); setEventoEditando(null); }} style={styles.buttonDanger}>Eliminar</button>
-                  <button onClick={guardarEdicionEvento} style={styles.buttonPaid}>Guardar</button>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px", gap: "10px" }}>
+                  <button onClick={() => setEventoEditando(null)} style={styles.button}>
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEventoAEliminar(eventoEditando);
+                      setEventoEditando(null);
+                    }}
+                    style={styles.buttonDanger}
+                  >
+                    Eliminar
+                  </button>
+                  <button onClick={guardarEdicionEvento} style={styles.buttonPaid}>
+                    Guardar
+                  </button>
                 </div>
               </div>
             </div>
@@ -917,12 +946,14 @@ function App() {
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
                 <h3>🗑 Confirmar eliminación</h3>
-                <p style={{marginBottom:"20px"}}>
-                  ¿Eliminar "{eventoAEliminar.titulo}"?
-                </p>
-                <div style={{ display:"flex", justifyContent:"space-between" }}>
-                  <button onClick={() => setEventoAEliminar(null)} style={styles.button}>Cancelar</button>
-                  <button onClick={confirmarEliminarEvento} style={styles.buttonDanger}>Eliminar</button>
+                <p style={{ marginBottom: "20px" }}>¿Eliminar "{eventoAEliminar.titulo}"?</p>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <button onClick={() => setEventoAEliminar(null)} style={styles.button}>
+                    Cancelar
+                  </button>
+                  <button onClick={confirmarEliminarEvento} style={styles.buttonDanger}>
+                    Eliminar
+                  </button>
                 </div>
               </div>
             </div>
@@ -937,7 +968,7 @@ function App() {
 
           {isMobile ? (
             <>
-              <div style={{ display:"flex", justifyContent:"center", marginBottom:"14px" }}>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: "14px" }}>
                 <select value={superMobile} onChange={(e) => setSuperMobile(e.target.value)} style={styles.select}>
                   {SUPERS.map((s) => {
                     const nombreVisible = nombresSupers[s.key] || s.defaultName;
@@ -952,7 +983,7 @@ function App() {
               </div>
 
               <div style={{ ...styles.grid, gridTemplateColumns: "1fr", width: "100%", maxWidth: "100%", margin: "0 auto 30px auto" }}>
-                {SUPERS.filter(s => s.key === superMobile).map((s) => {
+                {SUPERS.filter((s) => s.key === superMobile).map((s) => {
                   const lista = productosOrdenadosPorSuper(s.key);
                   const nombreVisible = nombresSupers[s.key] || s.defaultName;
                   const totalComprados = totalCompradosSuper(s.key);
@@ -961,7 +992,9 @@ function App() {
                     <div key={s.key} style={{ ...styles.card, padding: "16px 12px", margin: "0 auto" }}>
                       <div style={styles.cardHeaderRow}>
                         <h3 style={styles.cardTitle}>· {nombreVisible} ·</h3>
-                        <button onClick={() => abrirEditarSuper(s.key)} style={styles.buttonSuperEdit} title="Renombrar supermercado">✎</button>
+                        <button onClick={() => abrirEditarSuper(s.key)} style={styles.buttonSuperEdit} title="Renombrar supermercado">
+                          ✎
+                        </button>
                       </div>
 
                       <div style={styles.superFormRow}>
@@ -991,9 +1024,9 @@ function App() {
                         >
                           <div
                             style={{
-                              display:"flex",
-                              alignItems:"center",
-                              gap:"8px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
                               opacity: p.comprado ? 0.55 : 1,
                               flex: 1,
                               minWidth: 0
@@ -1023,14 +1056,24 @@ function App() {
                             </span>
                           </div>
 
-                          <div style={{display:"flex", gap:"6px", flexShrink: 0}}>
-                            <button onClick={() => {setProductoEditando(p); setEditProductoNombre(p.nombre);}} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>✏</button>
-                            <button onClick={() => setProductoAEliminar(p)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>🗑</button>
+                          <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+                            <button
+                              onClick={() => {
+                                setProductoEditando(p);
+                                setEditProductoNombre(p.nombre);
+                              }}
+                              style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}
+                            >
+                              ✏
+                            </button>
+                            <button onClick={() => setProductoAEliminar(p)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>
+                              🗑
+                            </button>
                           </div>
                         </div>
                       ))}
 
-                      <div style={{display:"flex",justifyContent:"center",marginTop:"14px"}}>
+                      <div style={{ display: "flex", justifyContent: "center", marginTop: "14px" }}>
                         <button onClick={() => limpiarComprados(s.key)} style={styles.buttonDanger}>
                           Limpiar comprados
                         </button>
@@ -1040,12 +1083,19 @@ function App() {
                         <div style={styles.modalOverlay}>
                           <div style={styles.modal}>
                             <h3>🧹 Limpiar comprados</h3>
-                            <p style={{marginBottom:"20px"}}>
+                            <p style={{ marginBottom: "20px" }}>
                               ¿Eliminar {totalComprados} producto(s) ya comprados de {nombreVisible}?
                             </p>
-                            <div style={{ display:"flex", justifyContent:"space-between" }}>
-                              <button onClick={() => setLimpiarCompradosConfirm({ open:false, superKey:null })} style={styles.button}>Cancelar</button>
-                              <button onClick={confirmarLimpiarComprados} style={styles.buttonDanger}>Eliminar</button>
+                            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                              <button
+                                onClick={() => setLimpiarCompradosConfirm({ open: false, superKey: null })}
+                                style={styles.button}
+                              >
+                                Cancelar
+                              </button>
+                              <button onClick={confirmarLimpiarComprados} style={styles.buttonDanger}>
+                                Eliminar
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -1066,7 +1116,9 @@ function App() {
                   <div key={s.key} style={styles.card}>
                     <div style={styles.cardHeaderRow}>
                       <h3 style={styles.cardTitle}>· {nombreVisible} ·</h3>
-                      <button onClick={() => abrirEditarSuper(s.key)} style={styles.buttonSuperEdit} title="Renombrar supermercado">✎</button>
+                      <button onClick={() => abrirEditarSuper(s.key)} style={styles.buttonSuperEdit} title="Renombrar supermercado">
+                        ✎
+                      </button>
                     </div>
 
                     <div style={styles.superFormRow}>
@@ -1086,26 +1138,34 @@ function App() {
 
                     {lista.map((p) => (
                       <div key={p.id} style={styles.gastoItem}>
-                        <div style={{display:"flex", alignItems:"center", gap:"10px", opacity: p.comprado ? 0.55 : 1}}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", opacity: p.comprado ? 0.55 : 1 }}>
                           <input
                             type="checkbox"
                             checked={p.comprado}
                             onChange={() => toggleComprado(p)}
                             style={{ accentColor: "#22c55e" }}
                           />
-                          <span style={{textDecoration: p.comprado ? "line-through" : "none"}}>
-                            {p.nombre}
-                          </span>
+                          <span style={{ textDecoration: p.comprado ? "line-through" : "none" }}>{p.nombre}</span>
                         </div>
 
-                        <div style={{display:"flex", gap:"8px"}}>
-                          <button onClick={() => {setProductoEditando(p); setEditProductoNombre(p.nombre);}} style={styles.buttonEdit}>✏</button>
-                          <button onClick={() => setProductoAEliminar(p)} style={styles.buttonDelete}>🗑</button>
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          <button
+                            onClick={() => {
+                              setProductoEditando(p);
+                              setEditProductoNombre(p.nombre);
+                            }}
+                            style={styles.buttonEdit}
+                          >
+                            ✏
+                          </button>
+                          <button onClick={() => setProductoAEliminar(p)} style={styles.buttonDelete}>
+                            🗑
+                          </button>
                         </div>
                       </div>
                     ))}
 
-                    <div style={{display:"flex",justifyContent:"center",marginTop:"14px"}}>
+                    <div style={{ display: "flex", justifyContent: "center", marginTop: "14px" }}>
                       <button onClick={() => limpiarComprados(s.key)} style={styles.buttonDanger}>
                         Limpiar comprados
                       </button>
@@ -1115,12 +1175,19 @@ function App() {
                       <div style={styles.modalOverlay}>
                         <div style={styles.modal}>
                           <h3>🧹 Limpiar comprados</h3>
-                          <p style={{marginBottom:"20px"}}>
+                          <p style={{ marginBottom: "20px" }}>
                             ¿Eliminar {totalComprados} producto(s) ya comprados de {nombreVisible}?
                           </p>
-                          <div style={{ display:"flex", justifyContent:"space-between" }}>
-                            <button onClick={() => setLimpiarCompradosConfirm({ open:false, superKey:null })} style={styles.button}>Cancelar</button>
-                            <button onClick={confirmarLimpiarComprados} style={styles.buttonDanger}>Eliminar</button>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}>
+                            <button
+                              onClick={() => setLimpiarCompradosConfirm({ open: false, superKey: null })}
+                              style={styles.button}
+                            >
+                              Cancelar
+                            </button>
+                            <button onClick={confirmarLimpiarComprados} style={styles.buttonDanger}>
+                              Eliminar
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -1135,14 +1202,14 @@ function App() {
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
                 <h3>✏ Editar Producto</h3>
-                <input
-                  value={editProductoNombre}
-                  onChange={(e) => setEditProductoNombre(e.target.value)}
-                  style={styles.input}
-                />
-                <div style={{ display:"flex", justifyContent:"space-between", marginTop:"10px" }}>
-                  <button onClick={() => setProductoEditando(null)} style={styles.button}>Cancelar</button>
-                  <button onClick={guardarEdicionProducto} style={styles.buttonDanger}>Guardar</button>
+                <input value={editProductoNombre} onChange={(e) => setEditProductoNombre(e.target.value)} style={styles.input} />
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px" }}>
+                  <button onClick={() => setProductoEditando(null)} style={styles.button}>
+                    Cancelar
+                  </button>
+                  <button onClick={guardarEdicionProducto} style={styles.buttonDanger}>
+                    Guardar
+                  </button>
                 </div>
               </div>
             </div>
@@ -1152,12 +1219,14 @@ function App() {
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
                 <h3>🗑 Confirmar eliminación</h3>
-                <p style={{marginBottom:"20px"}}>
-                  ¿Eliminar "{productoAEliminar.nombre}" de la lista?
-                </p>
-                <div style={{ display:"flex", justifyContent:"space-between" }}>
-                  <button onClick={() => setProductoAEliminar(null)} style={styles.button}>Cancelar</button>
-                  <button onClick={confirmarEliminarProducto} style={styles.buttonDanger}>Eliminar</button>
+                <p style={{ marginBottom: "20px" }}>¿Eliminar "{productoAEliminar.nombre}" de la lista?</p>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <button onClick={() => setProductoAEliminar(null)} style={styles.button}>
+                    Cancelar
+                  </button>
+                  <button onClick={confirmarEliminarProducto} style={styles.buttonDanger}>
+                    Eliminar
+                  </button>
                 </div>
               </div>
             </div>
@@ -1167,14 +1236,20 @@ function App() {
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
                 <h3>✎ Renombrar supermercado</h3>
-                <input
-                  value={editSuperNombre}
-                  onChange={(e) => setEditSuperNombre(e.target.value)}
-                  style={styles.input}
-                />
-                <div style={{ display:"flex", justifyContent:"space-between", marginTop:"10px" }}>
-                  <button onClick={() => { setSuperEditando(null); setEditSuperNombre(""); }} style={styles.button}>Cancelar</button>
-                  <button onClick={guardarNombreSuper} style={styles.buttonDanger}>Guardar</button>
+                <input value={editSuperNombre} onChange={(e) => setEditSuperNombre(e.target.value)} style={styles.input} />
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px" }}>
+                  <button
+                    onClick={() => {
+                      setSuperEditando(null);
+                      setEditSuperNombre("");
+                    }}
+                    style={styles.button}
+                  >
+                    Cancelar
+                  </button>
+                  <button onClick={guardarNombreSuper} style={styles.buttonDanger}>
+                    Guardar
+                  </button>
                 </div>
               </div>
             </div>
@@ -1190,26 +1265,28 @@ function App() {
           <div style={styles.selectorRow}>
             <select value={mesActual} onChange={(e) => setMesActual(Number(e.target.value))} style={styles.select}>
               {meses.map((mes, index) => (
-                <option key={index} value={index + 1}>{mes}</option>
+                <option key={index} value={index + 1}>
+                  {mes}
+                </option>
               ))}
             </select>
             <input type="number" value={anioActual} onChange={(e) => setAnioActual(Number(e.target.value))} style={styles.select} />
           </div>
 
-          <div style={getBalanceCardStyle()}>
-            {renderBalanceText()}
-          </div>
+          <div style={getBalanceCardStyle()}>{renderBalanceText()}</div>
 
           <div style={styles.cardFull}>
             <h3>· Añadir Nuevo Gasto ·</h3>
             <div style={styles.formContainer}>
-              <input type="text" placeholder="Comercio" value={comercio} onChange={(e) => setComercio(e.target.value)} style={styles.input}/>
-              <input type="number" placeholder="Importe" value={importe} onChange={(e) => setImporte(e.target.value)} style={styles.input}/>
+              <input type="text" placeholder="Comercio" value={comercio} onChange={(e) => setComercio(e.target.value)} style={styles.input} />
+              <input type="number" placeholder="Importe" value={importe} onChange={(e) => setImporte(e.target.value)} style={styles.input} />
               <select value={pagadoPor} onChange={(e) => setPagadoPor(e.target.value)} style={styles.input}>
                 <option value="mdekot@gmail.com">Mirko</option>
                 <option value="jessica.alca87@gmail.com">Jessica</option>
               </select>
-              <button onClick={agregarGasto} style={styles.button}>Guardar</button>
+              <button onClick={agregarGasto} style={styles.button}>
+                Guardar
+              </button>
             </div>
           </div>
 
@@ -1228,7 +1305,7 @@ function App() {
                     key={g.id}
                     style={{
                       ...styles.gastoItem,
-                      flexDirection: isMobile ? "row" : "row",
+                      flexDirection: "row",
                       alignItems: "center",
                       gap: isMobile ? "8px" : "0",
                       flexWrap: "nowrap"
@@ -1236,16 +1313,7 @@ function App() {
                   >
                     {isMobile ? (
                       <>
-                        {/* ✅ MÓVIL EN UNA SOLA LÍNEA */}
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                            flex: 1,
-                            minWidth: 0
-                          }}
-                        >
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0 }}>
                           <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle, flexShrink: 0 }}>
                             {badgeIcon}
                           </span>
@@ -1263,55 +1331,57 @@ function App() {
                               lineHeight: 1.2
                             }}
                           >
-                            {g.fecha
-                              ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" })
-                              : "--/--"}{" - "}{g.comercio}
+                            {g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"}{" "}
+                            - {g.comercio}
                           </span>
                         </div>
 
                         <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
-                          <span style={{ fontWeight: 600, fontSize: "14px", whiteSpace: "nowrap" }}>
-                            {Number(g.importe).toFixed(2)} €
-                          </span>
-                          <button onClick={() => abrirModalEditar(g)} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>✏</button>
-                          <button onClick={() => setGastoAEliminar(g)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>🗑</button>
+                          <span style={{ fontWeight: 600, fontSize: "14px", whiteSpace: "nowrap" }}>{Number(g.importe).toFixed(2)} €</span>
+                          <button onClick={() => abrirModalEditar(g)} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>
+                            ✏
+                          </button>
+                          <button onClick={() => setGastoAEliminar(g)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>
+                            🗑
+                          </button>
                         </div>
                       </>
                     ) : (
                       <>
-                        <span style={{ display:"flex", alignItems:"center", gap:"10px", minWidth: 0 }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
                           <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle }}>
                             {badgeIcon}
                           </span>
 
-                          {g.fecha
-                            ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" })
-                            : "--/--"}{" - "}{g.comercio}
+                          {g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"}{" "}
+                          - {g.comercio}
                         </span>
 
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                          <span style={{ minWidth: "90px", textAlign: "right", fontWeight: "600" }}>
-                            {Number(g.importe).toFixed(2)} €
-                          </span>
-                          <button onClick={() => abrirModalEditar(g)} style={styles.buttonEdit}>✏</button>
-                          <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDelete}>🗑</button>
+                          <span style={{ minWidth: "90px", textAlign: "right", fontWeight: "600" }}>{Number(g.importe).toFixed(2)} €</span>
+                          <button onClick={() => abrirModalEditar(g)} style={styles.buttonEdit}>
+                            ✏
+                          </button>
+                          <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDelete}>
+                            🗑
+                          </button>
                         </div>
                       </>
                     )}
                   </div>
                 );
               })}
-
             </div>
 
             <div style={styles.card}>
               <h3>· TOTAL POR COMERCIO ·</h3>
               {Object.entries(resumenComercio).map(([nombre, total]) => (
-                <p key={nombre}>{nombre} → {total.toFixed(2)} €</p>
+                <p key={nombre}>
+                  {nombre} → {total.toFixed(2)} €
+                </p>
               ))}
             </div>
 
-            {/* ✅ CORREGIDO: emoticonos también en GASTO INDIVIDUAL (PC y móvil) */}
             <div style={styles.card}>
               <h3>· GASTO INDIVIDUAL ·</h3>
 
@@ -1348,13 +1418,19 @@ function App() {
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
                 <h3>💸 LIQUIDAR MES</h3>
-                <p style={{marginBottom:"18px"}}>
+                <p style={{ marginBottom: "18px" }}>
                   ¿{debtInfo.debtorName.toUpperCase()} HA PAGADO LA DEUDA DE {debtInfo.amount.toFixed(2)} €?
                 </p>
-                <div style={{ display:"flex", justifyContent:"space-between", gap:"10px" }}>
-                  <button onClick={() => setLiquidarConfirmOpen(false)} style={styles.button}>Cancelar</button>
-                  <button onClick={() => guardarEstadoLiquidacion("unpaid")} style={styles.buttonDanger}>NO</button>
-                  <button onClick={() => guardarEstadoLiquidacion("paid")} style={styles.buttonPaid}>SÍ</button>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "10px" }}>
+                  <button onClick={() => setLiquidarConfirmOpen(false)} style={styles.button}>
+                    Cancelar
+                  </button>
+                  <button onClick={() => guardarEstadoLiquidacion("unpaid")} style={styles.buttonDanger}>
+                    NO
+                  </button>
+                  <button onClick={() => guardarEstadoLiquidacion("paid")} style={styles.buttonPaid}>
+                    SÍ
+                  </button>
                 </div>
               </div>
             </div>
@@ -1364,15 +1440,19 @@ function App() {
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
                 <h3>✏ Editar Gasto</h3>
-                <input value={editComercio} onChange={(e) => setEditComercio(e.target.value)} style={styles.input}/>
-                <input type="number" value={editImporte} onChange={(e) => setEditImporte(e.target.value)} style={styles.input}/>
+                <input value={editComercio} onChange={(e) => setEditComercio(e.target.value)} style={styles.input} />
+                <input type="number" value={editImporte} onChange={(e) => setEditImporte(e.target.value)} style={styles.input} />
                 <select value={editPagadoPor} onChange={(e) => setEditPagadoPor(e.target.value)} style={styles.input}>
                   <option value="mdekot@gmail.com">Mirko</option>
                   <option value="jessica.alca87@gmail.com">Jessica</option>
                 </select>
-                <div style={{ display:"flex", justifyContent:"space-between", marginTop:"10px" }}>
-                  <button onClick={() => setGastoEditando(null)} style={styles.button}>Cancelar</button>
-                  <button onClick={guardarEdicion} style={styles.buttonDanger}>Guardar</button>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px" }}>
+                  <button onClick={() => setGastoEditando(null)} style={styles.button}>
+                    Cancelar
+                  </button>
+                  <button onClick={guardarEdicion} style={styles.buttonDanger}>
+                    Guardar
+                  </button>
                 </div>
               </div>
             </div>
@@ -1382,12 +1462,16 @@ function App() {
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
                 <h3>🗑 Confirmar eliminación</h3>
-                <p style={{marginBottom:"20px"}}>
+                <p style={{ marginBottom: "20px" }}>
                   ¿Eliminar "{gastoAEliminar.comercio}" por {Number(gastoAEliminar.importe).toFixed(2)} €?
                 </p>
-                <div style={{ display:"flex", justifyContent:"space-between" }}>
-                  <button onClick={() => setGastoAEliminar(null)} style={styles.button}>Cancelar</button>
-                  <button onClick={confirmarEliminar} style={styles.buttonDanger}>Eliminar</button>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <button onClick={() => setGastoAEliminar(null)} style={styles.button}>
+                    Cancelar
+                  </button>
+                  <button onClick={confirmarEliminar} style={styles.buttonDanger}>
+                    Eliminar
+                  </button>
                 </div>
               </div>
             </div>
@@ -1398,10 +1482,7 @@ function App() {
       {/* ===== GRAFICO ===== */}
       {vista === "grafico" && (
         <div style={{ width: "100%", marginTop: "40px" }}>
-
-          <h2 style={{ textAlign: "center", marginBottom: "30px" }}>
-            📊 Distribución por Comercio
-          </h2>
+          <h2 style={{ textAlign: "center", marginBottom: "30px" }}>📊 Distribución por Comercio</h2>
 
           {dataGrafico.length === 0 ? (
             <p style={{ textAlign: "center" }}>No hay datos este mes</p>
@@ -1423,10 +1504,7 @@ function App() {
                       strokeWidth={2}
                     >
                       {dataGrafico.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={entry.color}
-                        />
+                        <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
 
@@ -1457,16 +1535,11 @@ function App() {
               <div style={styles.legendBox}>
                 {dataGraficoOrdenado.map((item) => (
                   <div key={item.nombre} style={styles.legendRow}>
-                    <div style={{display:"flex", alignItems:"center", gap:"10px"}}>
-                      <span
-                        style={{
-                          ...styles.legendDot,
-                          background: item.color
-                        }}
-                      />
-                      <span style={{fontWeight:700}}>{item.nombre}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <span style={{ ...styles.legendDot, background: item.color }} />
+                      <span style={{ fontWeight: 700 }}>{item.nombre}</span>
                     </div>
-                    <span style={{fontWeight:700}}>{Number(item.total).toFixed(2)} €</span>
+                    <span style={{ fontWeight: 700 }}>{Number(item.total).toFixed(2)} €</span>
                   </div>
                 ))}
               </div>
@@ -1474,97 +1547,102 @@ function App() {
               <div style={{ marginTop: "40px", display: "flex", justifyContent: "center", gap: "60px", flexWrap: "wrap" }}>
                 <div style={{ textAlign: "center" }}>
                   <h3>Mirko</h3>
-                  <p style={{ fontSize: "20px", fontWeight: "600" }}>
-                    {totalMirko.toFixed(2)} €
-                  </p>
+                  <p style={{ fontSize: "20px", fontWeight: "600" }}>{totalMirko.toFixed(2)} €</p>
                 </div>
 
                 <div style={{ textAlign: "center" }}>
                   <h3>Jessica</h3>
-                  <p style={{ fontSize: "20px", fontWeight: "600" }}>
-                    {totalJessica.toFixed(2)} €
-                  </p>
+                  <p style={{ fontSize: "20px", fontWeight: "600" }}>{totalJessica.toFixed(2)} €</p>
                 </div>
               </div>
             </>
           )}
         </div>
       )}
-
     </div>
   );
 }
 
 const styles = {
-  container:{background:"#4a505e",minHeight:"100vh",width:"100%",padding:"40px",color:"white",boxSizing:"border-box"},
-  title:{fontSize:"32px",marginBottom:"20px",textAlign:"center"},
-  selectorRow:{display:"flex",gap:"10px",marginBottom:"20px",flexWrap:"wrap"},
-  select:{padding:"8px",borderRadius:"6px"},
+  container: { background: "#4a505e", minHeight: "100vh", width: "100%", padding: "40px", color: "white", boxSizing: "border-box" },
+  title: { fontSize: "32px", marginBottom: "20px", textAlign: "center" },
+  selectorRow: { display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" },
+  select: { padding: "8px", borderRadius: "6px" },
 
-  balanceCard:{background:"#1e293b",padding:"20px",borderRadius:"10px",marginBottom:"30px",textAlign:"center",maxWidth:"600px",margin:"0 auto 30px auto"},
-  balanceCardPaid:{background:"#22c55e"},
-  balanceCardUnpaid:{background:"#ef4444"},
-  balanceCardBigText:{color:"#111827",textTransform:"uppercase",fontWeight:900},
+  balanceCard: { background: "#1e293b", padding: "20px", borderRadius: "10px", marginBottom: "30px", textAlign: "center", maxWidth: "600px", margin: "0 auto 30px auto" },
+  balanceCardPaid: { background: "#22c55e" },
+  balanceCardUnpaid: { background: "#ef4444" },
+  balanceCardBigText: { color: "#111827", textTransform: "uppercase", fontWeight: 900 },
 
-  cardFull:{background:"#1e293b",padding:"20px",borderRadius:"10px",marginBottom:"30px",textAlign:"center"},
-  formContainer:{width:"100%",maxWidth:"500px",margin:"0 auto"},
-  grid:{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))",gap:"20px",marginBottom:"30px"},
-  card:{background:"#1e293b",padding:"20px",borderRadius:"10px",textAlign:"center",boxSizing:"border-box",width:"100%"},
-  gastoItem:{display:"flex",justifyContent:"space-between",marginBottom:"8px"},
-  input:{display:"block",width:"100%",marginBottom:"10px",padding:"8px",borderRadius:"6px",border:"none"},
+  cardFull: { background: "#1e293b", padding: "20px", borderRadius: "10px", marginBottom: "30px", textAlign: "center" },
+  formContainer: { width: "100%", maxWidth: "500px", margin: "0 auto" },
+  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px", marginBottom: "30px" },
+  card: { background: "#1e293b", padding: "20px", borderRadius: "10px", textAlign: "center", boxSizing: "border-box", width: "100%" },
+  gastoItem: { display: "flex", justifyContent: "space-between", marginBottom: "8px" },
+  input: { display: "block", width: "100%", marginBottom: "10px", padding: "8px", borderRadius: "6px", border: "none" },
 
-  cardHeaderRow:{position:"relative",display:"flex",alignItems:"center",justifyContent:"flex-end",marginBottom:"10px",minHeight:"34px"},
-  cardTitle:{position:"absolute",left:"50%",transform:"translateX(-50%)",margin:0,width:"100%",textAlign:"center",pointerEvents:"none"},
+  cardHeaderRow: { position: "relative", display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: "10px", minHeight: "34px" },
+  cardTitle: { position: "absolute", left: "50%", transform: "translateX(-50%)", margin: 0, width: "100%", textAlign: "center", pointerEvents: "none" },
 
-  superFormRow:{display:"flex",justifyContent:"center",alignItems:"center",gap:"10px",marginBottom:"10px",width:"100%",boxSizing:"border-box"},
-  inputSuper:{display:"block",width:"70%",maxWidth:"260px",padding:"8px",borderRadius:"6px",border:"none"},
-  buttonAddInline:{background:"#3b82f6",color:"white",padding:"10px 14px",border:"none",borderRadius:"6px",cursor:"pointer",whiteSpace:"nowrap"},
+  superFormRow: { display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", marginBottom: "10px", width: "100%", boxSizing: "border-box" },
+  inputSuper: { display: "block", width: "70%", maxWidth: "260px", padding: "8px", borderRadius: "6px", border: "none" },
+  buttonAddInline: { background: "#3b82f6", color: "white", padding: "10px 14px", border: "none", borderRadius: "6px", cursor: "pointer", whiteSpace: "nowrap" },
 
-  button:{background:"#3b82f6",color:"white",padding:"10px",border:"none",borderRadius:"6px",cursor:"pointer"},
-  buttonDanger:{background:"#ef4444",color:"white",padding:"10px 15px",border:"none",borderRadius:"6px",cursor:"pointer"},
-  buttonPaid:{background:"#22c55e",color:"#111827",padding:"10px 15px",border:"none",borderRadius:"6px",cursor:"pointer",fontWeight:800},
+  button: { background: "#3b82f6", color: "white", padding: "10px", border: "none", borderRadius: "6px", cursor: "pointer" },
+  buttonDanger: { background: "#ef4444", color: "white", padding: "10px 15px", border: "none", borderRadius: "6px", cursor: "pointer" },
+  buttonPaid: { background: "#22c55e", color: "#111827", padding: "10px 15px", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 800 },
 
-  buttonEdit:{background:"#facc15",border:"none",borderRadius:"5px",padding:"4px 8px",marginRight:"5px",cursor:"pointer"},
-  buttonDelete:{background:"#ef4444",border:"none",borderRadius:"5px",padding:"4px 8px",cursor:"pointer"},
-  buttonCenter:{display:"flex",justifyContent:"center"},
-  tabs:{display:"flex",justifyContent:"center",gap:"10px",marginBottom:"20px",flexWrap:"wrap"},
-  tab:{background:"#1e293b",color:"white",padding:"10px 20px",border:"none",borderRadius:"6px",cursor:"pointer"},
-  tabActive:{background:"#3b82f6",color:"white",padding:"10px 20px",border:"none",borderRadius:"6px",cursor:"pointer"},
-  modalOverlay:{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",justifyContent:"center",alignItems:"center"},
-  modal:{background:"#1e293b",padding:"25px",borderRadius:"10px",width:"90%",maxWidth:"340px"},
+  buttonEdit: { background: "#facc15", border: "none", borderRadius: "5px", padding: "4px 8px", marginRight: "5px", cursor: "pointer" },
+  buttonDelete: { background: "#ef4444", border: "none", borderRadius: "5px", padding: "4px 8px", cursor: "pointer" },
+  buttonCenter: { display: "flex", justifyContent: "center" },
+  tabs: { display: "flex", justifyContent: "center", gap: "10px", marginBottom: "20px", flexWrap: "wrap" },
+  tab: { background: "#1e293b", color: "white", padding: "10px 20px", border: "none", borderRadius: "6px", cursor: "pointer" },
+  tabActive: { background: "#3b82f6", color: "white", padding: "10px 20px", border: "none", borderRadius: "6px", cursor: "pointer" },
+  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "center", alignItems: "center" },
+  modal: { background: "#1e293b", padding: "25px", borderRadius: "10px", width: "90%", maxWidth: "340px" },
 
-  buttonSuperEdit:{background:"#06b6d4",color:"white",border:"none",borderRadius:"999px",width:"34px",height:"34px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"},
+  buttonSuperEdit: { background: "#06b6d4", color: "white", border: "none", borderRadius: "999px", width: "34px", height: "34px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
 
-  payIcon:{width:"28px",height:"28px",borderRadius:"999px",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:"16px",flexShrink:0},
-  payMirko:{background:"#22c55e",color:"white"},
-  payJessica:{background:"#ec4899",color:"white"},
+  payIcon: { width: "28px", height: "28px", borderRadius: "999px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "16px", flexShrink: 0 },
+  payMirko: { background: "#22c55e", color: "white" },
+  payJessica: { background: "#ec4899", color: "white" },
 
-  legendBox:{maxWidth:"650px",margin:"28px auto 0 auto",background:"#1e293b",padding:"18px",borderRadius:"10px"},
-  legendRow:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.08)"},
-  legendDot:{width:"14px",height:"14px",borderRadius:"999px",display:"inline-block"},
+  legendBox: { maxWidth: "650px", margin: "28px auto 0 auto", background: "#1e293b", padding: "18px", borderRadius: "10px" },
+  legendRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.08)" },
+  legendDot: { width: "14px", height: "14px", borderRadius: "999px", display: "inline-block" },
 
   // ===== CALENDARIO STYLES =====
-  calHeader:{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap"},
-  buttonAddCalendar:{background:"#06b6d4",color:"white",padding:"10px 14px",border:"none",borderRadius:"6px",cursor:"pointer",fontWeight:800},
+  calHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" },
+  buttonAddCalendar: { background: "#06b6d4", color: "white", padding: "10px 14px", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 800 },
 
-  calWeekHeader:{display:"grid",gridTemplateColumns:"repeat(7, 1fr)",gap:"8px",marginBottom:"10px"},
-  calWeekHeaderCell:{background:"rgba(255,255,255,0.06)",borderRadius:"8px",padding:"10px 0",fontWeight:900},
+  calWeekHeader: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "8px", marginBottom: "10px" },
+  calWeekHeaderCell: { background: "rgba(255,255,255,0.06)", borderRadius: "8px", padding: "10px 0", fontWeight: 900 },
 
-  calGrid:{display:"grid",gridTemplateColumns:"repeat(7, 1fr)",gap:"8px"},
-  calCell:{background:"rgba(255,255,255,0.06)",borderRadius:"10px",padding:"10px",minHeight:"110px",boxSizing:"border-box",cursor:"default",display:"flex",flexDirection:"column"},
-  calCellEmpty:{background:"rgba(255,255,255,0.03)"},
-  calCellToday:{outline:"2px solid rgba(34,197,94,0.9)"},
-  calCellTopRow:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"8px"},
-  calDayNumber:{fontWeight:900,opacity:0.9},
-  calDayNumberToday:{color:"#22c55e"},
-  calAddMini:{background:"rgba(59,130,246,0.9)",color:"white",border:"none",borderRadius:"8px",width:"26px",height:"26px",cursor:"pointer",fontWeight:900},
+  calGrid: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "8px" },
+  calCell: { background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "10px", minHeight: "110px", boxSizing: "border-box", cursor: "default", display: "flex", flexDirection: "column" },
 
-  calEventsBox:{display:"flex",flexDirection:"column",gap:"6px",overflow:"hidden"},
-  eventChip:{color:"#111827",fontWeight:900,borderRadius:"8px",padding:"6px 8px",fontSize:"12px",textAlign:"left",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",cursor:"pointer"},
-  moreEvents:{opacity:0.9,fontSize:"12px",textAlign:"left",paddingLeft:"2px"},
+  // ✅ móvil compacto (sin perder 7 columnas)
+  calWeekHeaderMobile: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "6px", marginBottom: "8px" },
+  calWeekHeaderCellMobile: { background: "rgba(255,255,255,0.06)", borderRadius: "8px", padding: "8px 0", fontWeight: 900, fontSize: "12px" },
 
-  mobileEventCard:{background:"rgba(255,255,255,0.06)",borderRadius:"10px",padding:"12px"},
-  eventPill:{width:"40px",height:"28px",borderRadius:"999px",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:"12px",fontWeight:900,color:"#111827"}
+  calGridMobile: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "6px" },
+  calCellMobile: { background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "8px", minHeight: "78px", boxSizing: "border-box", cursor: "default", display: "flex", flexDirection: "column" },
+  calAddMiniMobile: { background: "rgba(59,130,246,0.9)", color: "white", border: "none", borderRadius: "8px", width: "22px", height: "22px", cursor: "pointer", fontWeight: 900, fontSize: "14px", lineHeight: "22px", padding: 0 },
+
+  calCellEmpty: { background: "rgba(255,255,255,0.03)" },
+  calCellToday: { outline: "2px solid rgba(34,197,94,0.9)" },
+  calCellTopRow: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" },
+  calDayNumber: { fontWeight: 900, opacity: 0.9, fontSize: "13px" },
+  calDayNumberToday: { color: "#22c55e" },
+  calAddMini: { background: "rgba(59,130,246,0.9)", color: "white", border: "none", borderRadius: "8px", width: "26px", height: "26px", cursor: "pointer", fontWeight: 900 },
+
+  calEventsBox: { display: "flex", flexDirection: "column", gap: "6px", overflow: "hidden" },
+  eventChip: { color: "#111827", fontWeight: 900, borderRadius: "8px", padding: "6px 8px", fontSize: "12px", textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", cursor: "pointer" },
+  eventChipMobile: { padding: "5px 6px", fontSize: "11px" },
+  moreEvents: { opacity: 0.9, fontSize: "12px", textAlign: "left", paddingLeft: "2px" },
+
+  mobileEventCard: { background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "12px" },
+  eventPill: { width: "40px", height: "28px", borderRadius: "999px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 900, color: "#111827" }
 };
 
 export default App;
