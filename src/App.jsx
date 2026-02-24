@@ -848,36 +848,58 @@ function App() {
                     key={g.id}
                     style={{
                       ...styles.gastoItem,
-                      flexDirection: isMobile ? "column" : "row",
-                      alignItems: isMobile ? "stretch" : "center"
+                      flexDirection: isMobile ? "row" : "row",
+                      alignItems: "center",
+                      gap: isMobile ? "8px" : "0",
+                      flexWrap: "nowrap"
                     }}
                   >
                     {isMobile ? (
                       <>
-                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                          <span style={{ display:"flex", alignItems:"center", gap:"10px" }}>
-                            <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle }}>
-                              {badgeIcon}
-                            </span>
+                        {/* ✅ MÓVIL EN UNA SOLA LÍNEA */}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            flex: 1,
+                            minWidth: 0
+                          }}
+                        >
+                          <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle, flexShrink: 0 }}>
+                            {badgeIcon}
+                          </span>
 
+                          <span
+                            title={`${g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"} - ${g.comercio}`}
+                            style={{
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              minWidth: 0,
+                              flex: 1,
+                              textAlign: "left",
+                              fontSize: "14px",
+                              lineHeight: 1.2
+                            }}
+                          >
                             {g.fecha
                               ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" })
                               : "--/--"}{" - "}{g.comercio}
                           </span>
-
-                          <span style={{ fontWeight: "600" }}>
-                            {Number(g.importe).toFixed(2)} €
-                          </span>
                         </div>
 
-                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "6px" }}>
-                          <button onClick={() => abrirModalEditar(g)} style={styles.buttonEdit}>✏</button>
-                          <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDelete}>🗑</button>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                          <span style={{ fontWeight: 600, fontSize: "14px", whiteSpace: "nowrap" }}>
+                            {Number(g.importe).toFixed(2)} €
+                          </span>
+                          <button onClick={() => abrirModalEditar(g)} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>✏</button>
+                          <button onClick={() => setGastoAEliminar(g)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>🗑</button>
                         </div>
                       </>
                     ) : (
                       <>
-                        <span style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+                        <span style={{ display:"flex", alignItems:"center", gap:"10px", minWidth: 0 }}>
                           <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle }}>
                             {badgeIcon}
                           </span>
