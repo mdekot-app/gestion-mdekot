@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   collection,
-  getDocs,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -96,12 +95,12 @@ function App() {
   const [eventoAEliminar, setEventoAEliminar] = useState(null);
 
   const [evTitulo, setEvTitulo] = useState("");
-  const [evTipo, setEvTipo] = useState("CUMPLEAÑOS");
+  const [evTipo, setEvTipo] = useState("OTRO"); // ✅ ya no hay selector, pero mantenemos el campo
   const [evFecha, setEvFecha] = useState("");
-  const [evHora, setEvHora] = useState("00:00"); // ✅ para que en móvil se vea 00:00
+  const [evHora, setEvHora] = useState("00:00");
   const [evNotas, setEvNotas] = useState("");
 
-  // ✅ NUEVO: modal de detalle del día (Google Calendar style)
+  // ✅ Modal detalle del día (como tu imagen)
   const [diaDetalleOpen, setDiaDetalleOpen] = useState(false);
   const [diaDetalleFecha, setDiaDetalleFecha] = useState("");
 
@@ -136,16 +135,8 @@ function App() {
       .join(" ");
   };
 
-  const COLORES_GRAFICO = [
-    "#3b82f6",
-    "#22c55e",
-    "#f59e0b",
-    "#ef4444",
-    "#a855f7",
-    "#06b6d4"
-  ];
+  const COLORES_GRAFICO = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4"];
 
-  // ✅ Color dinámico para evitar repeticiones cuando haya más comercios que colores base
   const generarColorGrafico = (index, total) => {
     if (index < COLORES_GRAFICO.length) return COLORES_GRAFICO[index];
     const offset = index - COLORES_GRAFICO.length;
@@ -224,7 +215,6 @@ function App() {
     cargarEstadoLiquidacion();
   }, [idLiquidacion]);
 
-  // ✅ CLAVE: si la deuda actual no coincide con la guardada, NO mostramos paid/unpaid
   useEffect(() => {
     if (balance === 0) {
       setEstadoDeuda(null);
@@ -482,7 +472,6 @@ function App() {
     return { start, end, lastDay };
   };
 
-  // ✅ CORREGIDO: consulta SIN índice (quitamos orderBy("hora"))
   useEffect(() => {
     const { start, end } = getMonthRange(calAnio, calMes);
 
@@ -499,7 +488,6 @@ function App() {
         let lista = [];
         snapshot.forEach((docu) => lista.push({ id: docu.id, ...docu.data() }));
 
-        // ✅ Ordenamos en JS por fecha + hora (sin necesitar índice)
         lista.sort((a, b) => {
           const fa = a.fecha || "";
           const fb = b.fecha || "";
@@ -522,7 +510,7 @@ function App() {
 
   const abrirNuevoEvento = (fechaPreseleccionada) => {
     setEvTitulo("");
-    setEvTipo("CUMPLEAÑOS");
+    setEvTipo("OTRO"); // ✅ fijo
     setEvNotas("");
     setEvHora("00:00");
     setEvFecha(fechaPreseleccionada || ymd(calAnio, calMes, new Date().getDate()));
@@ -539,7 +527,7 @@ function App() {
     await addDoc(collection(db, "eventos"), {
       titulo: t,
       tipo: (evTipo || "OTRO").trim(),
-      fecha: f, // YYYY-MM-DD
+      fecha: f,
       hora: horaFinal,
       notas: (evNotas || "").trim(),
       createdAt: new Date()
@@ -583,21 +571,11 @@ function App() {
     setEventoAEliminar(null);
   };
 
-  const tipoColor = (tipo) => {
-    const t = (tipo || "").toUpperCase();
-    if (t.includes("CUMPLE")) return "#a855f7";
-    if (t.includes("MÉD") || t.includes("MED")) return "#ef4444";
-    if (t.includes("CITA")) return "#3b82f6";
-    if (t.includes("TRABA")) return "#f59e0b";
-    return "#22c55e";
-  };
-
-  // ✅ Colores rotativos para eventos dentro del mismo día (independiente del tipo)
+  // ✅ Colores en el detalle del día (para diferenciar eventos)
   const COLORES_EVENTOS_DIA = useMemo(
     () => ["#a855f7", "#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#06b6d4"],
     []
   );
-
   const colorEventoPorIndice = (idx) => COLORES_EVENTOS_DIA[idx % COLORES_EVENTOS_DIA.length];
 
   const eventosPorFecha = {};
@@ -616,7 +594,8 @@ function App() {
     setDiaDetalleOpen(true);
   };
 
-  const eventosDelDiaDetalle = (diaDetalleFecha && eventosPorFecha[diaDetalleFecha]) ? eventosPorFecha[diaDetalleFecha] : [];
+  const eventosDelDiaDetalle =
+    diaDetalleFecha && eventosPorFecha[diaDetalleFecha] ? eventosPorFecha[diaDetalleFecha] : [];
 
   const irMesAnterior = () => {
     let m = calMes - 1;
@@ -729,9 +708,7 @@ function App() {
         celdas.push({ empty: true, key: `e-${i}` });
       } else {
         const fechaStr = ymd(calAnio, calMes, dayNum);
-        const esHoy =
-          fechaStr ===
-          ymd(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate());
+        const esHoy = fechaStr === ymd(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate());
         celdas.push({ empty: false, key: fechaStr, dayNum, fechaStr, esHoy });
       }
     }
@@ -743,28 +720,16 @@ function App() {
   return (
     <div style={{ ...styles.container, padding: isMobile ? "16px" : "40px" }}>
       <div style={styles.tabs}>
-        <button
-          onClick={() => setVista("dashboard")}
-          style={vista === "dashboard" ? styles.tabActive : styles.tab}
-        >
+        <button onClick={() => setVista("dashboard")} style={vista === "dashboard" ? styles.tabActive : styles.tab}>
           Dashboard
         </button>
-        <button
-          onClick={() => setVista("grafico")}
-          style={vista === "grafico" ? styles.tabActive : styles.tab}
-        >
+        <button onClick={() => setVista("grafico")} style={vista === "grafico" ? styles.tabActive : styles.tab}>
           Gráfico Mensual
         </button>
-        <button
-          onClick={() => setVista("lista")}
-          style={vista === "lista" ? styles.tabActive : styles.tab}
-        >
+        <button onClick={() => setVista("lista")} style={vista === "lista" ? styles.tabActive : styles.tab}>
           Lista de la Compra
         </button>
-        <button
-          onClick={() => setVista("calendario")}
-          style={vista === "calendario" ? styles.tabActive : styles.tab}
-        >
+        <button onClick={() => setVista("calendario")} style={vista === "calendario" ? styles.tabActive : styles.tab}>
           Calendario
         </button>
       </div>
@@ -774,154 +739,67 @@ function App() {
         <>
           <h1 style={styles.title}>📅 CALENDARIO</h1>
 
-          {/* ✅ móvil: contenedor a pantalla completa sin “fondo claro” */}
-          <div
-            style={{
-              ...styles.calendarPageWrap,
-              ...(isMobile ? styles.calendarPageWrapMobile : {})
-            }}
-          >
+          <div style={{ ...styles.calendarPageWrap, ...(isMobile ? styles.calendarPageWrapMobile : {}) }}>
             <div style={{ ...styles.cardFull, padding: isMobile ? "14px 12px" : "18px", marginBottom: isMobile ? "14px" : "30px" }}>
-              <div
-                style={{
-                  ...styles.calHeader,
-                  flexDirection: isMobile ? "column" : "row",
-                  gap: isMobile ? "10px" : "12px"
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    flexWrap: "wrap",
-                    justifyContent: "center"
-                  }}
-                >
-                  <button onClick={irMesAnterior} style={styles.button}>
-                    ◀
-                  </button>
-                  <button onClick={irHoy} style={styles.button}>
-                    Hoy
-                  </button>
-                  <button onClick={irMesSiguiente} style={styles.button}>
-                    ▶
-                  </button>
+              <div style={{ ...styles.calHeader, flexDirection: isMobile ? "column" : "row", gap: isMobile ? "10px" : "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "center" }}>
+                  <button onClick={irMesAnterior} style={styles.button}>◀</button>
+                  <button onClick={irHoy} style={styles.button}>Hoy</button>
+                  <button onClick={irMesSiguiente} style={styles.button}>▶</button>
 
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <select
-                      value={calMes}
-                      onChange={(e) => setCalMes(Number(e.target.value))}
-                      style={styles.select}
-                    >
+                    <select value={calMes} onChange={(e) => setCalMes(Number(e.target.value))} style={styles.select}>
                       {meses.map((m, idx) => (
-                        <option key={m} value={idx + 1}>
-                          {m}
-                        </option>
+                        <option key={m} value={idx + 1}>{m}</option>
                       ))}
                     </select>
-                    <input
-                      type="number"
-                      value={calAnio}
-                      onChange={(e) => setCalAnio(Number(e.target.value))}
-                      style={styles.select}
-                    />
+                    <input type="number" value={calAnio} onChange={(e) => setCalAnio(Number(e.target.value))} style={styles.select} />
                   </div>
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "center" }}>
-                  <button
-                    onClick={() => abrirNuevoEvento(ymd(calAnio, calMes, 1))}
-                    style={styles.buttonAddCalendar}
-                  >
+                  <button onClick={() => abrirNuevoEvento(ymd(calAnio, calMes, 1))} style={styles.buttonAddCalendar}>
                     + Nuevo evento
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* ✅ Cuadrícula: sin scroll horizontal, ocupa todo el ancho */}
-            <div
-              style={{
-                ...styles.calendarCard,
-                ...(isMobile ? styles.calendarCardMobile : {})
-              }}
-            >
+            <div style={{ ...styles.calendarCard, ...(isMobile ? styles.calendarCardMobile : {}) }}>
               <div style={styles.calWeekHeaderUnified}>
                 {diasSemana.map((d) => (
-                  <div key={d} style={styles.calWeekHeaderCellUnified}>
-                    {d}
-                  </div>
+                  <div key={d} style={styles.calWeekHeaderCellUnified}>{d}</div>
                 ))}
               </div>
 
               <div style={styles.calGridUnified}>
                 {calendarCells.map((c) => {
-                  const baseCellStyle = isMobile ? styles.calCellMobile2 : styles.calCell;
+                  const baseCellStyle = isMobile ? styles.calCellMobileDot : styles.calCellPcDot;
 
-                  if (c.empty) {
-                    return <div key={c.key} style={{ ...baseCellStyle, ...styles.calCellEmpty }} />;
-                  }
+                  if (c.empty) return <div key={c.key} style={{ ...baseCellStyle, ...styles.calCellEmpty }} />;
 
                   const evs = eventosPorFecha[c.fechaStr] || [];
-                  const cap = isMobile ? 2 : 4;
+                  const hasEvents = evs.length > 0;
 
                   return (
                     <div
                       key={c.key}
-                      style={{
-                        ...baseCellStyle,
-                        ...(c.esHoy ? styles.calCellToday : {})
-                      }}
+                      style={{ ...baseCellStyle, ...(c.esHoy ? styles.calCellToday : {}) }}
                       onClick={() => abrirDetalleDia(c.fechaStr)}
-                      title="Click para ver el día"
+                      title="Click para ver detalle del día"
                     >
-                      <div style={styles.calCellTopRow}>
-                        <span
-                          style={{
-                            ...styles.calDayNumber,
-                            ...(c.esHoy ? styles.calDayNumberToday : {})
-                          }}
-                        >
+                      <div style={styles.calCellDotTop}>
+                        <span style={{ ...styles.calDayNumber, ...(c.esHoy ? styles.calDayNumberToday : {}) }}>
                           {c.dayNum}
                         </span>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            abrirNuevoEvento(c.fechaStr);
-                          }}
-                          style={isMobile ? styles.calAddMiniMobile2 : styles.calAddMini}
-                          title="Añadir evento"
-                        >
-                          +
-                        </button>
                       </div>
 
-                      <div style={styles.calEventsBox}>
-                        {evs.slice(0, cap).map((ev, idx) => (
-                          <div
-                            key={ev.id}
-                            style={{
-                              ...styles.eventChip,
-                              ...(isMobile ? styles.eventChipMobile2 : {}),
-                              background: colorEventoPorIndice(idx) // ✅ colores distintos en el mismo día
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              abrirEditarEvento(ev);
-                            }}
-                            title={ev.titulo}
-                          >
-                            {/* ✅ NO mostrar hora en el cuadro del día */}
-                            {ev.titulo}
-                          </div>
-                        ))}
-
-                        {evs.length > cap ? (
-                          <div style={styles.moreEvents}>+{evs.length - cap} más</div>
-                        ) : null}
-                      </div>
+                      {/* ✅ SOLO 1 PUNTITO VERDE CENTRADO */}
+                      {hasEvents ? (
+                        <div style={styles.dotCenterWrap}>
+                          <span style={isMobile ? styles.dotGreenMobile : styles.dotGreenPc} />
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}
@@ -929,17 +807,22 @@ function App() {
 
               {!isMobile && (
                 <div style={{ marginTop: "12px", opacity: 0.8, fontSize: "13px" }}>
-                  Tip: click en un día para ver detalle. Click en un evento para editar.
+                  Tip: click en un día para ver detalle.
                 </div>
               )}
             </div>
           </div>
 
-          {/* ✅ DETALLE DEL DÍA (modal tipo Google Calendar) */}
+          {/* ✅ DETALLE DEL DÍA */}
           {diaDetalleOpen && (
             <div style={styles.modalOverlay}>
               <div style={{ ...styles.modal, maxWidth: "420px" }}>
-                <h3 style={{ marginTop: 0 }}>📌 {diaDetalleFecha ? new Date(diaDetalleFecha + "T00:00:00").toLocaleDateString("es-ES", { weekday: "long", day: "2-digit", month: "long" }) : "Día"}</h3>
+                <h3 style={{ marginTop: 0 }}>
+                  📌{" "}
+                  {diaDetalleFecha
+                    ? new Date(diaDetalleFecha + "T00:00:00").toLocaleDateString("es-ES", { weekday: "long", day: "2-digit", month: "long" })
+                    : "Día"}
+                </h3>
 
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px" }}>
                   <button onClick={() => abrirNuevoEvento(diaDetalleFecha)} style={styles.buttonAddCalendar}>
@@ -954,10 +837,7 @@ function App() {
                     {eventosDelDiaDetalle.map((ev, idx) => (
                       <div
                         key={ev.id}
-                        style={{
-                          ...styles.dayDetailRow,
-                          borderLeft: `10px solid ${colorEventoPorIndice(idx)}`
-                        }}
+                        style={{ ...styles.dayDetailRow, borderLeft: `10px solid ${colorEventoPorIndice(idx)}` }}
                       >
                         <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "center" }}>
                           <div style={{ minWidth: 0 }}>
@@ -965,7 +845,7 @@ function App() {
                               {ev.titulo}
                             </div>
                             <div style={{ opacity: 0.9, fontSize: "13px", textAlign: "left" }}>
-                              {ev.hora ? `${ev.hora}` : "00:00"} · {ev.tipo || "OTRO"}
+                              {ev.hora ? `${ev.hora}` : "00:00"}
                             </div>
                             {ev.notas ? (
                               <div style={{ opacity: 0.9, fontSize: "13px", textAlign: "left", marginTop: "6px" }}>
@@ -985,89 +865,43 @@ function App() {
                 )}
 
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "14px" }}>
-                  <button onClick={() => setDiaDetalleOpen(false)} style={styles.button}>
-                    Cerrar
-                  </button>
+                  <button onClick={() => setDiaDetalleOpen(false)} style={styles.button}>Cerrar</button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ===== MODALES EVENTO (igual que antes) ===== */}
+          {/* ===== MODAL NUEVO EVENTO (SIN SELECTOR DE TIPO) ===== */}
           {eventoNuevoOpen && (
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
                 <h3>📌 Nuevo Evento</h3>
-                <input
-                  value={evTitulo}
-                  onChange={(e) => setEvTitulo(e.target.value)}
-                  style={styles.input}
-                  placeholder="Título (ej: Cumpleaños mamá)"
-                />
-                <select value={evTipo} onChange={(e) => setEvTipo(e.target.value)} style={styles.input}>
-                  <option value="CUMPLEAÑOS">Cumpleaños</option>
-                  <option value="CITA">Cita</option>
-                  <option value="MÉDICO">Médico</option>
-                  <option value="TRABAJO">Trabajo</option>
-                  <option value="OTRO">Otro</option>
-                </select>
+                <input value={evTitulo} onChange={(e) => setEvTitulo(e.target.value)} style={styles.input} placeholder="Título (ej: Cumpleaños mamá)" />
                 <input type="date" value={evFecha} onChange={(e) => setEvFecha(e.target.value)} style={styles.input} />
-                <input
-                  type="time"
-                  value={evHora}
-                  onChange={(e) => setEvHora(e.target.value || "00:00")}
-                  style={styles.input}
-                />
+                <input type="time" value={evHora} onChange={(e) => setEvHora(e.target.value || "00:00")} style={styles.input} />
                 <input value={evNotas} onChange={(e) => setEvNotas(e.target.value)} style={styles.input} placeholder="Notas (opcional)" />
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px" }}>
-                  <button onClick={() => setEventoNuevoOpen(false)} style={styles.button}>
-                    Cancelar
-                  </button>
-                  <button onClick={guardarNuevoEvento} style={styles.buttonPaid}>
-                    Guardar
-                  </button>
+                  <button onClick={() => setEventoNuevoOpen(false)} style={styles.button}>Cancelar</button>
+                  <button onClick={guardarNuevoEvento} style={styles.buttonPaid}>Guardar</button>
                 </div>
               </div>
             </div>
           )}
 
+          {/* ===== MODAL EDITAR EVENTO (SIN SELECTOR DE TIPO) ===== */}
           {eventoEditando && (
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
                 <h3>✏ Editar Evento</h3>
                 <input value={evTitulo} onChange={(e) => setEvTitulo(e.target.value)} style={styles.input} placeholder="Título" />
-                <select value={evTipo} onChange={(e) => setEvTipo(e.target.value)} style={styles.input}>
-                  <option value="CUMPLEAÑOS">Cumpleaños</option>
-                  <option value="CITA">Cita</option>
-                  <option value="MÉDICO">Médico</option>
-                  <option value="TRABAJO">Trabajo</option>
-                  <option value="OTRO">Otro</option>
-                </select>
                 <input type="date" value={evFecha} onChange={(e) => setEvFecha(e.target.value)} style={styles.input} />
-                <input
-                  type="time"
-                  value={evHora}
-                  onChange={(e) => setEvHora(e.target.value || "00:00")}
-                  style={styles.input}
-                />
+                <input type="time" value={evHora} onChange={(e) => setEvHora(e.target.value || "00:00")} style={styles.input} />
                 <input value={evNotas} onChange={(e) => setEvNotas(e.target.value)} style={styles.input} placeholder="Notas (opcional)" />
 
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px", gap: "10px" }}>
-                  <button onClick={() => setEventoEditando(null)} style={styles.button}>
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEventoAEliminar(eventoEditando);
-                      setEventoEditando(null);
-                    }}
-                    style={styles.buttonDanger}
-                  >
-                    Eliminar
-                  </button>
-                  <button onClick={guardarEdicionEvento} style={styles.buttonPaid}>
-                    Guardar
-                  </button>
+                  <button onClick={() => setEventoEditando(null)} style={styles.button}>Cancelar</button>
+                  <button onClick={() => { setEventoAEliminar(eventoEditando); setEventoEditando(null); }} style={styles.buttonDanger}>Eliminar</button>
+                  <button onClick={guardarEdicionEvento} style={styles.buttonPaid}>Guardar</button>
                 </div>
               </div>
             </div>
@@ -1079,12 +913,8 @@ function App() {
                 <h3>🗑 Confirmar eliminación</h3>
                 <p style={{ marginBottom: "20px" }}>¿Eliminar "{eventoAEliminar.titulo}"?</p>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <button onClick={() => setEventoAEliminar(null)} style={styles.button}>
-                    Cancelar
-                  </button>
-                  <button onClick={confirmarEliminarEvento} style={styles.buttonDanger}>
-                    Eliminar
-                  </button>
+                  <button onClick={() => setEventoAEliminar(null)} style={styles.button}>Cancelar</button>
+                  <button onClick={confirmarEliminarEvento} style={styles.buttonDanger}>Eliminar</button>
                 </div>
               </div>
             </div>
@@ -1123,9 +953,7 @@ function App() {
                     <div key={s.key} style={{ ...styles.card, padding: "16px 12px", margin: "0 auto" }}>
                       <div style={styles.cardHeaderRow}>
                         <h3 style={styles.cardTitle}>· {nombreVisible} ·</h3>
-                        <button onClick={() => abrirEditarSuper(s.key)} style={styles.buttonSuperEdit} title="Renombrar supermercado">
-                          ✎
-                        </button>
+                        <button onClick={() => abrirEditarSuper(s.key)} style={styles.buttonSuperEdit} title="Renombrar supermercado">✎</button>
                       </div>
 
                       <div style={styles.superFormRow}>
@@ -1136,94 +964,42 @@ function App() {
                           onChange={(e) => setInputSuper(s.key, e.target.value)}
                           style={{ ...styles.inputSuper, width: "100%", maxWidth: "none", minWidth: 0 }}
                         />
-                        <button onClick={() => agregarProducto(s.key)} style={styles.buttonAddInline}>
-                          Añadir
-                        </button>
+                        <button onClick={() => agregarProducto(s.key)} style={styles.buttonAddInline}>Añadir</button>
                       </div>
 
                       {lista.length === 0 && <p>No hay productos</p>}
 
                       {lista.map((p) => (
-                        <div
-                          key={p.id}
-                          style={{
-                            ...styles.gastoItem,
-                            alignItems: "center",
-                            gap: "8px",
-                            flexWrap: "nowrap"
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "8px",
-                              opacity: p.comprado ? 0.55 : 1,
-                              flex: 1,
-                              minWidth: 0
-                            }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={p.comprado}
-                              onChange={() => toggleComprado(p)}
-                              style={{ accentColor: "#22c55e", flexShrink: 0 }}
-                            />
+                        <div key={p.id} style={{ ...styles.gastoItem, alignItems: "center", gap: "8px", flexWrap: "nowrap" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", opacity: p.comprado ? 0.55 : 1, flex: 1, minWidth: 0 }}>
+                            <input type="checkbox" checked={p.comprado} onChange={() => toggleComprado(p)} style={{ accentColor: "#22c55e", flexShrink: 0 }} />
                             <span
                               title={p.nombre}
-                              style={{
-                                textDecoration: p.comprado ? "line-through" : "none",
-                                whiteSpace: "nowrap",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                minWidth: 0,
-                                flex: 1,
-                                textAlign: "left",
-                                fontSize: "14px",
-                                lineHeight: 1.2
-                              }}
+                              style={{ textDecoration: p.comprado ? "line-through" : "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: 1, textAlign: "left", fontSize: "14px", lineHeight: 1.2 }}
                             >
                               {p.nombre}
                             </span>
                           </div>
 
                           <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
-                            <button
-                              onClick={() => {
-                                setProductoEditando(p);
-                                setEditProductoNombre(p.nombre);
-                              }}
-                              style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}
-                            >
-                              ✏
-                            </button>
-                            <button onClick={() => setProductoAEliminar(p)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>
-                              🗑
-                            </button>
+                            <button onClick={() => { setProductoEditando(p); setEditProductoNombre(p.nombre); }} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>✏</button>
+                            <button onClick={() => setProductoAEliminar(p)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>🗑</button>
                           </div>
                         </div>
                       ))}
 
                       <div style={{ display: "flex", justifyContent: "center", marginTop: "14px" }}>
-                        <button onClick={() => limpiarComprados(s.key)} style={styles.buttonDanger}>
-                          Limpiar comprados
-                        </button>
+                        <button onClick={() => limpiarComprados(s.key)} style={styles.buttonDanger}>Limpiar comprados</button>
                       </div>
 
                       {limpiarCompradosConfirm.open && limpiarCompradosConfirm.superKey === s.key && (
                         <div style={styles.modalOverlay}>
                           <div style={styles.modal}>
                             <h3>🧹 Limpiar comprados</h3>
-                            <p style={{ marginBottom: "20px" }}>
-                              ¿Eliminar {totalComprados} producto(s) ya comprados de {nombreVisible}?
-                            </p>
+                            <p style={{ marginBottom: "20px" }}>¿Eliminar {totalComprados} producto(s) ya comprados de {nombreVisible}?</p>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
-                              <button onClick={() => setLimpiarCompradosConfirm({ open: false, superKey: null })} style={styles.button}>
-                                Cancelar
-                              </button>
-                              <button onClick={confirmarLimpiarComprados} style={styles.buttonDanger}>
-                                Eliminar
-                              </button>
+                              <button onClick={() => setLimpiarCompradosConfirm({ open: false, superKey: null })} style={styles.button}>Cancelar</button>
+                              <button onClick={confirmarLimpiarComprados} style={styles.buttonDanger}>Eliminar</button>
                             </div>
                           </div>
                         </div>
@@ -1244,22 +1020,12 @@ function App() {
                   <div key={s.key} style={styles.card}>
                     <div style={styles.cardHeaderRow}>
                       <h3 style={styles.cardTitle}>· {nombreVisible} ·</h3>
-                      <button onClick={() => abrirEditarSuper(s.key)} style={styles.buttonSuperEdit} title="Renombrar supermercado">
-                        ✎
-                      </button>
+                      <button onClick={() => abrirEditarSuper(s.key)} style={styles.buttonSuperEdit} title="Renombrar supermercado">✎</button>
                     </div>
 
                     <div style={styles.superFormRow}>
-                      <input
-                        type="text"
-                        placeholder="Añadir producto..."
-                        value={inputsSuper[s.key] || ""}
-                        onChange={(e) => setInputSuper(s.key, e.target.value)}
-                        style={styles.inputSuper}
-                      />
-                      <button onClick={() => agregarProducto(s.key)} style={styles.buttonAddInline}>
-                        Añadir
-                      </button>
+                      <input type="text" placeholder="Añadir producto..." value={inputsSuper[s.key] || ""} onChange={(e) => setInputSuper(s.key, e.target.value)} style={styles.inputSuper} />
+                      <button onClick={() => agregarProducto(s.key)} style={styles.buttonAddInline}>Añadir</button>
                     </div>
 
                     {lista.length === 0 && <p>No hay productos</p>}
@@ -1272,42 +1038,24 @@ function App() {
                         </div>
 
                         <div style={{ display: "flex", gap: "8px" }}>
-                          <button
-                            onClick={() => {
-                              setProductoEditando(p);
-                              setEditProductoNombre(p.nombre);
-                            }}
-                            style={styles.buttonEdit}
-                          >
-                            ✏
-                          </button>
-                          <button onClick={() => setProductoAEliminar(p)} style={styles.buttonDelete}>
-                            🗑
-                          </button>
+                          <button onClick={() => { setProductoEditando(p); setEditProductoNombre(p.nombre); }} style={styles.buttonEdit}>✏</button>
+                          <button onClick={() => setProductoAEliminar(p)} style={styles.buttonDelete}>🗑</button>
                         </div>
                       </div>
                     ))}
 
                     <div style={{ display: "flex", justifyContent: "center", marginTop: "14px" }}>
-                      <button onClick={() => limpiarComprados(s.key)} style={styles.buttonDanger}>
-                        Limpiar comprados
-                      </button>
+                      <button onClick={() => limpiarComprados(s.key)} style={styles.buttonDanger}>Limpiar comprados</button>
                     </div>
 
                     {limpiarCompradosConfirm.open && limpiarCompradosConfirm.superKey === s.key && (
                       <div style={styles.modalOverlay}>
                         <div style={styles.modal}>
                           <h3>🧹 Limpiar comprados</h3>
-                          <p style={{ marginBottom: "20px" }}>
-                            ¿Eliminar {totalComprados} producto(s) ya comprados de {nombreVisible}?
-                          </p>
+                          <p style={{ marginBottom: "20px" }}>¿Eliminar {totalComprados} producto(s) ya comprados de {nombreVisible}?</p>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
-                            <button onClick={() => setLimpiarCompradosConfirm({ open: false, superKey: null })} style={styles.button}>
-                              Cancelar
-                            </button>
-                            <button onClick={confirmarLimpiarComprados} style={styles.buttonDanger}>
-                              Eliminar
-                            </button>
+                            <button onClick={() => setLimpiarCompradosConfirm({ open: false, superKey: null })} style={styles.button}>Cancelar</button>
+                            <button onClick={confirmarLimpiarComprados} style={styles.buttonDanger}>Eliminar</button>
                           </div>
                         </div>
                       </div>
@@ -1324,12 +1072,8 @@ function App() {
                 <h3>✏ Editar Producto</h3>
                 <input value={editProductoNombre} onChange={(e) => setEditProductoNombre(e.target.value)} style={styles.input} />
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px" }}>
-                  <button onClick={() => setProductoEditando(null)} style={styles.button}>
-                    Cancelar
-                  </button>
-                  <button onClick={guardarEdicionProducto} style={styles.buttonDanger}>
-                    Guardar
-                  </button>
+                  <button onClick={() => setProductoEditando(null)} style={styles.button}>Cancelar</button>
+                  <button onClick={guardarEdicionProducto} style={styles.buttonDanger}>Guardar</button>
                 </div>
               </div>
             </div>
@@ -1341,12 +1085,8 @@ function App() {
                 <h3>🗑 Confirmar eliminación</h3>
                 <p style={{ marginBottom: "20px" }}>¿Eliminar "{productoAEliminar.nombre}" de la lista?</p>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <button onClick={() => setProductoAEliminar(null)} style={styles.button}>
-                    Cancelar
-                  </button>
-                  <button onClick={confirmarEliminarProducto} style={styles.buttonDanger}>
-                    Eliminar
-                  </button>
+                  <button onClick={() => setProductoAEliminar(null)} style={styles.button}>Cancelar</button>
+                  <button onClick={confirmarEliminarProducto} style={styles.buttonDanger}>Eliminar</button>
                 </div>
               </div>
             </div>
@@ -1358,18 +1098,8 @@ function App() {
                 <h3>✎ Renombrar supermercado</h3>
                 <input value={editSuperNombre} onChange={(e) => setEditSuperNombre(e.target.value)} style={styles.input} />
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px" }}>
-                  <button
-                    onClick={() => {
-                      setSuperEditando(null);
-                      setEditSuperNombre("");
-                    }}
-                    style={styles.button}
-                  >
-                    Cancelar
-                  </button>
-                  <button onClick={guardarNombreSuper} style={styles.buttonDanger}>
-                    Guardar
-                  </button>
+                  <button onClick={() => { setSuperEditando(null); setEditSuperNombre(""); }} style={styles.button}>Cancelar</button>
+                  <button onClick={guardarNombreSuper} style={styles.buttonDanger}>Guardar</button>
                 </div>
               </div>
             </div>
@@ -1385,9 +1115,7 @@ function App() {
           <div style={styles.selectorRow}>
             <select value={mesActual} onChange={(e) => setMesActual(Number(e.target.value))} style={styles.select}>
               {meses.map((mes, index) => (
-                <option key={index} value={index + 1}>
-                  {mes}
-                </option>
+                <option key={index} value={index + 1}>{mes}</option>
               ))}
             </select>
             <input type="number" value={anioActual} onChange={(e) => setAnioActual(Number(e.target.value))} style={styles.select} />
@@ -1404,9 +1132,7 @@ function App() {
                 <option value="mdekot@gmail.com">Mirko</option>
                 <option value="jessica.alca87@gmail.com">Jessica</option>
               </select>
-              <button onClick={agregarGasto} style={styles.button}>
-                Guardar
-              </button>
+              <button onClick={agregarGasto} style={styles.button}>Guardar</button>
             </div>
           </div>
 
@@ -1421,35 +1147,14 @@ function App() {
                 const badgeTitle = esMirko ? "Pagó Mirko" : "Pagó Jessica";
 
                 return (
-                  <div
-                    key={g.id}
-                    style={{
-                      ...styles.gastoItem,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: isMobile ? "8px" : "0",
-                      flexWrap: "nowrap"
-                    }}
-                  >
+                  <div key={g.id} style={{ ...styles.gastoItem, flexDirection: "row", alignItems: "center", gap: isMobile ? "8px" : "0", flexWrap: "nowrap" }}>
                     {isMobile ? (
                       <>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0 }}>
-                          <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle, flexShrink: 0 }}>
-                            {badgeIcon}
-                          </span>
-
+                          <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle, flexShrink: 0 }}>{badgeIcon}</span>
                           <span
                             title={`${g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"} - ${g.comercio}`}
-                            style={{
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              minWidth: 0,
-                              flex: 1,
-                              textAlign: "left",
-                              fontSize: "14px",
-                              lineHeight: 1.2
-                            }}
+                            style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: 1, textAlign: "left", fontSize: "14px", lineHeight: 1.2 }}
                           >
                             {g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"}{" "}
                             - {g.comercio}
@@ -1458,33 +1163,22 @@ function App() {
 
                         <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
                           <span style={{ fontWeight: 600, fontSize: "14px", whiteSpace: "nowrap" }}>{Number(g.importe).toFixed(2)} €</span>
-                          <button onClick={() => abrirModalEditar(g)} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>
-                            ✏
-                          </button>
-                          <button onClick={() => setGastoAEliminar(g)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>
-                            🗑
-                          </button>
+                          <button onClick={() => abrirModalEditar(g)} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>✏</button>
+                          <button onClick={() => setGastoAEliminar(g)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>🗑</button>
                         </div>
                       </>
                     ) : (
                       <>
                         <span style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
-                          <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle }}>
-                            {badgeIcon}
-                          </span>
-
+                          <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle }}>{badgeIcon}</span>
                           {g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"}{" "}
                           - {g.comercio}
                         </span>
 
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                           <span style={{ minWidth: "90px", textAlign: "right", fontWeight: "600" }}>{Number(g.importe).toFixed(2)} €</span>
-                          <button onClick={() => abrirModalEditar(g)} style={styles.buttonEdit}>
-                            ✏
-                          </button>
-                          <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDelete}>
-                            🗑
-                          </button>
+                          <button onClick={() => abrirModalEditar(g)} style={styles.buttonEdit}>✏</button>
+                          <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDelete}>🗑</button>
                         </div>
                       </>
                     )}
@@ -1496,27 +1190,19 @@ function App() {
             <div style={styles.card}>
               <h3>· TOTAL POR COMERCIO ·</h3>
               {Object.entries(resumenComercio).map(([nombre, total]) => (
-                <p key={nombre}>
-                  {nombre} → {total.toFixed(2)} €
-                </p>
+                <p key={nombre}>{nombre} → {total.toFixed(2)} €</p>
               ))}
             </div>
 
             <div style={styles.card}>
               <h3>· GASTO INDIVIDUAL ·</h3>
-
               <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "10px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
-                  <span title="Pagó Mirko" style={{ ...styles.payIcon, ...styles.payMirko }}>
-                    👨
-                  </span>
+                  <span title="Pagó Mirko" style={{ ...styles.payIcon, ...styles.payMirko }}>👨</span>
                   <span style={{ fontWeight: "600" }}>Mirko → {totalMirko.toFixed(2)} €</span>
                 </div>
-
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
-                  <span title="Pagó Jessica" style={{ ...styles.payIcon, ...styles.payJessica }}>
-                    👩
-                  </span>
+                  <span title="Pagó Jessica" style={{ ...styles.payIcon, ...styles.payJessica }}>👩</span>
                   <span style={{ fontWeight: "600" }}>Jessica → {totalJessica.toFixed(2)} €</span>
                 </div>
               </div>
@@ -1529,9 +1215,7 @@ function App() {
           </div>
 
           <div style={styles.buttonCenter}>
-            <button onClick={liquidarMes} style={styles.buttonDanger} disabled={balance === 0}>
-              Liquidar mes
-            </button>
+            <button onClick={liquidarMes} style={styles.buttonDanger} disabled={balance === 0}>Liquidar mes</button>
           </div>
 
           {liquidarConfirmOpen && balance !== 0 && (
@@ -1542,15 +1226,9 @@ function App() {
                   ¿{debtInfo.debtorName.toUpperCase()} HA PAGADO LA DEUDA DE {debtInfo.amount.toFixed(2)} €?
                 </p>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: "10px" }}>
-                  <button onClick={() => setLiquidarConfirmOpen(false)} style={styles.button}>
-                    Cancelar
-                  </button>
-                  <button onClick={() => guardarEstadoLiquidacion("unpaid")} style={styles.buttonDanger}>
-                    NO
-                  </button>
-                  <button onClick={() => guardarEstadoLiquidacion("paid")} style={styles.buttonPaid}>
-                    SÍ
-                  </button>
+                  <button onClick={() => setLiquidarConfirmOpen(false)} style={styles.button}>Cancelar</button>
+                  <button onClick={() => guardarEstadoLiquidacion("unpaid")} style={styles.buttonDanger}>NO</button>
+                  <button onClick={() => guardarEstadoLiquidacion("paid")} style={styles.buttonPaid}>SÍ</button>
                 </div>
               </div>
             </div>
@@ -1567,12 +1245,8 @@ function App() {
                   <option value="jessica.alca87@gmail.com">Jessica</option>
                 </select>
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px" }}>
-                  <button onClick={() => setGastoEditando(null)} style={styles.button}>
-                    Cancelar
-                  </button>
-                  <button onClick={guardarEdicion} style={styles.buttonDanger}>
-                    Guardar
-                  </button>
+                  <button onClick={() => setGastoEditando(null)} style={styles.button}>Cancelar</button>
+                  <button onClick={guardarEdicion} style={styles.buttonDanger}>Guardar</button>
                 </div>
               </div>
             </div>
@@ -1586,12 +1260,8 @@ function App() {
                   ¿Eliminar "{gastoAEliminar.comercio}" por {Number(gastoAEliminar.importe).toFixed(2)} €?
                 </p>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <button onClick={() => setGastoAEliminar(null)} style={styles.button}>
-                    Cancelar
-                  </button>
-                  <button onClick={confirmarEliminar} style={styles.buttonDanger}>
-                    Eliminar
-                  </button>
+                  <button onClick={() => setGastoAEliminar(null)} style={styles.button}>Cancelar</button>
+                  <button onClick={confirmarEliminar} style={styles.buttonDanger}>Eliminar</button>
                 </div>
               </div>
             </div>
@@ -1718,11 +1388,10 @@ const styles = {
   legendRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.08)" },
   legendDot: { width: "14px", height: "14px", borderRadius: "999px", display: "inline-block" },
 
-  // ===== CALENDARIO STYLES =====
+  // ===== CALENDARIO =====
   calHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" },
   buttonAddCalendar: { background: "#06b6d4", color: "white", padding: "10px 14px", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 800 },
 
-  // ✅ wrapper para que en móvil el fondo oscuro ocupe toda la pantalla
   calendarPageWrap: { width: "100%", maxWidth: "1100px", margin: "0 auto" },
   calendarPageWrapMobile: { width: "100vw", marginLeft: "calc(50% - 50vw)", marginRight: "calc(50% - 50vw)" },
 
@@ -1734,22 +1403,19 @@ const styles = {
 
   calGridUnified: { display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "6px" },
 
-  calCell: { background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "10px", minHeight: "110px", boxSizing: "border-box", display: "flex", flexDirection: "column" },
-  calCellMobile2: { background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "7px", minHeight: "72px", boxSizing: "border-box", display: "flex", flexDirection: "column" },
+  calCellPcDot: { background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "10px", minHeight: "110px", boxSizing: "border-box", display: "flex", flexDirection: "column", cursor: "pointer" },
+  calCellMobileDot: { background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "7px", minHeight: "72px", boxSizing: "border-box", display: "flex", flexDirection: "column", cursor: "pointer" },
 
   calCellEmpty: { background: "rgba(255,255,255,0.03)" },
   calCellToday: { outline: "2px solid rgba(34,197,94,0.9)" },
-  calCellTopRow: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" },
+
+  calCellDotTop: { display: "flex", alignItems: "flex-start", justifyContent: "flex-start" },
   calDayNumber: { fontWeight: 900, opacity: 0.9, fontSize: "13px" },
   calDayNumberToday: { color: "#22c55e" },
 
-  calAddMini: { background: "rgba(59,130,246,0.9)", color: "white", border: "none", borderRadius: "8px", width: "26px", height: "26px", cursor: "pointer", fontWeight: 900 },
-  calAddMiniMobile2: { background: "rgba(59,130,246,0.9)", color: "white", border: "none", borderRadius: "8px", width: "22px", height: "22px", cursor: "pointer", fontWeight: 900, fontSize: "14px", lineHeight: "22px", padding: 0 },
-
-  calEventsBox: { display: "flex", flexDirection: "column", gap: "6px", overflow: "hidden" },
-  eventChip: { color: "#111827", fontWeight: 900, borderRadius: "8px", padding: "6px 8px", fontSize: "12px", textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", cursor: "pointer" },
-  eventChipMobile2: { padding: "5px 6px", fontSize: "11px" },
-  moreEvents: { opacity: 0.9, fontSize: "12px", textAlign: "left", paddingLeft: "2px" },
+  dotCenterWrap: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center" },
+  dotGreenPc: { width: "12px", height: "12px", borderRadius: "999px", background: "#39ff14", boxShadow: "0 0 10px rgba(57,255,20,0.8)" },
+  dotGreenMobile: { width: "8px", height: "8px", borderRadius: "999px", background: "#39ff14", boxShadow: "0 0 8px rgba(57,255,20,0.8)" },
 
   dayDetailRow: { background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "10px" }
 };
