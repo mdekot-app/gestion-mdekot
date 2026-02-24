@@ -571,14 +571,14 @@ function App() {
                 </select>
               </div>
 
-              <div style={styles.grid}>
+              <div style={{ ...styles.grid, gridTemplateColumns: "1fr" }}>
                 {SUPERS.filter(s => s.key === superMobile).map((s) => {
                   const lista = productosOrdenadosPorSuper(s.key);
                   const nombreVisible = nombresSupers[s.key] || s.defaultName;
                   const totalComprados = totalCompradosSuper(s.key);
 
                   return (
-                    <div key={s.key} style={styles.card}>
+                    <div key={s.key} style={{ ...styles.card, width: "100%", padding: "16px 12px" }}>
                       <div style={styles.cardHeaderRow}>
                         <h3 style={styles.cardTitle}>· {nombreVisible} ·</h3>
                         <button onClick={() => abrirEditarSuper(s.key)} style={styles.buttonSuperEdit} title="Renombrar supermercado">✎</button>
@@ -590,7 +590,7 @@ function App() {
                           placeholder="Añadir producto..."
                           value={inputsSuper[s.key] || ""}
                           onChange={(e) => setInputSuper(s.key, e.target.value)}
-                          style={styles.inputSuper}
+                          style={{ ...styles.inputSuper, width: "100%", maxWidth: "none", minWidth: 0 }}
                         />
                         <button onClick={() => agregarProducto(s.key)} style={styles.buttonAddInline}>
                           Añadir
@@ -600,22 +600,52 @@ function App() {
                       {lista.length === 0 && <p>No hay productos</p>}
 
                       {lista.map((p) => (
-                        <div key={p.id} style={styles.gastoItem}>
-                          <div style={{display:"flex", alignItems:"center", gap:"10px", opacity: p.comprado ? 0.55 : 1}}>
+                        <div
+                          key={p.id}
+                          style={{
+                            ...styles.gastoItem,
+                            alignItems: "center",
+                            gap: "8px",
+                            flexWrap: "nowrap"
+                          }}
+                        >
+                          <div
+                            style={{
+                              display:"flex",
+                              alignItems:"center",
+                              gap:"8px",
+                              opacity: p.comprado ? 0.55 : 1,
+                              flex: 1,
+                              minWidth: 0
+                            }}
+                          >
                             <input
                               type="checkbox"
                               checked={p.comprado}
                               onChange={() => toggleComprado(p)}
-                              style={{ accentColor: "#22c55e" }}
+                              style={{ accentColor: "#22c55e", flexShrink: 0 }}
                             />
-                            <span style={{textDecoration: p.comprado ? "line-through" : "none"}}>
+                            <span
+                              title={p.nombre}
+                              style={{
+                                textDecoration: p.comprado ? "line-through" : "none",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                minWidth: 0,
+                                flex: 1,
+                                textAlign: "left",
+                                fontSize: "14px",
+                                lineHeight: 1.2
+                              }}
+                            >
                               {p.nombre}
                             </span>
                           </div>
 
-                          <div style={{display:"flex", gap:"8px"}}>
-                            <button onClick={() => {setProductoEditando(p); setEditProductoNombre(p.nombre);}} style={styles.buttonEdit}>✏</button>
-                            <button onClick={() => setProductoAEliminar(p)} style={styles.buttonDelete}>🗑</button>
+                          <div style={{display:"flex", gap:"6px", flexShrink: 0}}>
+                            <button onClick={() => {setProductoEditando(p); setEditProductoNombre(p.nombre);}} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>✏</button>
+                            <button onClick={() => setProductoAEliminar(p)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>🗑</button>
                           </div>
                         </div>
                       ))}
