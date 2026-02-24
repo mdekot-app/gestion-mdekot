@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   collection,
   getDocs,
@@ -100,6 +100,10 @@ function App() {
   const [evFecha, setEvFecha] = useState("");
   const [evHora, setEvHora] = useState("00:00"); // ✅ para que en móvil se vea 00:00
   const [evNotas, setEvNotas] = useState("");
+
+  // ✅ NUEVO: modal de detalle del día (Google Calendar style)
+  const [diaDetalleOpen, setDiaDetalleOpen] = useState(false);
+  const [diaDetalleFecha, setDiaDetalleFecha] = useState("");
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -500,8 +504,8 @@ function App() {
           const fa = a.fecha || "";
           const fb = b.fecha || "";
           if (fa !== fb) return fa.localeCompare(fb);
-          const ha = (a.hora || "99:99");
-          const hb = (b.hora || "99:99");
+          const ha = a.hora || "99:99";
+          const hb = b.hora || "99:99";
           return ha.localeCompare(hb);
         });
 
@@ -520,7 +524,7 @@ function App() {
     setEvTitulo("");
     setEvTipo("CUMPLEAÑOS");
     setEvNotas("");
-    setEvHora("00:00"); // ✅ para que en móvil no se vea en blanco
+    setEvHora("00:00");
     setEvFecha(fechaPreseleccionada || ymd(calAnio, calMes, new Date().getDate()));
     setEventoNuevoOpen(true);
   };
@@ -536,7 +540,7 @@ function App() {
       titulo: t,
       tipo: (evTipo || "OTRO").trim(),
       fecha: f, // YYYY-MM-DD
-      hora: horaFinal, // ✅ siempre visible
+      hora: horaFinal,
       notas: (evNotas || "").trim(),
       createdAt: new Date()
     });
@@ -549,7 +553,7 @@ function App() {
     setEvTitulo(ev.titulo || "");
     setEvTipo(ev.tipo || "OTRO");
     setEvFecha(ev.fecha || "");
-    setEvHora((ev.hora && ev.hora.trim()) ? ev.hora : "00:00"); // ✅ si viene vacío, mostrar 00:00
+    setEvHora(ev.hora && ev.hora.trim() ? ev.hora : "00:00");
     setEvNotas(ev.notas || "");
   };
 
@@ -588,6 +592,14 @@ function App() {
     return "#22c55e";
   };
 
+  // ✅ Colores rotativos para eventos dentro del mismo día (independiente del tipo)
+  const COLORES_EVENTOS_DIA = useMemo(
+    () => ["#a855f7", "#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#06b6d4"],
+    []
+  );
+
+  const colorEventoPorIndice = (idx) => COLORES_EVENTOS_DIA[idx % COLORES_EVENTOS_DIA.length];
+
   const eventosPorFecha = {};
   eventos.forEach((ev) => {
     const f = ev.fecha || "";
@@ -595,10 +607,16 @@ function App() {
     eventosPorFecha[f].push(ev);
   });
 
-  // ✅ Por si Firestore devuelve sin ordenar por hora, ordenamos dentro de cada día
   Object.keys(eventosPorFecha).forEach((f) => {
     eventosPorFecha[f].sort((a, b) => (a.hora || "99:99").localeCompare(b.hora || "99:99"));
   });
+
+  const abrirDetalleDia = (fechaStr) => {
+    setDiaDetalleFecha(fechaStr);
+    setDiaDetalleOpen(true);
+  };
+
+  const eventosDelDiaDetalle = (diaDetalleFecha && eventosPorFecha[diaDetalleFecha]) ? eventosPorFecha[diaDetalleFecha] : [];
 
   const irMesAnterior = () => {
     let m = calMes - 1;
@@ -711,7 +729,9 @@ function App() {
         celdas.push({ empty: true, key: `e-${i}` });
       } else {
         const fechaStr = ymd(calAnio, calMes, dayNum);
-        const esHoy = fechaStr === ymd(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate());
+        const esHoy =
+          fechaStr ===
+          ymd(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate());
         celdas.push({ empty: false, key: fechaStr, dayNum, fechaStr, esHoy });
       }
     }
@@ -723,16 +743,28 @@ function App() {
   return (
     <div style={{ ...styles.container, padding: isMobile ? "16px" : "40px" }}>
       <div style={styles.tabs}>
-        <button onClick={() => setVista("dashboard")} style={vista === "dashboard" ? styles.tabActive : styles.tab}>
+        <button
+          onClick={() => setVista("dashboard")}
+          style={vista === "dashboard" ? styles.tabActive : styles.tab}
+        >
           Dashboard
         </button>
-        <button onClick={() => setVista("grafico")} style={vista === "grafico" ? styles.tabActive : styles.tab}>
+        <button
+          onClick={() => setVista("grafico")}
+          style={vista === "grafico" ? styles.tabActive : styles.tab}
+        >
           Gráfico Mensual
         </button>
-        <button onClick={() => setVista("lista")} style={vista === "lista" ? styles.tabActive : styles.tab}>
+        <button
+          onClick={() => setVista("lista")}
+          style={vista === "lista" ? styles.tabActive : styles.tab}
+        >
           Lista de la Compra
         </button>
-        <button onClick={() => setVista("calendario")} style={vista === "calendario" ? styles.tabActive : styles.tab}>
+        <button
+          onClick={() => setVista("calendario")}
+          style={vista === "calendario" ? styles.tabActive : styles.tab}
+        >
           Calendario
         </button>
       </div>
@@ -742,127 +774,226 @@ function App() {
         <>
           <h1 style={styles.title}>📅 CALENDARIO</h1>
 
-          <div style={{ ...styles.cardFull, padding: isMobile ? "14px 12px" : "18px" }}>
+          {/* ✅ móvil: contenedor a pantalla completa sin “fondo claro” */}
+          <div
+            style={{
+              ...styles.calendarPageWrap,
+              ...(isMobile ? styles.calendarPageWrapMobile : {})
+            }}
+          >
+            <div style={{ ...styles.cardFull, padding: isMobile ? "14px 12px" : "18px", marginBottom: isMobile ? "14px" : "30px" }}>
+              <div
+                style={{
+                  ...styles.calHeader,
+                  flexDirection: isMobile ? "column" : "row",
+                  gap: isMobile ? "10px" : "12px"
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    flexWrap: "wrap",
+                    justifyContent: "center"
+                  }}
+                >
+                  <button onClick={irMesAnterior} style={styles.button}>
+                    ◀
+                  </button>
+                  <button onClick={irHoy} style={styles.button}>
+                    Hoy
+                  </button>
+                  <button onClick={irMesSiguiente} style={styles.button}>
+                    ▶
+                  </button>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <select
+                      value={calMes}
+                      onChange={(e) => setCalMes(Number(e.target.value))}
+                      style={styles.select}
+                    >
+                      {meses.map((m, idx) => (
+                        <option key={m} value={idx + 1}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      value={calAnio}
+                      onChange={(e) => setCalAnio(Number(e.target.value))}
+                      style={styles.select}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <button
+                    onClick={() => abrirNuevoEvento(ymd(calAnio, calMes, 1))}
+                    style={styles.buttonAddCalendar}
+                  >
+                    + Nuevo evento
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ✅ Cuadrícula: sin scroll horizontal, ocupa todo el ancho */}
             <div
               style={{
-                ...styles.calHeader,
-                flexDirection: isMobile ? "column" : "row",
-                gap: isMobile ? "10px" : "12px"
+                ...styles.calendarCard,
+                ...(isMobile ? styles.calendarCardMobile : {})
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "center" }}>
-                <button onClick={irMesAnterior} style={styles.button}>
-                  ◀
-                </button>
-                <button onClick={irHoy} style={styles.button}>
-                  Hoy
-                </button>
-                <button onClick={irMesSiguiente} style={styles.button}>
-                  ▶
-                </button>
-
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <select value={calMes} onChange={(e) => setCalMes(Number(e.target.value))} style={styles.select}>
-                    {meses.map((m, idx) => (
-                      <option key={m} value={idx + 1}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                  <input type="number" value={calAnio} onChange={(e) => setCalAnio(Number(e.target.value))} style={styles.select} />
-                </div>
+              <div style={styles.calWeekHeaderUnified}>
+                {diasSemana.map((d) => (
+                  <div key={d} style={styles.calWeekHeaderCellUnified}>
+                    {d}
+                  </div>
+                ))}
               </div>
 
-              <div style={{ display: "flex", justifyContent: "center" }}>
-                <button onClick={() => abrirNuevoEvento(ymd(calAnio, calMes, 1))} style={styles.buttonAddCalendar}>
-                  + Nuevo evento
-                </button>
-              </div>
-            </div>
-          </div>
+              <div style={styles.calGridUnified}>
+                {calendarCells.map((c) => {
+                  const baseCellStyle = isMobile ? styles.calCellMobile2 : styles.calCell;
 
-          {/* ✅ CORREGIDO: en móvil también mostramos CUADRÍCULA */}
-          <div style={{ ...styles.card, padding: isMobile ? "14px 10px" : "18px" }}>
-            <div style={isMobile ? styles.calWeekHeaderMobile : styles.calWeekHeader}>
-              {diasSemana.map((d) => (
-                <div key={d} style={isMobile ? styles.calWeekHeaderCellMobile : styles.calWeekHeaderCell}>
-                  {d}
-                </div>
-              ))}
-            </div>
+                  if (c.empty) {
+                    return <div key={c.key} style={{ ...baseCellStyle, ...styles.calCellEmpty }} />;
+                  }
 
-            <div style={isMobile ? styles.calGridMobile : styles.calGrid}>
-              {calendarCells.map((c) => {
-                if (c.empty) {
-                  return <div key={c.key} style={{ ...(isMobile ? styles.calCellMobile : styles.calCell), ...styles.calCellEmpty }} />;
-                }
+                  const evs = eventosPorFecha[c.fechaStr] || [];
+                  const cap = isMobile ? 2 : 4;
 
-                const evs = eventosPorFecha[c.fechaStr] || [];
-                const cap = isMobile ? 2 : 4;
-
-                return (
-                  <div
-                    key={c.key}
-                    style={{
-                      ...(isMobile ? styles.calCellMobile : styles.calCell),
-                      ...(c.esHoy ? styles.calCellToday : {})
-                    }}
-                    onDoubleClick={() => abrirNuevoEvento(c.fechaStr)}
-                    title="Doble click para añadir evento"
-                  >
-                    <div style={styles.calCellTopRow}>
-                      <span style={{ ...styles.calDayNumber, ...(c.esHoy ? styles.calDayNumberToday : {}) }}>{c.dayNum}</span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          abrirNuevoEvento(c.fechaStr);
-                        }}
-                        style={isMobile ? styles.calAddMiniMobile : styles.calAddMini}
-                        title="Añadir evento"
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    <div style={styles.calEventsBox}>
-                      {evs.slice(0, cap).map((ev) => (
-                        <div
-                          key={ev.id}
+                  return (
+                    <div
+                      key={c.key}
+                      style={{
+                        ...baseCellStyle,
+                        ...(c.esHoy ? styles.calCellToday : {})
+                      }}
+                      onClick={() => abrirDetalleDia(c.fechaStr)}
+                      title="Click para ver el día"
+                    >
+                      <div style={styles.calCellTopRow}>
+                        <span
                           style={{
-                            ...styles.eventChip,
-                            ...(isMobile ? styles.eventChipMobile : {}),
-                            background: tipoColor(ev.tipo)
+                            ...styles.calDayNumber,
+                            ...(c.esHoy ? styles.calDayNumberToday : {})
                           }}
+                        >
+                          {c.dayNum}
+                        </span>
+
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            abrirEditarEvento(ev);
+                            abrirNuevoEvento(c.fechaStr);
                           }}
-                          title={`${ev.titulo}${ev.hora ? ` (${ev.hora})` : ""}`}
+                          style={isMobile ? styles.calAddMiniMobile2 : styles.calAddMini}
+                          title="Añadir evento"
                         >
-                          {isMobile ? (
-                            <span style={{ fontWeight: 900 }}>{ev.titulo}</span>
-                          ) : (
-                            <>
-                              {ev.hora ? `${ev.hora} ` : ""}
-                              {ev.titulo}
-                            </>
-                          )}
-                        </div>
-                      ))}
-                      {evs.length > cap ? <div style={styles.moreEvents}>+{evs.length - cap} más</div> : null}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                          +
+                        </button>
+                      </div>
 
-            {!isMobile && (
-              <div style={{ marginTop: "12px", opacity: 0.8, fontSize: "13px" }}>
-                Tip: doble click en un día para añadir evento. Click en un evento para editar.
+                      <div style={styles.calEventsBox}>
+                        {evs.slice(0, cap).map((ev, idx) => (
+                          <div
+                            key={ev.id}
+                            style={{
+                              ...styles.eventChip,
+                              ...(isMobile ? styles.eventChipMobile2 : {}),
+                              background: colorEventoPorIndice(idx) // ✅ colores distintos en el mismo día
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              abrirEditarEvento(ev);
+                            }}
+                            title={ev.titulo}
+                          >
+                            {/* ✅ NO mostrar hora en el cuadro del día */}
+                            {ev.titulo}
+                          </div>
+                        ))}
+
+                        {evs.length > cap ? (
+                          <div style={styles.moreEvents}>+{evs.length - cap} más</div>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            )}
+
+              {!isMobile && (
+                <div style={{ marginTop: "12px", opacity: 0.8, fontSize: "13px" }}>
+                  Tip: click en un día para ver detalle. Click en un evento para editar.
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* ✅ DETALLE DEL DÍA (modal tipo Google Calendar) */}
+          {diaDetalleOpen && (
+            <div style={styles.modalOverlay}>
+              <div style={{ ...styles.modal, maxWidth: "420px" }}>
+                <h3 style={{ marginTop: 0 }}>📌 {diaDetalleFecha ? new Date(diaDetalleFecha + "T00:00:00").toLocaleDateString("es-ES", { weekday: "long", day: "2-digit", month: "long" }) : "Día"}</h3>
+
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px" }}>
+                  <button onClick={() => abrirNuevoEvento(diaDetalleFecha)} style={styles.buttonAddCalendar}>
+                    + Añadir evento a este día
+                  </button>
+                </div>
+
+                {eventosDelDiaDetalle.length === 0 ? (
+                  <p>No hay eventos este día</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {eventosDelDiaDetalle.map((ev, idx) => (
+                      <div
+                        key={ev.id}
+                        style={{
+                          ...styles.dayDetailRow,
+                          borderLeft: `10px solid ${colorEventoPorIndice(idx)}`
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "center" }}>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: 900, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {ev.titulo}
+                            </div>
+                            <div style={{ opacity: 0.9, fontSize: "13px", textAlign: "left" }}>
+                              {ev.hora ? `${ev.hora}` : "00:00"} · {ev.tipo || "OTRO"}
+                            </div>
+                            {ev.notas ? (
+                              <div style={{ opacity: 0.9, fontSize: "13px", textAlign: "left", marginTop: "6px" }}>
+                                {ev.notas}
+                              </div>
+                            ) : null}
+                          </div>
+
+                          <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                            <button onClick={() => abrirEditarEvento(ev)} style={styles.buttonEdit}>✏</button>
+                            <button onClick={() => setEventoAEliminar(ev)} style={styles.buttonDelete}>🗑</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "14px" }}>
+                  <button onClick={() => setDiaDetalleOpen(false)} style={styles.button}>
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===== MODALES EVENTO (igual que antes) ===== */}
           {eventoNuevoOpen && (
             <div style={styles.modalOverlay}>
               <div style={styles.modal}>
@@ -1087,10 +1218,7 @@ function App() {
                               ¿Eliminar {totalComprados} producto(s) ya comprados de {nombreVisible}?
                             </p>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
-                              <button
-                                onClick={() => setLimpiarCompradosConfirm({ open: false, superKey: null })}
-                                style={styles.button}
-                              >
+                              <button onClick={() => setLimpiarCompradosConfirm({ open: false, superKey: null })} style={styles.button}>
                                 Cancelar
                               </button>
                               <button onClick={confirmarLimpiarComprados} style={styles.buttonDanger}>
@@ -1139,12 +1267,7 @@ function App() {
                     {lista.map((p) => (
                       <div key={p.id} style={styles.gastoItem}>
                         <div style={{ display: "flex", alignItems: "center", gap: "10px", opacity: p.comprado ? 0.55 : 1 }}>
-                          <input
-                            type="checkbox"
-                            checked={p.comprado}
-                            onChange={() => toggleComprado(p)}
-                            style={{ accentColor: "#22c55e" }}
-                          />
+                          <input type="checkbox" checked={p.comprado} onChange={() => toggleComprado(p)} style={{ accentColor: "#22c55e" }} />
                           <span style={{ textDecoration: p.comprado ? "line-through" : "none" }}>{p.nombre}</span>
                         </div>
 
@@ -1179,10 +1302,7 @@ function App() {
                             ¿Eliminar {totalComprados} producto(s) ya comprados de {nombreVisible}?
                           </p>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
-                            <button
-                              onClick={() => setLimpiarCompradosConfirm({ open: false, superKey: null })}
-                              style={styles.button}
-                            >
+                            <button onClick={() => setLimpiarCompradosConfirm({ open: false, superKey: null })} style={styles.button}>
                               Cancelar
                             </button>
                             <button onClick={confirmarLimpiarComprados} style={styles.buttonDanger}>
@@ -1509,23 +1629,10 @@ function App() {
                     </Pie>
 
                     <circle cx="50%" cy="50%" r={centerHoleRadius} fill="white" />
-                    <text
-                      x="50%"
-                      y="50%"
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      style={{ fill: "#111827", fontSize: `${centerMainFont}px`, fontWeight: 800 }}
-                    >
+                    <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" style={{ fill: "#111827", fontSize: `${centerMainFont}px`, fontWeight: 800 }}>
                       {totalMes.toFixed(2)} €
                     </text>
-                    <text
-                      x="50%"
-                      y="50%"
-                      dy={isMobile ? 22 : 28}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      style={{ fill: "#111827", fontSize: `${centerSubFont}px`, fontWeight: 600 }}
-                    >
+                    <text x="50%" y="50%" dy={isMobile ? 22 : 28} textAnchor="middle" dominantBaseline="middle" style={{ fill: "#111827", fontSize: `${centerSubFont}px`, fontWeight: 600 }}>
                       Total gastado
                     </text>
                   </PieChart>
@@ -1598,7 +1705,7 @@ const styles = {
   tabs: { display: "flex", justifyContent: "center", gap: "10px", marginBottom: "20px", flexWrap: "wrap" },
   tab: { background: "#1e293b", color: "white", padding: "10px 20px", border: "none", borderRadius: "6px", cursor: "pointer" },
   tabActive: { background: "#3b82f6", color: "white", padding: "10px 20px", border: "none", borderRadius: "6px", cursor: "pointer" },
-  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "center", alignItems: "center" },
+  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999 },
   modal: { background: "#1e293b", padding: "25px", borderRadius: "10px", width: "90%", maxWidth: "340px" },
 
   buttonSuperEdit: { background: "#06b6d4", color: "white", border: "none", borderRadius: "999px", width: "34px", height: "34px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
@@ -1615,34 +1722,36 @@ const styles = {
   calHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" },
   buttonAddCalendar: { background: "#06b6d4", color: "white", padding: "10px 14px", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 800 },
 
-  calWeekHeader: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "8px", marginBottom: "10px" },
-  calWeekHeaderCell: { background: "rgba(255,255,255,0.06)", borderRadius: "8px", padding: "10px 0", fontWeight: 900 },
+  // ✅ wrapper para que en móvil el fondo oscuro ocupe toda la pantalla
+  calendarPageWrap: { width: "100%", maxWidth: "1100px", margin: "0 auto" },
+  calendarPageWrapMobile: { width: "100vw", marginLeft: "calc(50% - 50vw)", marginRight: "calc(50% - 50vw)" },
 
-  calGrid: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "8px" },
-  calCell: { background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "10px", minHeight: "110px", boxSizing: "border-box", cursor: "default", display: "flex", flexDirection: "column" },
+  calendarCard: { background: "#1e293b", padding: "18px", borderRadius: "10px", boxSizing: "border-box", width: "100%", overflowX: "hidden" },
+  calendarCardMobile: { padding: "14px 10px", borderRadius: "10px", width: "100vw" },
 
-  // ✅ móvil compacto (sin perder 7 columnas)
-  calWeekHeaderMobile: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "6px", marginBottom: "8px" },
-  calWeekHeaderCellMobile: { background: "rgba(255,255,255,0.06)", borderRadius: "8px", padding: "8px 0", fontWeight: 900, fontSize: "12px" },
+  calWeekHeaderUnified: { display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "6px", marginBottom: "8px" },
+  calWeekHeaderCellUnified: { background: "rgba(255,255,255,0.06)", borderRadius: "8px", padding: "8px 0", fontWeight: 900, fontSize: "12px" },
 
-  calGridMobile: { display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "6px" },
-  calCellMobile: { background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "8px", minHeight: "78px", boxSizing: "border-box", cursor: "default", display: "flex", flexDirection: "column" },
-  calAddMiniMobile: { background: "rgba(59,130,246,0.9)", color: "white", border: "none", borderRadius: "8px", width: "22px", height: "22px", cursor: "pointer", fontWeight: 900, fontSize: "14px", lineHeight: "22px", padding: 0 },
+  calGridUnified: { display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "6px" },
+
+  calCell: { background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "10px", minHeight: "110px", boxSizing: "border-box", display: "flex", flexDirection: "column" },
+  calCellMobile2: { background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "7px", minHeight: "72px", boxSizing: "border-box", display: "flex", flexDirection: "column" },
 
   calCellEmpty: { background: "rgba(255,255,255,0.03)" },
   calCellToday: { outline: "2px solid rgba(34,197,94,0.9)" },
   calCellTopRow: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" },
   calDayNumber: { fontWeight: 900, opacity: 0.9, fontSize: "13px" },
   calDayNumberToday: { color: "#22c55e" },
+
   calAddMini: { background: "rgba(59,130,246,0.9)", color: "white", border: "none", borderRadius: "8px", width: "26px", height: "26px", cursor: "pointer", fontWeight: 900 },
+  calAddMiniMobile2: { background: "rgba(59,130,246,0.9)", color: "white", border: "none", borderRadius: "8px", width: "22px", height: "22px", cursor: "pointer", fontWeight: 900, fontSize: "14px", lineHeight: "22px", padding: 0 },
 
   calEventsBox: { display: "flex", flexDirection: "column", gap: "6px", overflow: "hidden" },
   eventChip: { color: "#111827", fontWeight: 900, borderRadius: "8px", padding: "6px 8px", fontSize: "12px", textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", cursor: "pointer" },
-  eventChipMobile: { padding: "5px 6px", fontSize: "11px" },
+  eventChipMobile2: { padding: "5px 6px", fontSize: "11px" },
   moreEvents: { opacity: 0.9, fontSize: "12px", textAlign: "left", paddingLeft: "2px" },
 
-  mobileEventCard: { background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "12px" },
-  eventPill: { width: "40px", height: "28px", borderRadius: "999px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 900, color: "#111827" }
+  dayDetailRow: { background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "10px" }
 };
 
 export default App;
