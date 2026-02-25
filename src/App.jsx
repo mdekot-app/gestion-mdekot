@@ -109,17 +109,15 @@ function App() {
   const [pushStatus, setPushStatus] = useState("");
   const [pushToken, setPushToken] = useState(localStorage.getItem("fcmToken") || "");
 
-  // ✅✅✅ NUEVO: helper para enviar push a TODOS via tu endpoint /api/push
+  // ✅✅✅ helper para enviar push a TODOS via tu endpoint /api/push (local vs prod)
   const enviarPushATodos = async ({ title, body, link }) => {
     try {
+      const isLocal = window.location.hostname === "localhost";
+
       const res = await fetch("/api/push", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          body,
-          link
-        })
+        headers: { "Content-Type": isLocal ? "text/plain" : "application/json" },
+        body: JSON.stringify({ title, body, link })
       });
 
       const data = await res.json().catch(() => null);
