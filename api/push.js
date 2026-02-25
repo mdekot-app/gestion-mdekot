@@ -27,7 +27,6 @@ export default async function handler(req, res) {
     // ✅ PARSEO ROBUSTO DEL BODY (vercel dev / curl / prod)
     let payloadIn = req.body;
 
-    // Si viene como string, parseamos
     if (typeof payloadIn === "string") {
       try {
         payloadIn = JSON.parse(payloadIn);
@@ -36,7 +35,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Si viene vacío, leemos del stream
     if (!payloadIn || Object.keys(payloadIn).length === 0) {
       const chunks = [];
       for await (const chunk of req) chunks.push(chunk);
@@ -53,51 +51,40 @@ export default async function handler(req, res) {
     const b = body || "Notificación";
     const l = link || "https://gestion-mdekot.vercel.app";
 
-    // 1) Cargar tokens
+    // 1) Cargar SOLO tokens mobile
     const snap = await db.collection("pushTokens").get();
     const tokens = [];
-    const tokenDocs = []; // para poder borrar inválidos
+    const tokenDocs = [];
 
-    snap.forEach((doc) => {
-      const data = doc.data() || {};
-      const tok = data.token || doc.id;
+    snap.forEach((docu) => {
+      const data = docu.data() || {};
+      const platform = String(data.platform || "").toLowerCase();
+      if (platform !== "mobile") return; // ✅ SOLO MOBILE
+
+      const tok = data.token || docu.id;
       if (tok && typeof tok === "string") {
         tokens.push(tok);
-        tokenDocs.push({ id: doc.id, token: tok });
+        tokenDocs.push({ id: docu.id, token: tok });
       }
     });
 
     const uniqTokens = [...new Set(tokens)];
 
     if (uniqTokens.length === 0) {
-      return res
-        .status(200)
-        .json({ ok: true, sent: 0, msg: "No hay tokens en pushTokens" });
+      return res.status(200).json({
+        ok: true,
+        sent: 0,
+        msg: "No hay tokens MOBILE en pushTokens (platform: mobile)",
+      });
     }
 
-    // 2) Mensaje multi-plataforma (web + android)
+    // 2) Payload (solo móvil; android ayuda a prioridad)
     const payload = {
       notification: { title: t, body: b },
-
-      // Web (PC / Chrome / PWA)
-      webpush: {
-        fcmOptions: { link: l },
-        notification: {
-          title: t,
-          body: b,
-        },
-      },
-
-      // Android (mejora entrega/visualización)
       android: {
         priority: "high",
-        notification: {
-          title: t,
-          body: b,
-        },
+        notification: { title: t, body: b },
       },
-
-      // Data (por si quieres manejar clicks/lógica en SW/app)
       data: {
         link: l,
       },
@@ -108,7 +95,7 @@ export default async function handler(req, res) {
       ...payload,
     });
 
-    // 3) Limpiar tokens inválidos (muy recomendable)
+    // 3) Limpiar tokens inválidos (solo los mobile usados)
     const invalid = [];
     result.responses.forEach((r, idx) => {
       if (!r.success) {
@@ -138,6 +125,7 @@ export default async function handler(req, res) {
       success: result.successCount,
       failure: result.failureCount,
       invalidRemoved: invalid.length,
+      target: "mobile",
     });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e?.message || String(e) });
