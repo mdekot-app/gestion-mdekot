@@ -13,7 +13,8 @@ import {
   where,
   orderBy
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { db, getFirebaseMessaging, VAPID_KEY } from "./firebase";
+import { getToken, onMessage } from "firebase/messaging";
 
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
@@ -104,18 +105,141 @@ function App() {
   const [diaDetalleOpen, setDiaDetalleOpen] = useState(false);
   const [diaDetalleFecha, setDiaDetalleFecha] = useState("");
 
+  // ✅ STEP 1 (CORREGIDO): resize + registrar SW y esperar a ready (SIN SILENCIOS)
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", handleResize);
 
-    // ✅ REGISTRAR SERVICE WORKER (Firebase Messaging)
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker
-        .register("/firebase-messaging-sw.js")
-        .catch((e) => console.error("SW register error:", e));
-    }
+    const registerSW = async () => {
+      try {
+        if (!("serviceWorker" in navigator)) {
+          console.warn("⚠️ ServiceWorker no soportado en este navegador.");
+          return;
+        }
+
+        // registra SIEMPRE el SW de FCM
+        await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+
+        // espera a que esté listo
+        await navigator.serviceWorker.ready;
+
+        console.log("✅ SW listo:", (await navigator.serviceWorker.getRegistration())?.active?.scriptURL);
+      } catch (e) {
+        console.error("❌ SW register error:", e);
+      }
+    };
+
+    registerSW();
 
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // ✅ STEP 2 (CORREGIDO): pedir permiso + getToken + guardar localStorage + guardar Firestore
+  useEffect(() => {
+    const initPush = async () => {
+      try {
+        console.log("🔔 Notification.permission:", Notification.permission);
+
+        if (!("Notification" in window)) {
+          console.warn("⚠️ Notification API no soportada.");
+          return;
+        }
+
+        const vapid = String(VAPID_KEY || "").trim();
+        console.log("🔑 VAPID_KEY length:", vapid.length);
+
+        if (!vapid) {
+          console.warn("❌ VAPID_KEY vacía. Revisa VITE_FIREBASE_VAPID_KEY en .env.local / Vercel.");
+          return;
+        }
+
+        const messaging = await getFirebaseMessaging();
+        if (!messaging) {
+          console.warn("⚠️ Firebase Messaging no soportado (getFirebaseMessaging devolvió null).");
+          return;
+        }
+
+        // Asegura SW listo (si falla aquí, getToken no funciona)
+        let swReg;
+        try {
+          swReg = await navigator.serviceWorker.ready;
+          console.log("✅ navigator.serviceWorker.ready OK");
+        } catch (e) {
+          console.error("❌ navigator.serviceWorker.ready FALLÓ:", e);
+          return;
+        }
+
+        // Pedir permiso si hace falta
+        if (Notification.permission === "default") {
+          const perm = await Notification.requestPermission();
+          console.log("🔔 Permission result:", perm);
+          if (perm !== "granted") return;
+        }
+
+        if (Notification.permission !== "granted") {
+          console.warn("⚠️ Notificaciones NO concedidas:", Notification.permission);
+          return;
+        }
+
+        // Obtener token
+        let token = null;
+        try {
+          token = await getToken(messaging, {
+            vapidKey: vapid,
+            serviceWorkerRegistration: swReg
+          });
+        } catch (e) {
+          console.error("❌ getToken ERROR:", e);
+          return;
+        }
+
+        console.log("✅ TOKEN RESULT:", token);
+
+        if (!token) {
+          console.warn("❌ Token vacío. Normalmente es VAPID incorrecto / SW no válido / navegador no permite push.");
+          return;
+        }
+
+        // Guardar local
+        localStorage.setItem("fcmToken", token);
+
+        // Guardar en Firestore (docId = token)
+        const platform = window.innerWidth < 768 ? "mobile" : "pc";
+
+        await setDoc(
+          doc(db, "pushTokens", token),
+          {
+            token,
+            createdAt: new Date(),
+            userAgent: navigator.userAgent || "",
+            platform
+          },
+          { merge: true }
+        );
+
+        console.log("✅ Token guardado en Firestore + localStorage.");
+
+        // Mensajes en primer plano
+        onMessage(messaging, (payload) => {
+          console.log("📩 onMessage payload:", payload);
+          try {
+            const title = payload?.notification?.title || "Gestión Mdekot";
+            const body = payload?.notification?.body || "";
+
+            if (Notification.permission === "granted") {
+              new Notification(title, { body, icon: "/vite.svg", badge: "/vite.svg" });
+            }
+          } catch (e) {
+            console.error("onMessage error:", e);
+          }
+        });
+      } catch (e) {
+        console.error("initPush error:", e);
+      }
+    };
+
+    initPush();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const meses = [
@@ -720,6 +844,7 @@ function App() {
         <button onClick={() => setVista("calendario")} style={vista === "calendario" ? styles.tabActive : styles.tab}>Calendario</button>
       </div>
 
+      {/* ===== CALENDARIO ===== */}
       {vista === "calendario" && (
         <>
           <h1 style={styles.title}>📅 CALENDARIO</h1>
@@ -1312,7 +1437,6 @@ const styles = {
   calendarCardMobile: { padding: "14px 10px", borderRadius: "10px", width: "100vw" },
 
   calWeekHeaderUnified: { display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "6px", marginBottom: "8px" },
-  // ✅ centrado
   calWeekHeaderCellUnified: { background: "rgba(255,255,255,0.06)", borderRadius: "8px", padding: "8px 0", fontWeight: 900, fontSize: "12px", textAlign: "center" },
 
   calGridUnified: { display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "6px" },
@@ -1323,7 +1447,6 @@ const styles = {
   calCellEmpty: { background: "rgba(255,255,255,0.03)" },
   calCellToday: { outline: "2px solid rgba(34,197,94,0.9)" },
 
-  // ✅ número del día centrado arriba
   calCellDotTop: { display: "flex", alignItems: "flex-start", justifyContent: "center" },
   calDayNumber: { fontWeight: 900, opacity: 0.9, fontSize: "13px", textAlign: "center", width: "100%" },
   calDayNumberToday: { color: "#22c55e" },
