@@ -652,6 +652,7 @@ function App() {
     setEventoNuevoOpen(true);
   };
 
+  // ✅✅✅ MODIFICADO: añade eventAt + notificado:false
   const guardarNuevoEvento = async () => {
     const t = (evTitulo || "").trim();
     const f = (evFecha || "").trim();
@@ -659,12 +660,17 @@ function App() {
 
     const horaFinal = (evHora || "").trim() || "00:00";
 
+    // ✅ NUEVO: fecha+hora completa (hora local España)
+    const eventAt = new Date(`${f}T${horaFinal}:00`);
+
     await addDoc(collection(db, "eventos"), {
       titulo: t,
       tipo: (evTipo || "OTRO").trim(),
       fecha: f,
       hora: horaFinal,
       notas: (evNotas || "").trim(),
+      eventAt,            // ✅ NUEVO
+      notificado: false,  // ✅ NUEVO
       createdAt: new Date()
     });
 
@@ -680,6 +686,7 @@ function App() {
     setEvNotas(ev.notas || "");
   };
 
+  // ✅✅✅ MODIFICADO: recalcula eventAt + resetea notificado:false
   const guardarEdicionEvento = async () => {
     if (!eventoEditando) return;
     const t = (evTitulo || "").trim();
@@ -688,12 +695,17 @@ function App() {
 
     const horaFinal = (evHora || "").trim() || "00:00";
 
+    // ✅ NUEVO
+    const eventAt = new Date(`${f}T${horaFinal}:00`);
+
     await updateDoc(doc(db, "eventos", eventoEditando.id), {
       titulo: t,
       tipo: (evTipo || "OTRO").trim(),
       fecha: f,
       hora: horaFinal,
       notas: (evNotas || "").trim(),
+      eventAt,            // ✅ NUEVO
+      notificado: false,  // ✅ NUEVO
       updatedAt: new Date()
     });
 
