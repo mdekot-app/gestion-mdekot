@@ -27,3 +27,5 @@ dist-ssr
 .env*.local
 serviceAccountKey.json
 serviceAccountKey*.json
+.vercel
+.env*.local

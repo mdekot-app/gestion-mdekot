@@ -109,6 +109,30 @@ function App() {
   const [pushStatus, setPushStatus] = useState("");
   const [pushToken, setPushToken] = useState(localStorage.getItem("fcmToken") || "");
 
+  // ✅✅✅ NUEVO: helper para enviar push a TODOS via tu endpoint /api/push
+  const enviarPushATodos = async ({ title, body, link }) => {
+    try {
+      const res = await fetch("/api/push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          body,
+          link
+        })
+      });
+
+      const data = await res.json().catch(() => null);
+      console.log("📨 Push API response:", data);
+
+      // Si quieres verlo en pantalla, puedes descomentar:
+      // if (data?.ok) setPushStatus(`✅ Push enviado: ${data.success}/${data.tokens}`);
+      // else setPushStatus(`❌ Push API error: ${data?.error || res.status}`);
+    } catch (e) {
+      console.warn("❌ Error enviando push:", e);
+    }
+  };
+
   // ✅ Step 1: resize + registrar el SW (y asegurarlo listo)
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -652,7 +676,7 @@ function App() {
     setEventoNuevoOpen(true);
   };
 
-  // ✅✅✅ MODIFICADO: añade eventAt + notificado:false
+  // ✅✅✅ MODIFICADO: añade eventAt + notificado:false + PUSH AUTOMÁTICO
   const guardarNuevoEvento = async () => {
     const t = (evTitulo || "").trim();
     const f = (evFecha || "").trim();
@@ -674,6 +698,13 @@ function App() {
       createdAt: new Date()
     });
 
+    // ✅✅✅ NUEVO: push inmediato a todos
+    await enviarPushATodos({
+      title: "📅 Nuevo evento",
+      body: `${t} · ${f} ${horaFinal}`,
+      link: window.location.origin
+    });
+
     setEventoNuevoOpen(false);
   };
 
@@ -686,7 +717,7 @@ function App() {
     setEvNotas(ev.notas || "");
   };
 
-  // ✅✅✅ MODIFICADO: recalcula eventAt + resetea notificado:false
+  // ✅✅✅ MODIFICADO: recalcula eventAt + resetea notificado:false + PUSH AUTOMÁTICO
   const guardarEdicionEvento = async () => {
     if (!eventoEditando) return;
     const t = (evTitulo || "").trim();
@@ -707,6 +738,13 @@ function App() {
       eventAt,            // ✅ NUEVO
       notificado: false,  // ✅ NUEVO
       updatedAt: new Date()
+    });
+
+    // ✅✅✅ NUEVO: push inmediato a todos (evento editado)
+    await enviarPushATodos({
+      title: "✏️ Evento actualizado",
+      body: `${t} · ${f} ${horaFinal}`,
+      link: window.location.origin
     });
 
     setEventoEditando(null);
