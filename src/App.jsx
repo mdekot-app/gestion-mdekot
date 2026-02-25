@@ -105,25 +105,24 @@ function App() {
   const [diaDetalleOpen, setDiaDetalleOpen] = useState(false);
   const [diaDetalleFecha, setDiaDetalleFecha] = useState("");
 
-  // ✅ STEP 1 (CORREGIDO): resize + registrar SW y esperar a ready (SIN SILENCIOS)
+  // ===== PUSH DEBUG / STATUS =====
+  const [pushStatus, setPushStatus] = useState("");
+  const [pushToken, setPushToken] = useState(localStorage.getItem("fcmToken") || "");
+
+  // ✅ Step 1: resize + registrar el SW (y asegurarlo listo)
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", handleResize);
 
     const registerSW = async () => {
+      if (!("serviceWorker" in navigator)) {
+        console.warn("⚠️ serviceWorker no soportado");
+        return;
+      }
       try {
-        if (!("serviceWorker" in navigator)) {
-          console.warn("⚠️ ServiceWorker no soportado en este navegador.");
-          return;
-        }
-
-        // registra SIEMPRE el SW de FCM
         await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-
-        // espera a que esté listo
         await navigator.serviceWorker.ready;
-
-        console.log("✅ SW listo:", (await navigator.serviceWorker.getRegistration())?.active?.scriptURL);
+        console.log("✅ SW listo:", (await navigator.serviceWorker.ready)?.active?.scriptURL || "");
       } catch (e) {
         console.error("❌ SW register error:", e);
       }
@@ -134,98 +133,18 @@ function App() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ✅ STEP 2 (CORREGIDO): pedir permiso + getToken + guardar localStorage + guardar Firestore
+  // ✅ Step 2: listener de foreground (esto NO pide token; solo escucha si ya hay messaging)
   useEffect(() => {
-    const initPush = async () => {
+    const initForegroundListener = async () => {
       try {
-        console.log("🔔 Notification.permission:", Notification.permission);
-
-        if (!("Notification" in window)) {
-          console.warn("⚠️ Notification API no soportada.");
-          return;
-        }
-
-        const vapid = String(VAPID_KEY || "").trim();
-        console.log("🔑 VAPID_KEY length:", vapid.length);
-
-        if (!vapid) {
-          console.warn("❌ VAPID_KEY vacía. Revisa VITE_FIREBASE_VAPID_KEY en .env.local / Vercel.");
-          return;
-        }
-
         const messaging = await getFirebaseMessaging();
-        if (!messaging) {
-          console.warn("⚠️ Firebase Messaging no soportado (getFirebaseMessaging devolvió null).");
-          return;
-        }
+        if (!messaging) return;
 
-        // Asegura SW listo (si falla aquí, getToken no funciona)
-        let swReg;
-        try {
-          swReg = await navigator.serviceWorker.ready;
-          console.log("✅ navigator.serviceWorker.ready OK");
-        } catch (e) {
-          console.error("❌ navigator.serviceWorker.ready FALLÓ:", e);
-          return;
-        }
-
-        // Pedir permiso si hace falta
-        if (Notification.permission === "default") {
-          const perm = await Notification.requestPermission();
-          console.log("🔔 Permission result:", perm);
-          if (perm !== "granted") return;
-        }
-
-        if (Notification.permission !== "granted") {
-          console.warn("⚠️ Notificaciones NO concedidas:", Notification.permission);
-          return;
-        }
-
-        // Obtener token
-        let token = null;
-        try {
-          token = await getToken(messaging, {
-            vapidKey: vapid,
-            serviceWorkerRegistration: swReg
-          });
-        } catch (e) {
-          console.error("❌ getToken ERROR:", e);
-          return;
-        }
-
-        console.log("✅ TOKEN RESULT:", token);
-
-        if (!token) {
-          console.warn("❌ Token vacío. Normalmente es VAPID incorrecto / SW no válido / navegador no permite push.");
-          return;
-        }
-
-        // Guardar local
-        localStorage.setItem("fcmToken", token);
-
-        // Guardar en Firestore (docId = token)
-        const platform = window.innerWidth < 768 ? "mobile" : "pc";
-
-        await setDoc(
-          doc(db, "pushTokens", token),
-          {
-            token,
-            createdAt: new Date(),
-            userAgent: navigator.userAgent || "",
-            platform
-          },
-          { merge: true }
-        );
-
-        console.log("✅ Token guardado en Firestore + localStorage.");
-
-        // Mensajes en primer plano
         onMessage(messaging, (payload) => {
-          console.log("📩 onMessage payload:", payload);
           try {
+            console.log("📩 FCM foreground payload:", payload);
             const title = payload?.notification?.title || "Gestión Mdekot";
             const body = payload?.notification?.body || "";
-
             if (Notification.permission === "granted") {
               new Notification(title, { body, icon: "/vite.svg", badge: "/vite.svg" });
             }
@@ -234,13 +153,97 @@ function App() {
           }
         });
       } catch (e) {
-        console.error("initPush error:", e);
+        console.error(e);
       }
     };
 
-    initPush();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // solo si existe Notification API
+    if ("Notification" in window) initForegroundListener();
   }, []);
+
+  // ✅ BOTÓN: activar notificaciones (en móvil casi siempre debe ser con click)
+  const activarNotificaciones = async () => {
+    try {
+      setPushStatus("Iniciando...");
+
+      if (!("Notification" in window)) {
+        setPushStatus("Este navegador no soporta notificaciones.");
+        return;
+      }
+
+      const vapid = String(VAPID_KEY || "").trim();
+      if (!vapid) {
+        setPushStatus("VAPID_KEY vacía. Revisa VITE_FIREBASE_VAPID_KEY en Vercel.");
+        return;
+      }
+
+      // Asegura SW listo
+      let swReg;
+      try {
+        swReg = await navigator.serviceWorker.ready;
+        console.log("✅ navigator.serviceWorker.ready OK");
+      } catch (e) {
+        console.error(e);
+        setPushStatus("Service Worker no listo (ready falló).");
+        return;
+      }
+
+      // Pedir permiso
+      if (Notification.permission === "default") {
+        const perm = await Notification.requestPermission();
+        console.log("🔔 Notification permission:", perm);
+        if (perm !== "granted") {
+          setPushStatus("Permiso no concedido: " + perm);
+          return;
+        }
+      }
+
+      if (Notification.permission !== "granted") {
+        setPushStatus("Notificaciones NO concedidas: " + Notification.permission);
+        return;
+      }
+
+      const messaging = await getFirebaseMessaging();
+      if (!messaging) {
+        setPushStatus("Firebase Messaging no soportado en este navegador.");
+        return;
+      }
+
+      const token = await getToken(messaging, {
+        vapidKey: vapid,
+        serviceWorkerRegistration: swReg
+      });
+
+      console.log("✅ TOKEN RESULT:", token);
+
+      if (!token) {
+        setPushStatus("Token vacío (getToken devolvió null).");
+        return;
+      }
+
+      localStorage.setItem("fcmToken", token);
+      setPushToken(token);
+
+      const platform = window.innerWidth < 768 ? "mobile" : "pc";
+
+      await setDoc(
+        doc(db, "pushTokens", token),
+        {
+          token,
+          createdAt: new Date(),
+          userAgent: navigator.userAgent || "",
+          platform
+        },
+        { merge: true }
+      );
+
+      setPushStatus("✅ Token guardado en Firestore (" + platform + ")");
+      console.log("✅ Token guardado en Firestore + localStorage.");
+    } catch (e) {
+      console.error(e);
+      setPushStatus("❌ Error: " + (e?.message || String(e)));
+    }
+  };
 
   const meses = [
     "Enero",
@@ -811,6 +814,7 @@ function App() {
   const centerMainFont = isMobile ? 18 : 24;
   const centerSubFont = isMobile ? 12 : 14;
 
+  // ===== CALENDARIO UI HELPERS =====
   const diasSemana = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
   const { lastDay } = getMonthRange(calAnio, calMes);
 
@@ -844,6 +848,175 @@ function App() {
         <button onClick={() => setVista("calendario")} style={vista === "calendario" ? styles.tabActive : styles.tab}>Calendario</button>
       </div>
 
+      {vista === "dashboard" && (
+        <>
+          <h1 style={styles.title}>💰💶 GESTIÓN MDEKOT 💶💰</h1>
+
+          {/* 🔥 BOTÓN PUSH (OBLIGATORIO EN MUCHOS MÓVILES) */}
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "14px", gap: "10px", flexWrap: "wrap" }}>
+            <button onClick={activarNotificaciones} style={styles.buttonAddCalendar}>🔔 Activar notificaciones</button>
+          </div>
+
+          {pushStatus ? (
+            <div style={{ maxWidth: "700px", margin: "0 auto 14px auto", background: "#1e293b", padding: "10px", borderRadius: "10px" }}>
+              <div style={{ fontWeight: 700 }}>Push status:</div>
+              <div style={{ opacity: 0.9, wordBreak: "break-word" }}>{pushStatus}</div>
+              <div style={{ marginTop: "8px", fontWeight: 700 }}>Permission:</div>
+              <div style={{ opacity: 0.9 }}>{("Notification" in window) ? Notification.permission : "no Notification API"}</div>
+              {pushToken ? (
+                <>
+                  <div style={{ fontWeight: 700, marginTop: "8px" }}>Token:</div>
+                  <div style={{ fontSize: "12px", opacity: 0.85, wordBreak: "break-word" }}>{pushToken}</div>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div style={styles.selectorRow}>
+            <select value={mesActual} onChange={(e) => setMesActual(Number(e.target.value))} style={styles.select}>
+              {meses.map((mes, index) => (<option key={index} value={index + 1}>{mes}</option>))}
+            </select>
+            <input type="number" value={anioActual} onChange={(e) => setAnioActual(Number(e.target.value))} style={styles.select} />
+          </div>
+
+          <div style={getBalanceCardStyle()}>{renderBalanceText()}</div>
+
+          <div style={styles.cardFull}>
+            <h3>· Añadir Nuevo Gasto ·</h3>
+            <div style={styles.formContainer}>
+              <input type="text" placeholder="Comercio" value={comercio} onChange={(e) => setComercio(e.target.value)} style={styles.input} />
+              <input type="number" placeholder="Importe" value={importe} onChange={(e) => setImporte(e.target.value)} style={styles.input} />
+              <select value={pagadoPor} onChange={(e) => setPagadoPor(e.target.value)} style={styles.input}>
+                <option value="mdekot@gmail.com">Mirko</option>
+                <option value="jessica.alca87@gmail.com">Jessica</option>
+              </select>
+              <button onClick={agregarGasto} style={styles.button}>Guardar</button>
+            </div>
+          </div>
+
+          <div style={styles.grid}>
+            <div style={styles.card}>
+              <h3>· GASTOS DEL MES ·</h3>
+              {gastos.map((g) => {
+                const esMirko = g.pagadoPor === "mdekot@gmail.com";
+                const badgeStyle = esMirko ? styles.payMirko : styles.payJessica;
+                const badgeIcon = esMirko ? "👨" : "👩";
+                const badgeTitle = esMirko ? "Pagó Mirko" : "Pagó Jessica";
+
+                return (
+                  <div key={g.id} style={{ ...styles.gastoItem, flexDirection: "row", alignItems: "center", gap: isMobile ? "8px" : "0", flexWrap: "nowrap" }}>
+                    {isMobile ? (
+                      <>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0 }}>
+                          <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle, flexShrink: 0 }}>{badgeIcon}</span>
+                          <span title={`${g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"} - ${g.comercio}`} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: 1, textAlign: "left", fontSize: "14px", lineHeight: 1.2 }}>
+                            {g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"}{" "}
+                            - {g.comercio}
+                          </span>
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                          <span style={{ fontWeight: 600, fontSize: "14px", whiteSpace: "nowrap" }}>{Number(g.importe).toFixed(2)} €</span>
+                          <button onClick={() => abrirModalEditar(g)} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>✏</button>
+                          <button onClick={() => setGastoAEliminar(g)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>🗑</button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                          <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle }}>{badgeIcon}</span>
+                          {g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"}{" "}
+                          - {g.comercio}
+                        </span>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          <span style={{ minWidth: "90px", textAlign: "right", fontWeight: "600" }}>{Number(g.importe).toFixed(2)} €</span>
+                          <button onClick={() => abrirModalEditar(g)} style={styles.buttonEdit}>✏</button>
+                          <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDelete}>🗑</button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={styles.card}>
+              <h3>· TOTAL POR COMERCIO ·</h3>
+              {Object.entries(resumenComercio).map(([nombre, total]) => (<p key={nombre}>{nombre} → {total.toFixed(2)} €</p>))}
+            </div>
+
+            <div style={styles.card}>
+              <h3>· GASTO INDIVIDUAL ·</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "10px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+                  <span title="Pagó Mirko" style={{ ...styles.payIcon, ...styles.payMirko }}>👨</span>
+                  <span style={{ fontWeight: "600" }}>Mirko → {totalMirko.toFixed(2)} €</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+                  <span title="Pagó Jessica" style={{ ...styles.payIcon, ...styles.payJessica }}>👩</span>
+                  <span style={{ fontWeight: "600" }}>Jessica → {totalJessica.toFixed(2)} €</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={styles.card}>
+              <h3>· TOTAL GASTOS ·</h3>
+              <h2>{totalMes.toFixed(2)} €</h2>
+            </div>
+          </div>
+
+          <div style={styles.buttonCenter}>
+            <button onClick={liquidarMes} style={styles.buttonDanger} disabled={balance === 0}>Liquidar mes</button>
+          </div>
+
+          {liquidarConfirmOpen && balance !== 0 && (
+            <div style={styles.modalOverlay}>
+              <div style={styles.modal}>
+                <h3>💸 LIQUIDAR MES</h3>
+                <p style={{ marginBottom: "18px" }}>¿{debtInfo.debtorName.toUpperCase()} HA PAGADO LA DEUDA DE {debtInfo.amount.toFixed(2)} €?</p>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "10px" }}>
+                  <button onClick={() => setLiquidarConfirmOpen(false)} style={styles.button}>Cancelar</button>
+                  <button onClick={() => guardarEstadoLiquidacion("unpaid")} style={styles.buttonDanger}>NO</button>
+                  <button onClick={() => guardarEstadoLiquidacion("paid")} style={styles.buttonPaid}>SÍ</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {gastoEditando && (
+            <div style={styles.modalOverlay}>
+              <div style={styles.modal}>
+                <h3>✏ Editar Gasto</h3>
+                <input value={editComercio} onChange={(e) => setEditComercio(e.target.value)} style={styles.input} />
+                <input type="number" value={editImporte} onChange={(e) => setEditImporte(e.target.value)} style={styles.input} />
+                <select value={editPagadoPor} onChange={(e) => setEditPagadoPor(e.target.value)} style={styles.input}>
+                  <option value="mdekot@gmail.com">Mirko</option>
+                  <option value="jessica.alca87@gmail.com">Jessica</option>
+                </select>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px" }}>
+                  <button onClick={() => setGastoEditando(null)} style={styles.button}>Cancelar</button>
+                  <button onClick={guardarEdicion} style={styles.buttonDanger}>Guardar</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {gastoAEliminar && (
+            <div style={styles.modalOverlay}>
+              <div style={styles.modal}>
+                <h3>🗑 Confirmar eliminación</h3>
+                <p style={{ marginBottom: "20px" }}>¿Eliminar "{gastoAEliminar.comercio}" por {Number(gastoAEliminar.importe).toFixed(2)} €?</p>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <button onClick={() => setGastoAEliminar(null)} style={styles.button}>Cancelar</button>
+                  <button onClick={confirmarEliminar} style={styles.buttonDanger}>Eliminar</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
       {/* ===== CALENDARIO ===== */}
       {vista === "calendario" && (
         <>
@@ -873,15 +1046,12 @@ function App() {
 
             <div style={{ ...styles.calendarCard, ...(isMobile ? styles.calendarCardMobile : {}) }}>
               <div style={styles.calWeekHeaderUnified}>
-                {diasSemana.map((d) => (
-                  <div key={d} style={styles.calWeekHeaderCellUnified}>{d}</div>
-                ))}
+                {diasSemana.map((d) => (<div key={d} style={styles.calWeekHeaderCellUnified}>{d}</div>))}
               </div>
 
               <div style={styles.calGridUnified}>
                 {calendarCells.map((c) => {
                   const baseCellStyle = isMobile ? styles.calCellMobileDot : styles.calCellPcDot;
-
                   if (c.empty) return <div key={c.key} style={{ ...baseCellStyle, ...styles.calCellEmpty }} />;
 
                   const evs = eventosPorFecha[c.fechaStr] || [];
@@ -1176,155 +1346,7 @@ function App() {
         </>
       )}
 
-      {vista === "dashboard" && (
-        <>
-          <h1 style={styles.title}>💰💶 GESTIÓN MDEKOT 💶💰</h1>
-
-          <div style={styles.selectorRow}>
-            <select value={mesActual} onChange={(e) => setMesActual(Number(e.target.value))} style={styles.select}>
-              {meses.map((mes, index) => (<option key={index} value={index + 1}>{mes}</option>))}
-            </select>
-            <input type="number" value={anioActual} onChange={(e) => setAnioActual(Number(e.target.value))} style={styles.select} />
-          </div>
-
-          <div style={getBalanceCardStyle()}>{renderBalanceText()}</div>
-
-          <div style={styles.cardFull}>
-            <h3>· Añadir Nuevo Gasto ·</h3>
-            <div style={styles.formContainer}>
-              <input type="text" placeholder="Comercio" value={comercio} onChange={(e) => setComercio(e.target.value)} style={styles.input} />
-              <input type="number" placeholder="Importe" value={importe} onChange={(e) => setImporte(e.target.value)} style={styles.input} />
-              <select value={pagadoPor} onChange={(e) => setPagadoPor(e.target.value)} style={styles.input}>
-                <option value="mdekot@gmail.com">Mirko</option>
-                <option value="jessica.alca87@gmail.com">Jessica</option>
-              </select>
-              <button onClick={agregarGasto} style={styles.button}>Guardar</button>
-            </div>
-          </div>
-
-          <div style={styles.grid}>
-            <div style={styles.card}>
-              <h3>· GASTOS DEL MES ·</h3>
-              {gastos.map((g) => {
-                const esMirko = g.pagadoPor === "mdekot@gmail.com";
-                const badgeStyle = esMirko ? styles.payMirko : styles.payJessica;
-                const badgeIcon = esMirko ? "👨" : "👩";
-                const badgeTitle = esMirko ? "Pagó Mirko" : "Pagó Jessica";
-
-                return (
-                  <div key={g.id} style={{ ...styles.gastoItem, flexDirection: "row", alignItems: "center", gap: isMobile ? "8px" : "0", flexWrap: "nowrap" }}>
-                    {isMobile ? (
-                      <>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0 }}>
-                          <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle, flexShrink: 0 }}>{badgeIcon}</span>
-                          <span title={`${g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"} - ${g.comercio}`} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: 1, textAlign: "left", fontSize: "14px", lineHeight: 1.2 }}>
-                            {g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"}{" "}
-                            - {g.comercio}
-                          </span>
-                        </div>
-
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
-                          <span style={{ fontWeight: 600, fontSize: "14px", whiteSpace: "nowrap" }}>{Number(g.importe).toFixed(2)} €</span>
-                          <button onClick={() => abrirModalEditar(g)} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>✏</button>
-                          <button onClick={() => setGastoAEliminar(g)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>🗑</button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <span style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
-                          <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle }}>{badgeIcon}</span>
-                          {g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"}{" "}
-                          - {g.comercio}
-                        </span>
-
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                          <span style={{ minWidth: "90px", textAlign: "right", fontWeight: "600" }}>{Number(g.importe).toFixed(2)} €</span>
-                          <button onClick={() => abrirModalEditar(g)} style={styles.buttonEdit}>✏</button>
-                          <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDelete}>🗑</button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div style={styles.card}>
-              <h3>· TOTAL POR COMERCIO ·</h3>
-              {Object.entries(resumenComercio).map(([nombre, total]) => (<p key={nombre}>{nombre} → {total.toFixed(2)} €</p>))}
-            </div>
-
-            <div style={styles.card}>
-              <h3>· GASTO INDIVIDUAL ·</h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "10px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
-                  <span title="Pagó Mirko" style={{ ...styles.payIcon, ...styles.payMirko }}>👨</span>
-                  <span style={{ fontWeight: "600" }}>Mirko → {totalMirko.toFixed(2)} €</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
-                  <span title="Pagó Jessica" style={{ ...styles.payIcon, ...styles.payJessica }}>👩</span>
-                  <span style={{ fontWeight: "600" }}>Jessica → {totalJessica.toFixed(2)} €</span>
-                </div>
-              </div>
-            </div>
-
-            <div style={styles.card}>
-              <h3>· TOTAL GASTOS ·</h3>
-              <h2>{totalMes.toFixed(2)} €</h2>
-            </div>
-          </div>
-
-          <div style={styles.buttonCenter}>
-            <button onClick={liquidarMes} style={styles.buttonDanger} disabled={balance === 0}>Liquidar mes</button>
-          </div>
-
-          {liquidarConfirmOpen && balance !== 0 && (
-            <div style={styles.modalOverlay}>
-              <div style={styles.modal}>
-                <h3>💸 LIQUIDAR MES</h3>
-                <p style={{ marginBottom: "18px" }}>¿{debtInfo.debtorName.toUpperCase()} HA PAGADO LA DEUDA DE {debtInfo.amount.toFixed(2)} €?</p>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: "10px" }}>
-                  <button onClick={() => setLiquidarConfirmOpen(false)} style={styles.button}>Cancelar</button>
-                  <button onClick={() => guardarEstadoLiquidacion("unpaid")} style={styles.buttonDanger}>NO</button>
-                  <button onClick={() => guardarEstadoLiquidacion("paid")} style={styles.buttonPaid}>SÍ</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {gastoEditando && (
-            <div style={styles.modalOverlay}>
-              <div style={styles.modal}>
-                <h3>✏ Editar Gasto</h3>
-                <input value={editComercio} onChange={(e) => setEditComercio(e.target.value)} style={styles.input} />
-                <input type="number" value={editImporte} onChange={(e) => setEditImporte(e.target.value)} style={styles.input} />
-                <select value={editPagadoPor} onChange={(e) => setEditPagadoPor(e.target.value)} style={styles.input}>
-                  <option value="mdekot@gmail.com">Mirko</option>
-                  <option value="jessica.alca87@gmail.com">Jessica</option>
-                </select>
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px" }}>
-                  <button onClick={() => setGastoEditando(null)} style={styles.button}>Cancelar</button>
-                  <button onClick={guardarEdicion} style={styles.buttonDanger}>Guardar</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {gastoAEliminar && (
-            <div style={styles.modalOverlay}>
-              <div style={styles.modal}>
-                <h3>🗑 Confirmar eliminación</h3>
-                <p style={{ marginBottom: "20px" }}>¿Eliminar "{gastoAEliminar.comercio}" por {Number(gastoAEliminar.importe).toFixed(2)} €?</p>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <button onClick={() => setGastoAEliminar(null)} style={styles.button}>Cancelar</button>
-                  <button onClick={confirmarEliminar} style={styles.buttonDanger}>Eliminar</button>
-                </div>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
+      {/* ===== GRAFICO ===== */}
       {vista === "grafico" && (
         <div style={{ width: "100%", marginTop: "40px" }}>
           <h2 style={{ textAlign: "center", marginBottom: "30px" }}>📊 Distribución por Comercio</h2>
