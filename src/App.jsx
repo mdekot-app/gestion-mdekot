@@ -536,16 +536,28 @@ function App() {
   const agregarGasto = async () => {
     if (!importe || !comercio) return;
 
+    const importeNum = Number(importe);
+    const comercioFmt = formatearComercio(comercio);
+
     await addDoc(collection(db, "gastos"), {
-      importe: Number(importe),
+      importe: importeNum,
       pagadoPor,
       mes: mesActual,
       anio: anioActual,
       liquidado: false,
       divididoEntre: ["mdekot@gmail.com", "jessica.alca87@gmail.com"],
       participantesCount: 2,
-      comercio: formatearComercio(comercio),
+      comercio: comercioFmt,
       fecha: new Date()
+    });
+
+    // ✅ Push inmediato al móvil (PC ya no recibirá por tu api/push.js)
+    const quien = pagadoPor === "mdekot@gmail.com" ? "Mirko" : "Jessica";
+    const euros = importeNum.toFixed(2).replace(".", ",");
+    await enviarPushATodos({
+      title: "💸 Nuevo gasto",
+      body: `${quien} pagó ${euros}€ en ${comercioFmt}`,
+      link: window.location.origin
     });
 
     setImporte("");
@@ -674,7 +686,7 @@ function App() {
     setEventoNuevoOpen(true);
   };
 
-  // ✅✅✅ MODIFICADO: añade eventAt + notificado:false + PUSH AUTOMÁTICO
+  // ✅✅✅ EVENTO: añade eventAt + notificado:false (SIN PUSH al crear)
   const guardarNuevoEvento = async () => {
     const t = (evTitulo || "").trim();
     const f = (evFecha || "").trim();
@@ -682,7 +694,7 @@ function App() {
 
     const horaFinal = (evHora || "").trim() || "00:00";
 
-    // ✅ NUEVO: fecha+hora completa (hora local España)
+    // ✅ fecha+hora completa
     const eventAt = new Date(`${f}T${horaFinal}:00`);
 
     await addDoc(collection(db, "eventos"), {
@@ -691,16 +703,9 @@ function App() {
       fecha: f,
       hora: horaFinal,
       notas: (evNotas || "").trim(),
-      eventAt,            // ✅ NUEVO
-      notificado: false,  // ✅ NUEVO
+      eventAt,
+      notificado: false,
       createdAt: new Date()
-    });
-
-    // ✅✅✅ NUEVO: push inmediato a todos
-    await enviarPushATodos({
-      title: "📅 Nuevo evento",
-      body: `${t} · ${f} ${horaFinal}`,
-      link: window.location.origin
     });
 
     setEventoNuevoOpen(false);
@@ -715,7 +720,7 @@ function App() {
     setEvNotas(ev.notas || "");
   };
 
-  // ✅✅✅ MODIFICADO: recalcula eventAt + resetea notificado:false + PUSH AUTOMÁTICO
+  // ✅✅✅ EVENTO: recalcula eventAt + resetea notificado:false (SIN PUSH al editar)
   const guardarEdicionEvento = async () => {
     if (!eventoEditando) return;
     const t = (evTitulo || "").trim();
@@ -723,8 +728,6 @@ function App() {
     if (!t || !f) return;
 
     const horaFinal = (evHora || "").trim() || "00:00";
-
-    // ✅ NUEVO
     const eventAt = new Date(`${f}T${horaFinal}:00`);
 
     await updateDoc(doc(db, "eventos", eventoEditando.id), {
@@ -733,16 +736,9 @@ function App() {
       fecha: f,
       hora: horaFinal,
       notas: (evNotas || "").trim(),
-      eventAt,            // ✅ NUEVO
-      notificado: false,  // ✅ NUEVO
+      eventAt,
+      notificado: false,
       updatedAt: new Date()
-    });
-
-    // ✅✅✅ NUEVO: push inmediato a todos (evento editado)
-    await enviarPushATodos({
-      title: "✏️ Evento actualizado",
-      body: `${t} · ${f} ${horaFinal}`,
-      link: window.location.origin
     });
 
     setEventoEditando(null);
