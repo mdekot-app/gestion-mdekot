@@ -109,25 +109,30 @@ function App() {
   const [pushStatus, setPushStatus] = useState("");
   const [pushToken, setPushToken] = useState(localStorage.getItem("fcmToken") || "");
 
-  // ✅✅✅ helper para enviar push a TODOS via tu endpoint /api/push (local vs prod)
+  // ✅✅✅ helper para enviar push a TODOS via tu endpoint /api/push
   const enviarPushATodos = async ({ title, body, link }) => {
     try {
-      const isLocal = window.location.hostname === "localhost";
-
       const res = await fetch("/api/push", {
         method: "POST",
-        headers: { "Content-Type": isLocal ? "text/plain" : "application/json" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, body, link })
       });
 
       const data = await res.json().catch(() => null);
       console.log("📨 Push API response:", data);
 
-      // Si quieres verlo en pantalla, puedes descomentar:
-      // if (data?.ok) setPushStatus(`✅ Push enviado: ${data.success}/${data.tokens}`);
-      // else setPushStatus(`❌ Push API error: ${data?.error || res.status}`);
+      if (!res.ok || !data?.ok) {
+        const msg = data?.error || `HTTP ${res.status}`;
+        setPushStatus(`❌ Push API error: ${msg}`);
+        return { ok: false, data };
+      }
+
+      setPushStatus(`✅ Push enviado: ${data?.success ?? 0}/${data?.tokens ?? 0}`);
+      return { ok: true, data };
     } catch (e) {
       console.warn("❌ Error enviando push:", e);
+      setPushStatus("❌ Error enviando push: " + (e?.message || String(e)));
+      return { ok: false, error: e };
     }
   };
 
@@ -536,32 +541,41 @@ function App() {
   const agregarGasto = async () => {
     if (!importe || !comercio) return;
 
-    const importeNum = Number(importe);
-    const comercioFmt = formatearComercio(comercio);
+    try {
+      const importeNum = Number(importe);
+      const comercioFmt = formatearComercio(comercio);
 
-    await addDoc(collection(db, "gastos"), {
-      importe: importeNum,
-      pagadoPor,
-      mes: mesActual,
-      anio: anioActual,
-      liquidado: false,
-      divididoEntre: ["mdekot@gmail.com", "jessica.alca87@gmail.com"],
-      participantesCount: 2,
-      comercio: comercioFmt,
-      fecha: new Date()
-    });
+      await addDoc(collection(db, "gastos"), {
+        importe: importeNum,
+        pagadoPor,
+        mes: mesActual,
+        anio: anioActual,
+        liquidado: false,
+        divididoEntre: ["mdekot@gmail.com", "jessica.alca87@gmail.com"],
+        participantesCount: 2,
+        comercio: comercioFmt,
+        fecha: new Date()
+      });
 
-    // ✅ Push inmediato al móvil (PC ya no recibirá por tu api/push.js)
-    const quien = pagadoPor === "mdekot@gmail.com" ? "Mirko" : "Jessica";
-    const euros = importeNum.toFixed(2).replace(".", ",");
-    await enviarPushATodos({
-      title: "💸 Nuevo gasto",
-      body: `${quien} pagó ${euros}€ en ${comercioFmt}`,
-      link: window.location.origin
-    });
+      const quien = pagadoPor === "mdekot@gmail.com" ? "Mirko" : "Jessica";
+      const euros = importeNum.toFixed(2).replace(".", ",");
 
-    setImporte("");
-    setComercio("");
+      const pushResult = await enviarPushATodos({
+        title: "💸 Nuevo gasto",
+        body: `${quien} pagó ${euros}€ en ${comercioFmt}`,
+        link: window.location.origin
+      });
+
+      if (!pushResult?.ok) {
+        console.warn("⚠️ El gasto se guardó, pero el push falló:", pushResult);
+      }
+
+      setImporte("");
+      setComercio("");
+    } catch (e) {
+      console.error("❌ Error en agregarGasto:", e);
+      setPushStatus("❌ Error al guardar gasto o enviar push: " + (e?.message || String(e)));
+    }
   };
 
   const confirmarEliminar = async () => {
