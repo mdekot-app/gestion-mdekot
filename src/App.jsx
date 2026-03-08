@@ -257,37 +257,38 @@ function App() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ✅ Foreground listener CON notificación manual cuando la app está abierta
+  // ✅ Foreground listener visible también con móvil abierto
   useEffect(() => {
     const initForegroundListener = async () => {
       try {
         const messaging = await getFirebaseMessaging();
         if (!messaging) return;
 
-        onMessage(messaging, (payload) => {
+        onMessage(messaging, async (payload) => {
           try {
             console.log("📩 FCM foreground payload:", payload);
 
             const activadas = localStorage.getItem("notificationsEnabled") !== "false";
             if (!activadas) return;
+            if (Notification.permission !== "granted") return;
 
             const title = payload?.data?.title || payload?.notification?.title || "Gestión Mdekot";
             const body = payload?.data?.body || payload?.notification?.body || "";
             const link = payload?.data?.link || window.location.origin;
 
-            if (Notification.permission === "granted") {
-              const notif = new Notification(title, {
-                body,
-                icon: "/vite.svg",
-                badge: "/vite.svg",
-                data: { link }
-              });
+            const reg =
+              (await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js")) ||
+              (await navigator.serviceWorker.ready);
 
-              notif.onclick = () => {
-                window.focus();
-                window.location.href = link;
-              };
-            }
+            if (!reg) return;
+
+            await reg.showNotification(title, {
+              body,
+              icon: "/vite.svg",
+              badge: "/vite.svg",
+              data: { link },
+              tag: `push-${Date.now()}`
+            });
           } catch (e) {
             console.error("onMessage error:", e);
           }
@@ -297,7 +298,7 @@ function App() {
       }
     };
 
-    if ("Notification" in window) initForegroundListener();
+    if ("Notification" in window && "serviceWorker" in navigator) initForegroundListener();
   }, []);
 
   const meses = [
