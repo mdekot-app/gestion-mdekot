@@ -13,7 +13,21 @@ firebase.initializeApp({
   appId: "1:925024945706:web:34dbd94fe0d03dfbe6e553"
 });
 
-firebase.messaging();
+const messaging = firebase.messaging();
+
+// ✅ Mostrar UNA notificación cuando la app está en segundo plano o móvil bloqueado
+messaging.onBackgroundMessage((payload) => {
+  const title = payload?.data?.title || "Gestión Mdekot";
+  const body = payload?.data?.body || "";
+  const link = payload?.data?.link || "https://gestion-mdekot.vercel.app";
+
+  self.registration.showNotification(title, {
+    body,
+    icon: "/vite.svg",
+    badge: "/vite.svg",
+    data: { link }
+  });
+});
 
 // ✅ Abrir la app al tocar la notificación
 self.addEventListener("notificationclick", (event) => {

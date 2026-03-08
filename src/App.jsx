@@ -257,7 +257,7 @@ function App() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ✅ Foreground listener SIN notificación manual para evitar duplicados
+  // ✅ Foreground listener CON notificación manual cuando la app está abierta
   useEffect(() => {
     const initForegroundListener = async () => {
       try {
@@ -267,6 +267,27 @@ function App() {
         onMessage(messaging, (payload) => {
           try {
             console.log("📩 FCM foreground payload:", payload);
+
+            const activadas = localStorage.getItem("notificationsEnabled") !== "false";
+            if (!activadas) return;
+
+            const title = payload?.data?.title || payload?.notification?.title || "Gestión Mdekot";
+            const body = payload?.data?.body || payload?.notification?.body || "";
+            const link = payload?.data?.link || window.location.origin;
+
+            if (Notification.permission === "granted") {
+              const notif = new Notification(title, {
+                body,
+                icon: "/vite.svg",
+                badge: "/vite.svg",
+                data: { link }
+              });
+
+              notif.onclick = () => {
+                window.focus();
+                window.location.href = link;
+              };
+            }
           } catch (e) {
             console.error("onMessage error:", e);
           }

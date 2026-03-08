@@ -50,7 +50,6 @@ export default async function handler(req, res) {
     const b = body || "Notificación";
     const l = link || "https://gestion-mdekot.vercel.app";
 
-    // ✅ SOLO tokens mobile + notificationsEnabled !== false
     const snap = await db.collection("pushTokens").get();
     const tokens = [];
     const tokenDocs = [];
@@ -81,13 +80,18 @@ export default async function handler(req, res) {
     }
 
     const payload = {
-      notification: { title: t, body: b },
+      data: {
+        title: String(t),
+        body: String(b),
+        link: String(l),
+      },
       android: {
         priority: "high",
-        notification: { title: t, body: b },
       },
-      data: {
-        link: l,
+      webpush: {
+        headers: {
+          Urgency: "high",
+        },
       },
     };
 
@@ -125,7 +129,7 @@ export default async function handler(req, res) {
       success: result.successCount,
       failure: result.failureCount,
       invalidRemoved: invalid.length,
-      target: "mobile_enabled_only",
+      target: "mobile_enabled_only_data_mode",
     });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e?.message || String(e) });
