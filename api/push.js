@@ -24,7 +24,6 @@ export default async function handler(req, res) {
       return res.status(405).json({ ok: false, error: "Method not allowed" });
     }
 
-    // ✅ PARSEO ROBUSTO DEL BODY (vercel dev / curl / prod)
     let payloadIn = req.body;
 
     if (typeof payloadIn === "string") {
@@ -51,7 +50,7 @@ export default async function handler(req, res) {
     const b = body || "Notificación";
     const l = link || "https://gestion-mdekot.vercel.app";
 
-    // 1) Cargar SOLO tokens mobile
+    // ✅ SOLO tokens mobile + notificationsEnabled !== false
     const snap = await db.collection("pushTokens").get();
     const tokens = [];
     const tokenDocs = [];
@@ -59,7 +58,10 @@ export default async function handler(req, res) {
     snap.forEach((docu) => {
       const data = docu.data() || {};
       const platform = String(data.platform || "").toLowerCase();
-      if (platform !== "mobile") return; // ✅ SOLO MOBILE
+      const enabled = data.notificationsEnabled !== false;
+
+      if (platform !== "mobile") return;
+      if (!enabled) return;
 
       const tok = data.token || docu.id;
       if (tok && typeof tok === "string") {
@@ -74,11 +76,10 @@ export default async function handler(req, res) {
       return res.status(200).json({
         ok: true,
         sent: 0,
-        msg: "No hay tokens MOBILE en pushTokens (platform: mobile)",
+        msg: "No hay tokens MOBILE activos con notificationsEnabled=true",
       });
     }
 
-    // 2) Payload (solo móvil; android ayuda a prioridad)
     const payload = {
       notification: { title: t, body: b },
       android: {
@@ -95,7 +96,6 @@ export default async function handler(req, res) {
       ...payload,
     });
 
-    // 3) Limpiar tokens inválidos (solo los mobile usados)
     const invalid = [];
     result.responses.forEach((r, idx) => {
       if (!r.success) {
@@ -125,7 +125,7 @@ export default async function handler(req, res) {
       success: result.successCount,
       failure: result.failureCount,
       invalidRemoved: invalid.length,
-      target: "mobile",
+      target: "mobile_enabled_only",
     });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e?.message || String(e) });

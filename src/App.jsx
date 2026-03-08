@@ -41,6 +41,12 @@ function App() {
   // ✅ SOLO MOVIL: selector para elegir supermercado
   const [superMobile, setSuperMobile] = useState("MERCADONA");
 
+  // ===== PUSH UI SIMPLE =====
+  const [notificacionesActivas, setNotificacionesActivas] = useState(
+    localStorage.getItem("notificationsEnabled") !== "false"
+  );
+  const [pushReady, setPushReady] = useState(false);
+
   // ===== LISTA COMPRA (4 SUPERS) =====
   const SUPERS = [
     { key: "MERCADONA", defaultName: "MERCADONA" },
@@ -79,11 +85,9 @@ function App() {
 
   // ===== LIQUIDACIÓN =====
   const [liquidarConfirmOpen, setLiquidarConfirmOpen] = useState(false);
-  // estadoDeuda: null | "paid" | "unpaid"
   const [estadoDeuda, setEstadoDeuda] = useState(null);
 
-  // ✅ Guardamos también lo que viene de Firestore para comparar con la deuda actual
-  const [liquidacionGuardada, setLiquidacionGuardada] = useState(null); // { status, debtor, creditor, amount }
+  const [liquidacionGuardada, setLiquidacionGuardada] = useState(null);
 
   // ===== CALENDARIO =====
   const hoy = new Date();
@@ -96,20 +100,115 @@ function App() {
   const [eventoAEliminar, setEventoAEliminar] = useState(null);
 
   const [evTitulo, setEvTitulo] = useState("");
-  const [evTipo, setEvTipo] = useState("OTRO"); // ✅ ya no hay selector, pero mantenemos el campo
+  const [evTipo, setEvTipo] = useState("OTRO");
   const [evFecha, setEvFecha] = useState("");
   const [evHora, setEvHora] = useState("00:00");
   const [evNotas, setEvNotas] = useState("");
 
-  // ✅ Modal detalle del día (como tu imagen)
   const [diaDetalleOpen, setDiaDetalleOpen] = useState(false);
   const [diaDetalleFecha, setDiaDetalleFecha] = useState("");
 
-  // ===== PUSH DEBUG / STATUS =====
-  const [pushStatus, setPushStatus] = useState("");
-  const [pushToken, setPushToken] = useState(localStorage.getItem("fcmToken") || "");
+  const getPlatform = () => (window.innerWidth < 768 ? "mobile" : "pc");
 
-  // ✅✅✅ helper para enviar push a TODOS via tu endpoint /api/push
+  const guardarTokenEnFirestore = async (token, enabled) => {
+    if (!token) return;
+
+    await setDoc(
+      doc(db, "pushTokens", token),
+      {
+        token,
+        createdAt: new Date(),
+        userAgent: navigator.userAgent || "",
+        platform: getPlatform(),
+        notificationsEnabled: enabled
+      },
+      { merge: true }
+    );
+  };
+
+  const registrarPushSilencioso = async () => {
+    try {
+      if (!("Notification" in window)) return false;
+      if (Notification.permission !== "granted") return false;
+
+      const vapid = String(VAPID_KEY || "").trim();
+      if (!vapid) return false;
+
+      if (!("serviceWorker" in navigator)) return false;
+
+      const swReg = await navigator.serviceWorker.ready;
+      const messaging = await getFirebaseMessaging();
+      if (!messaging) return false;
+
+      const token = await getToken(messaging, {
+        vapidKey: vapid,
+        serviceWorkerRegistration: swReg
+      });
+
+      if (!token) return false;
+
+      localStorage.setItem("fcmToken", token);
+      await guardarTokenEnFirestore(token, localStorage.getItem("notificationsEnabled") !== "false");
+      setPushReady(true);
+      return true;
+    } catch (e) {
+      console.error("❌ registrarPushSilencioso:", e);
+      return false;
+    }
+  };
+
+  const activarNotificacionesSilencioso = async () => {
+    try {
+      if (!("Notification" in window)) return false;
+
+      if (Notification.permission === "default") {
+        const perm = await Notification.requestPermission();
+        if (perm !== "granted") return false;
+      }
+
+      if (Notification.permission !== "granted") return false;
+
+      const ok = await registrarPushSilencioso();
+      if (!ok) return false;
+
+      localStorage.setItem("notificationsEnabled", "true");
+      setNotificacionesActivas(true);
+
+      const token = localStorage.getItem("fcmToken");
+      if (token) {
+        await setDoc(doc(db, "pushTokens", token), { notificationsEnabled: true }, { merge: true });
+      }
+
+      return true;
+    } catch (e) {
+      console.error("❌ activarNotificacionesSilencioso:", e);
+      return false;
+    }
+  };
+
+  const toggleNotificaciones = async () => {
+    try {
+      const siguiente = !notificacionesActivas;
+      const token = localStorage.getItem("fcmToken");
+
+      if (siguiente) {
+        const ok = await activarNotificacionesSilencioso();
+        if (!ok) return;
+        setNotificacionesActivas(true);
+        return;
+      }
+
+      localStorage.setItem("notificationsEnabled", "false");
+      setNotificacionesActivas(false);
+
+      if (token) {
+        await setDoc(doc(db, "pushTokens", token), { notificationsEnabled: false }, { merge: true });
+      }
+    } catch (e) {
+      console.error("❌ toggleNotificaciones:", e);
+    }
+  };
+
   const enviarPushATodos = async ({ title, body, link }) => {
     try {
       const res = await fetch("/api/push", {
@@ -122,45 +221,43 @@ function App() {
       console.log("📨 Push API response:", data);
 
       if (!res.ok || !data?.ok) {
-        const msg = data?.error || `HTTP ${res.status}`;
-        setPushStatus(`❌ Push API error: ${msg}`);
         return { ok: false, data };
       }
 
-      setPushStatus(`✅ Push enviado: ${data?.success ?? 0}/${data?.tokens ?? 0}`);
       return { ok: true, data };
     } catch (e) {
       console.warn("❌ Error enviando push:", e);
-      setPushStatus("❌ Error enviando push: " + (e?.message || String(e)));
       return { ok: false, error: e };
     }
   };
 
-  // ✅ Step 1: resize + registrar el SW (y asegurarlo listo)
+  // ✅ Step 1: resize + registrar SW + auto init push si ya hay permiso
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", handleResize);
 
-    const registerSW = async () => {
-      if (!("serviceWorker" in navigator)) {
-        console.warn("⚠️ serviceWorker no soportado");
-        return;
-      }
+    const init = async () => {
+      if (!("serviceWorker" in navigator)) return;
+
       try {
         await navigator.serviceWorker.register("/firebase-messaging-sw.js");
         await navigator.serviceWorker.ready;
-        console.log("✅ SW listo:", (await navigator.serviceWorker.ready)?.active?.scriptURL || "");
       } catch (e) {
         console.error("❌ SW register error:", e);
       }
+
+      const ok = await registrarPushSilencioso();
+      if (ok) {
+        setPushReady(true);
+      }
     };
 
-    registerSW();
+    init();
 
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ✅ Step 2: listener de foreground (esto NO pide token; solo escucha si ya hay messaging)
+  // ✅ Foreground listener SIN notificación manual para evitar duplicados
   useEffect(() => {
     const initForegroundListener = async () => {
       try {
@@ -170,11 +267,6 @@ function App() {
         onMessage(messaging, (payload) => {
           try {
             console.log("📩 FCM foreground payload:", payload);
-            const title = payload?.notification?.title || "Gestión Mdekot";
-            const body = payload?.notification?.body || "";
-            if (Notification.permission === "granted") {
-              new Notification(title, { body, icon: "/vite.svg", badge: "/vite.svg" });
-            }
           } catch (e) {
             console.error("onMessage error:", e);
           }
@@ -184,93 +276,8 @@ function App() {
       }
     };
 
-    // solo si existe Notification API
     if ("Notification" in window) initForegroundListener();
   }, []);
-
-  // ✅ BOTÓN: activar notificaciones (en móvil casi siempre debe ser con click)
-  const activarNotificaciones = async () => {
-    try {
-      setPushStatus("Iniciando...");
-
-      if (!("Notification" in window)) {
-        setPushStatus("Este navegador no soporta notificaciones.");
-        return;
-      }
-
-      const vapid = String(VAPID_KEY || "").trim();
-      if (!vapid) {
-        setPushStatus("VAPID_KEY vacía. Revisa VITE_FIREBASE_VAPID_KEY en Vercel.");
-        return;
-      }
-
-      // Asegura SW listo
-      let swReg;
-      try {
-        swReg = await navigator.serviceWorker.ready;
-        console.log("✅ navigator.serviceWorker.ready OK");
-      } catch (e) {
-        console.error(e);
-        setPushStatus("Service Worker no listo (ready falló).");
-        return;
-      }
-
-      // Pedir permiso
-      if (Notification.permission === "default") {
-        const perm = await Notification.requestPermission();
-        console.log("🔔 Notification permission:", perm);
-        if (perm !== "granted") {
-          setPushStatus("Permiso no concedido: " + perm);
-          return;
-        }
-      }
-
-      if (Notification.permission !== "granted") {
-        setPushStatus("Notificaciones NO concedidas: " + Notification.permission);
-        return;
-      }
-
-      const messaging = await getFirebaseMessaging();
-      if (!messaging) {
-        setPushStatus("Firebase Messaging no soportado en este navegador.");
-        return;
-      }
-
-      const token = await getToken(messaging, {
-        vapidKey: vapid,
-        serviceWorkerRegistration: swReg
-      });
-
-      console.log("✅ TOKEN RESULT:", token);
-
-      if (!token) {
-        setPushStatus("Token vacío (getToken devolvió null).");
-        return;
-      }
-
-      localStorage.setItem("fcmToken", token);
-      setPushToken(token);
-
-      const platform = window.innerWidth < 768 ? "mobile" : "pc";
-
-      await setDoc(
-        doc(db, "pushTokens", token),
-        {
-          token,
-          createdAt: new Date(),
-          userAgent: navigator.userAgent || "",
-          platform
-        },
-        { merge: true }
-      );
-
-      setPushStatus("✅ Token guardado en Firestore (" + platform + ")");
-      console.log("✅ Token guardado en Firestore + localStorage.");
-    } catch (e) {
-      console.error(e);
-      setPushStatus("❌ Error: " + (e?.message || String(e)));
-    }
-  };
 
   const meses = [
     "Enero",
@@ -574,7 +581,6 @@ function App() {
       setComercio("");
     } catch (e) {
       console.error("❌ Error en agregarGasto:", e);
-      setPushStatus("❌ Error al guardar gasto o enviar push: " + (e?.message || String(e)));
     }
   };
 
@@ -693,22 +699,19 @@ function App() {
 
   const abrirNuevoEvento = (fechaPreseleccionada) => {
     setEvTitulo("");
-    setEvTipo("OTRO"); // ✅ fijo
+    setEvTipo("OTRO");
     setEvNotas("");
     setEvHora("00:00");
     setEvFecha(fechaPreseleccionada || ymd(calAnio, calMes, new Date().getDate()));
     setEventoNuevoOpen(true);
   };
 
-  // ✅✅✅ EVENTO: añade eventAt + notificado:false (SIN PUSH al crear)
   const guardarNuevoEvento = async () => {
     const t = (evTitulo || "").trim();
     const f = (evFecha || "").trim();
     if (!t || !f) return;
 
     const horaFinal = (evHora || "").trim() || "00:00";
-
-    // ✅ fecha+hora completa
     const eventAt = new Date(`${f}T${horaFinal}:00`);
 
     await addDoc(collection(db, "eventos"), {
@@ -734,7 +737,6 @@ function App() {
     setEvNotas(ev.notas || "");
   };
 
-  // ✅✅✅ EVENTO: recalcula eventAt + resetea notificado:false (SIN PUSH al editar)
   const guardarEdicionEvento = async () => {
     if (!eventoEditando) return;
     const t = (evTitulo || "").trim();
@@ -764,7 +766,6 @@ function App() {
     setEventoAEliminar(null);
   };
 
-  // ✅ Colores en el detalle del día (para diferenciar eventos)
   const COLORES_EVENTOS_DIA = useMemo(() => ["#a855f7", "#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#06b6d4"], []);
   const colorEventoPorIndice = (idx) => COLORES_EVENTOS_DIA[idx % COLORES_EVENTOS_DIA.length];
 
@@ -872,7 +873,6 @@ function App() {
   const centerMainFont = isMobile ? 18 : 24;
   const centerSubFont = isMobile ? 12 : 14;
 
-  // ===== CALENDARIO UI HELPERS =====
   const diasSemana = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
   const { lastDay } = getMonthRange(calAnio, calMes);
 
@@ -910,25 +910,15 @@ function App() {
         <>
           <h1 style={styles.title}>💰💶 GESTIÓN MDEKOT 💶💰</h1>
 
-          {/* 🔥 BOTÓN PUSH (OBLIGATORIO EN MUCHOS MÓVILES) */}
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: "14px", gap: "10px", flexWrap: "wrap" }}>
-            <button onClick={activarNotificaciones} style={styles.buttonAddCalendar}>🔔 Activar notificaciones</button>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
+            <button
+              onClick={toggleNotificaciones}
+              style={notificacionesActivas ? styles.buttonNotifOn : styles.buttonNotifOff}
+              title={pushReady ? "Activar u ocultar notificaciones en este dispositivo" : "Se configurará automáticamente cuando el navegador lo permita"}
+            >
+              {notificacionesActivas ? "🔔 Notificaciones activadas" : "🔕 Notificaciones desactivadas"}
+            </button>
           </div>
-
-          {pushStatus ? (
-            <div style={{ maxWidth: "700px", margin: "0 auto 14px auto", background: "#1e293b", padding: "10px", borderRadius: "10px" }}>
-              <div style={{ fontWeight: 700 }}>Push status:</div>
-              <div style={{ opacity: 0.9, wordBreak: "break-word" }}>{pushStatus}</div>
-              <div style={{ marginTop: "8px", fontWeight: 700 }}>Permission:</div>
-              <div style={{ opacity: 0.9 }}>{("Notification" in window) ? Notification.permission : "no Notification API"}</div>
-              {pushToken ? (
-                <>
-                  <div style={{ fontWeight: 700, marginTop: "8px" }}>Token:</div>
-                  <div style={{ fontSize: "12px", opacity: 0.85, wordBreak: "break-word" }}>{pushToken}</div>
-                </>
-              ) : null}
-            </div>
-          ) : null}
 
           <div style={styles.selectorRow}>
             <select value={mesActual} onChange={(e) => setMesActual(Number(e.target.value))} style={styles.select}>
@@ -1075,7 +1065,6 @@ function App() {
         </>
       )}
 
-      {/* ===== CALENDARIO ===== */}
       {vista === "calendario" && (
         <>
           <h1 style={styles.title}>📅 CALENDARIO</h1>
@@ -1228,7 +1217,6 @@ function App() {
         </>
       )}
 
-      {/* ===== LISTA COMPRA ===== */}
       {vista === "lista" && (
         <>
           <h1 style={styles.title}>🛒 LISTA DE LA COMPRA</h1>
@@ -1404,7 +1392,6 @@ function App() {
         </>
       )}
 
-      {/* ===== GRAFICO ===== */}
       {vista === "grafico" && (
         <div style={{ width: "100%", marginTop: "40px" }}>
           <h2 style={{ textAlign: "center", marginBottom: "30px" }}>📊 Distribución por Comercio</h2>
@@ -1486,6 +1473,8 @@ const styles = {
   button: { background: "#3b82f6", color: "white", padding: "10px", border: "none", borderRadius: "6px", cursor: "pointer" },
   buttonDanger: { background: "#ef4444", color: "white", padding: "10px 15px", border: "none", borderRadius: "6px", cursor: "pointer" },
   buttonPaid: { background: "#22c55e", color: "#111827", padding: "10px 15px", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 800 },
+  buttonNotifOn: { background: "#22c55e", color: "#111827", padding: "12px 18px", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 800 },
+  buttonNotifOff: { background: "#64748b", color: "white", padding: "12px 18px", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 800 },
 
   buttonEdit: { background: "#facc15", border: "none", borderRadius: "5px", padding: "4px 8px", marginRight: "5px", cursor: "pointer" },
   buttonDelete: { background: "#ef4444", border: "none", borderRadius: "5px", padding: "4px 8px", cursor: "pointer" },
@@ -1506,7 +1495,6 @@ const styles = {
   legendRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.08)" },
   legendDot: { width: "14px", height: "14px", borderRadius: "999px", display: "inline-block" },
 
-  // ===== CALENDARIO =====
   calHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" },
   buttonAddCalendar: { background: "#06b6d4", color: "white", padding: "10px 14px", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 800 },
 
