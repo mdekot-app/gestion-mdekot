@@ -26,8 +26,10 @@ function App() {
   const [comercio, setComercio] = useState("");
   const [gastos, setGastos] = useState([]);
 
-  const [mesActual, setMesActual] = useState(2);
-  const [anioActual, setAnioActual] = useState(2026);
+  const [mesActual, setMesActual] = useState(new Date().getMonth() + 1);
+  const [anioActual, setAnioActual] = useState(new Date().getFullYear());
+
+  console.log("MES ACTUAL:", new Date().getMonth() + 1, new Date().getFullYear());
 
   const [gastoEditando, setGastoEditando] = useState(null);
   const [editComercio, setEditComercio] = useState("");
