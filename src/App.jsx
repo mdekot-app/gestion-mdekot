@@ -14,7 +14,8 @@ import {
   orderBy,
   getDocs,
   limit,
-  runTransaction
+  runTransaction,
+  documentId
 } from "firebase/firestore";
 import { auth, db, getFirebaseMessaging, VAPID_KEY } from "./firebase";
 import { getToken, onMessage } from "firebase/messaging";
@@ -36,6 +37,8 @@ function App() {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [registerName, setRegisterName] = useState("");
+  const [registerGroupName, setRegisterGroupName] = useState("");
+  const [registerGender, setRegisterGender] = useState("hombre");
   const [inviteCode, setInviteCode] = useState("");
   const [loginError, setLoginError] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
@@ -43,10 +46,13 @@ function App() {
   const [userProfile, setUserProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
+  const [groupProfile, setGroupProfile] = useState(null);
+  const [groupMembers, setGroupMembers] = useState([]);
+
   const [vista, setVista] = useState("dashboard");
   const [balance, setBalance] = useState(0);
   const [importe, setImporte] = useState("");
-  const [pagadoPor, setPagadoPor] = useState("mirmilmor@gmail.com");
+  const [pagadoPor, setPagadoPor] = useState("");
   const [comercio, setComercio] = useState("");
   const [gastos, setGastos] = useState([]);
 
@@ -137,9 +143,7 @@ function App() {
   const generarCodigoBase = () => {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let out = "";
-    for (let i = 0; i < 6; i++) {
-      out += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
+    for (let i = 0; i < 6; i++) out += chars.charAt(Math.floor(Math.random() * chars.length));
     return out;
   };
 
@@ -157,9 +161,58 @@ function App() {
     setLoginEmail("");
     setLoginPassword("");
     setRegisterName("");
+    setRegisterGroupName("");
+    setRegisterGender("hombre");
     setInviteCode("");
     setLoginError("");
   };
+
+  const getNombreUsuarioPorEmail = (email) => {
+    const miembro = groupMembers.find((m) => m.email === email);
+    if (miembro?.nombre) return miembro.nombre;
+    if (email === "mirmilmor@gmail.com") return "Mirko";
+    if (email === "jessica.alca87@gmail.com") return "Jessica";
+    return email || "Usuario";
+  };
+
+  const getGeneroPorEmail = (email) => {
+    const miembro = groupMembers.find((m) => m.email === email);
+    if (miembro?.sexo) return miembro.sexo;
+    if (email === "jessica.alca87@gmail.com") return "mujer";
+    return "hombre";
+  };
+
+  const getBadgeStyleByGender = (sexo) => (sexo === "mujer" ? styles.payJessica : styles.payMirko);
+  const getBadgeIconByGender = (sexo) => (sexo === "mujer" ? "👩" : "👨");
+
+  const participantesGrupo = useMemo(() => {
+    const miembrosValidos = groupMembers
+      .filter((m) => m?.email)
+      .map((m) => ({
+        uid: m.id,
+        nombre: m.nombre || m.email,
+        email: m.email,
+        sexo: m.sexo || "hombre"
+      }));
+
+    if (miembrosValidos.length >= 2) return miembrosValidos.slice(0, 2);
+
+    if (miembrosValidos.length === 1) return miembrosValidos;
+
+    return [
+      { uid: "mirko", nombre: "Mirko", email: "mirmilmor@gmail.com", sexo: "hombre" },
+      { uid: "jessica", nombre: "Jessica", email: "jessica.alca87@gmail.com", sexo: "mujer" }
+    ];
+  }, [groupMembers]);
+
+  const participanteA = participantesGrupo[0] || null;
+  const participanteB = participantesGrupo[1] || null;
+
+  useEffect(() => {
+    if (!pagadoPor && participanteA?.email) {
+      setPagadoPor(participanteA.email);
+    }
+  }, [pagadoPor, participanteA]);
 
   const iniciarSesion = async () => {
     try {
@@ -180,6 +233,11 @@ function App() {
       return;
     }
 
+    if (!registerGroupName.trim()) {
+      setLoginError("Pon un nombre al grupo");
+      return;
+    }
+
     try {
       setAuthBusy(true);
       setLoginError("");
@@ -192,6 +250,7 @@ function App() {
       const nombreUsuario = (registerName || "").trim() || loginEmail.trim().split("@")[0];
 
       await setDoc(grupoRef, {
+        nombre: registerGroupName.trim(),
         codigoInvitacion,
         createdAt: new Date(),
         createdBy: uid,
@@ -202,9 +261,11 @@ function App() {
 
       await setDoc(doc(db, "usuarios", uid), {
         nombre: nombreUsuario,
+        sexo: registerGender,
         email: loginEmail.trim(),
         grupoId: grupoRef.id,
         grupoCodigo: codigoInvitacion,
+        grupoNombre: registerGroupName.trim(),
         createdAt: new Date()
       });
 
@@ -251,18 +312,14 @@ function App() {
       await runTransaction(db, async (transaction) => {
         const grupoSnap = await transaction.get(grupoRef);
 
-        if (!grupoSnap.exists()) {
-          throw new Error("El grupo ya no existe");
-        }
+        if (!grupoSnap.exists()) throw new Error("El grupo ya no existe");
 
         const data = grupoSnap.data() || {};
         const miembros = Array.isArray(data.miembros) ? data.miembros : [];
         const miembrosCount = Number(data.miembrosCount || miembros.length || 0);
         const maxMiembros = Number(data.maxMiembros || 2);
 
-        if (miembrosCount >= maxMiembros) {
-          throw new Error("Este grupo ya tiene 2 personas");
-        }
+        if (miembrosCount >= maxMiembros) throw new Error("Este grupo ya tiene 2 personas");
 
         const nuevosMiembros = miembros.includes(uid) ? miembros : [...miembros, uid];
 
@@ -274,9 +331,11 @@ function App() {
 
         transaction.set(doc(db, "usuarios", uid), {
           nombre: nombreUsuario,
+          sexo: registerGender,
           email: loginEmail.trim(),
           grupoId: grupoRef.id,
           grupoCodigo: data.codigoInvitacion || codigo,
+          grupoNombre: data.nombre || "Grupo",
           createdAt: new Date()
         });
       });
@@ -335,7 +394,6 @@ function App() {
 
       const vapid = String(VAPID_KEY || "").trim();
       if (!vapid) return false;
-
       if (!("serviceWorker" in navigator)) return false;
 
       const swReg = await navigator.serviceWorker.ready;
@@ -421,10 +479,7 @@ function App() {
 
       const data = await res.json().catch(() => null);
 
-      if (!res.ok || !data?.ok) {
-        return { ok: false, data };
-      }
-
+      if (!res.ok || !data?.ok) return { ok: false, data };
       return { ok: true, data };
     } catch (e) {
       console.warn("❌ Error enviando push:", e);
@@ -455,11 +510,8 @@ function App() {
         const ref = doc(db, "usuarios", usuarioAuth.uid);
         const snap = await getDoc(ref);
 
-        if (snap.exists()) {
-          setUserProfile({ id: snap.id, ...snap.data() });
-        } else {
-          setUserProfile(null);
-        }
+        if (snap.exists()) setUserProfile({ id: snap.id, ...snap.data() });
+        else setUserProfile(null);
       } catch (e) {
         console.error("Error cargando perfil de usuario:", e);
         setUserProfile(null);
@@ -470,6 +522,55 @@ function App() {
 
     cargarPerfilUsuario();
   }, [usuarioAuth]);
+
+  useEffect(() => {
+    const cargarGrupo = async () => {
+      if (!grupoId) {
+        setGroupProfile(null);
+        setGroupMembers([]);
+        return;
+      }
+
+      try {
+        const grupoSnap = await getDoc(doc(db, "grupos", grupoId));
+        if (grupoSnap.exists()) {
+          setGroupProfile({ id: grupoSnap.id, ...grupoSnap.data() });
+          const miembrosIds = Array.isArray(grupoSnap.data().miembros) ? grupoSnap.data().miembros : [];
+
+          if (miembrosIds.length > 0) {
+            const chunks = [];
+            for (let i = 0; i < miembrosIds.length; i += 10) chunks.push(miembrosIds.slice(i, i + 10));
+
+            let users = [];
+            for (const chunk of chunks) {
+              const qUsers = query(collection(db, "usuarios"), where(documentId(), "in", chunk));
+              const usersSnap = await getDocs(qUsers);
+              users = [...users, ...usersSnap.docs.map((d) => ({ id: d.id, ...d.data() }))];
+            }
+
+            users.sort((a, b) => {
+              const ia = miembrosIds.indexOf(a.id);
+              const ib = miembrosIds.indexOf(b.id);
+              return ia - ib;
+            });
+
+            setGroupMembers(users);
+          } else {
+            setGroupMembers([]);
+          }
+        } else {
+          setGroupProfile(null);
+          setGroupMembers([]);
+        }
+      } catch (e) {
+        console.error("Error cargando grupo:", e);
+        setGroupProfile(null);
+        setGroupMembers([]);
+      }
+    };
+
+    cargarGrupo();
+  }, [grupoId]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -486,9 +587,7 @@ function App() {
       }
 
       const ok = await registrarPushSilencioso();
-      if (ok) {
-        setPushReady(true);
-      }
+      if (ok) setPushReady(true);
     };
 
     init();
@@ -563,8 +662,12 @@ function App() {
   };
 
   const getDebtInfo = (bal) => {
-    if (bal > 0) return { debtorName: "Jessica", creditorName: "Mirko", amount: bal };
-    if (bal < 0) return { debtorName: "Mirko", creditorName: "Jessica", amount: Math.abs(bal) };
+    if (!participanteA || !participanteB) {
+      return { debtorName: "", creditorName: "", amount: 0 };
+    }
+
+    if (bal > 0) return { debtorName: participanteB.nombre, creditorName: participanteA.nombre, amount: bal };
+    if (bal < 0) return { debtorName: participanteA.nombre, creditorName: participanteB.nombre, amount: Math.abs(bal) };
     return { debtorName: "", creditorName: "", amount: 0 };
   };
 
@@ -579,8 +682,8 @@ function App() {
 
     const q = query(collection(db, "grupos", grupoId, "gastos"));
     const unsub = onSnapshot(q, (snapshot) => {
-      let totalPagado = 0;
-      let totalDebe = 0;
+      let totalPagadoA = 0;
+      let totalDebeA = 0;
       let lista = [];
 
       snapshot.forEach((documento) => {
@@ -589,13 +692,13 @@ function App() {
         if (data.mes === mesActual && data.anio === anioActual && data.liquidado === false) {
           lista.push({ id: documento.id, ...data });
 
-          const parte = data.importe / data.participantesCount;
+          const parte = Number(data.importe || 0) / Number(data.participantesCount || 2);
 
-          if (data.pagadoPor === "mirmilmor@gmail.com") {
-            totalPagado += data.importe;
-            totalDebe += parte;
-          } else {
-            totalDebe += parte;
+          if (data.pagadoPor === participanteA?.email) {
+            totalPagadoA += Number(data.importe || 0);
+            totalDebeA += parte;
+          } else if (data.pagadoPor === participanteB?.email) {
+            totalDebeA += parte;
           }
         }
       });
@@ -606,11 +709,11 @@ function App() {
       });
 
       setGastos(lista);
-      setBalance(totalPagado - totalDebe);
+      setBalance(totalPagadoA - totalDebeA);
     });
 
     return () => unsub();
-  }, [grupoId, mesActual, anioActual]);
+  }, [grupoId, mesActual, anioActual, participanteA?.email, participanteB?.email]);
 
   useEffect(() => {
     const cargarEstadoLiquidacion = async () => {
@@ -663,7 +766,7 @@ function App() {
 
     if (mismoDeudor && mismoAcreedor && mismoImporte) setEstadoDeuda(liquidacionGuardada.status);
     else setEstadoDeuda(null);
-  }, [balance, liquidacionGuardada]);
+  }, [balance, liquidacionGuardada, participanteA, participanteB]);
 
   useEffect(() => {
     const cargarNombres = async () => {
@@ -687,7 +790,6 @@ function App() {
       }
     };
     cargarNombres();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const abrirEditarSuper = (superKey) => {
@@ -811,6 +913,7 @@ function App() {
 
   const agregarGasto = async () => {
     if (!importe || !comercio || !grupoId) return;
+    if (!participanteA?.email || !participanteB?.email) return;
 
     try {
       const importeNum = Number(importe);
@@ -822,13 +925,13 @@ function App() {
         mes: mesActual,
         anio: anioActual,
         liquidado: false,
-        divididoEntre: ["mirmilmor@gmail.com", "jessica.alca87@gmail.com"],
+        divididoEntre: [participanteA.email, participanteB.email],
         participantesCount: 2,
         comercio: comercioFmt,
         fecha: new Date()
       });
 
-      const quien = pagadoPor === "mirmilmor@gmail.com" ? "Mirko" : "Jessica";
+      const quien = getNombreUsuarioPorEmail(pagadoPor);
       const euros = importeNum.toFixed(2).replace(".", ",");
 
       const pushResult = await enviarPushATodos({
@@ -1107,15 +1210,16 @@ function App() {
 
   const dataGraficoOrdenado = dataGrafico.slice().sort((a, b) => b.total - a.total);
 
-  let totalMirko = 0;
-  let totalJessica = 0;
-
+  const totalPorEmail = {};
   gastos.forEach((g) => {
-    if (g.pagadoPor === "mirmilmor@gmail.com") totalMirko += g.importe;
-    else totalJessica += g.importe;
+    if (!totalPorEmail[g.pagadoPor]) totalPorEmail[g.pagadoPor] = 0;
+    totalPorEmail[g.pagadoPor] += Number(g.importe || 0);
   });
 
-  const totalMes = totalMirko + totalJessica;
+  const totalParticipanteA = participanteA?.email ? totalPorEmail[participanteA.email] || 0 : 0;
+  const totalParticipanteB = participanteB?.email ? totalPorEmail[participanteB.email] || 0 : 0;
+  const totalMes = totalParticipanteA + totalParticipanteB;
+
   const debtInfo = getDebtInfo(balance);
 
   const getBalanceCardStyle = () => {
@@ -1136,8 +1240,8 @@ function App() {
       return <h2 style={styles.balanceCardBigText}>{`${debtInfo.debtorName} NO HA PAGADO LA DEUDA DE ${debtInfo.amount.toFixed(2)} €`}</h2>;
     }
 
-    if (balance > 0) return <h2>Jessica debe {balance.toFixed(2)} € a Mirko</h2>;
-    return <h2>Mirko debe {Math.abs(balance).toFixed(2)} € a Jessica</h2>;
+    if (balance > 0) return <h2>{participanteB?.nombre} debe {balance.toFixed(2)} € a {participanteA?.nombre}</h2>;
+    return <h2>{participanteA?.nombre} debe {Math.abs(balance).toFixed(2)} € a {participanteB?.nombre}</h2>;
   };
 
   const chartHeight = isMobile ? 320 : 440;
@@ -1183,7 +1287,7 @@ function App() {
   if (!usuarioAuth) {
     return (
       <div style={{ ...styles.container, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ ...styles.card, maxWidth: "440px", width: "100%" }}>
+        <div style={{ ...styles.card, maxWidth: "460px", width: "100%" }}>
           <h1 style={styles.title}>
             {authMode === "login" ? "🔐 Iniciar sesión" : authMode === "register-create" ? "✨ Crear cuenta y grupo" : "🤝 Unirme a un grupo"}
           </h1>
@@ -1201,11 +1305,28 @@ function App() {
           </div>
 
           {authMode !== "login" && (
+            <>
+              <input
+                type="text"
+                placeholder="Nombre para mostrar"
+                value={registerName}
+                onChange={(e) => setRegisterName(e.target.value)}
+                style={styles.input}
+              />
+
+              <select value={registerGender} onChange={(e) => setRegisterGender(e.target.value)} style={styles.input}>
+                <option value="hombre">Hombre</option>
+                <option value="mujer">Mujer</option>
+              </select>
+            </>
+          )}
+
+          {authMode === "register-create" && (
             <input
               type="text"
-              placeholder="Nombre (opcional)"
-              value={registerName}
-              onChange={(e) => setRegisterName(e.target.value)}
+              placeholder="Nombre del grupo"
+              value={registerGroupName}
+              onChange={(e) => setRegisterGroupName(e.target.value)}
               style={styles.input}
             />
           )}
@@ -1298,7 +1419,7 @@ function App() {
           <h1 style={styles.title}>💰💶 GESTIÓN MDEKOT 💶💰</h1>
 
           <p style={{ textAlign: "center", marginBottom: "10px", fontWeight: "600" }}>
-            Usuario: {userProfile?.nombre || usuarioAuth?.email} | Grupo: {userProfile?.grupoId || "Sin grupo"}
+            Usuario: {userProfile?.nombre || usuarioAuth?.email} | Grupo: {groupProfile?.nombre || userProfile?.grupoNombre || "Sin grupo"}
           </p>
 
           {userProfile?.grupoCodigo ? (
@@ -1338,8 +1459,9 @@ function App() {
               <input type="text" placeholder="Comercio" value={comercio} onChange={(e) => setComercio(e.target.value)} style={styles.input} />
               <input type="number" placeholder="Importe" value={importe} onChange={(e) => setImporte(e.target.value)} style={styles.input} />
               <select value={pagadoPor} onChange={(e) => setPagadoPor(e.target.value)} style={styles.input}>
-                <option value="mirmilmor@gmail.com">Mirko</option>
-                <option value="jessica.alca87@gmail.com">Jessica</option>
+                {participantesGrupo.map((p) => (
+                  <option key={p.email} value={p.email}>{p.nombre}</option>
+                ))}
               </select>
               <button onClick={agregarGasto} style={styles.button}>Guardar</button>
             </div>
@@ -1349,10 +1471,11 @@ function App() {
             <div style={styles.card}>
               <h3>· GASTOS DEL MES ·</h3>
               {gastos.map((g) => {
-                const esMirko = g.pagadoPor === "mirmilmor@gmail.com";
-                const badgeStyle = esMirko ? styles.payMirko : styles.payJessica;
-                const badgeIcon = esMirko ? "👨" : "👩";
-                const badgeTitle = esMirko ? "Pagó Mirko" : "Pagó Jessica";
+                const nombrePagador = getNombreUsuarioPorEmail(g.pagadoPor);
+                const sexoPagador = getGeneroPorEmail(g.pagadoPor);
+                const badgeStyle = getBadgeStyleByGender(sexoPagador);
+                const badgeIcon = getBadgeIconByGender(sexoPagador);
+                const badgeTitle = `Pagó ${nombrePagador}`;
 
                 return (
                   <div key={g.id} style={{ ...styles.gastoItem, flexDirection: "row", alignItems: "center", gap: isMobile ? "8px" : "0", flexWrap: "nowrap" }}>
@@ -1398,14 +1521,19 @@ function App() {
             <div style={styles.card}>
               <h3>· GASTO INDIVIDUAL ·</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "10px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
-                  <span title="Pagó Mirko" style={{ ...styles.payIcon, ...styles.payMirko }}>👨</span>
-                  <span style={{ fontWeight: "600" }}>Mirko → {totalMirko.toFixed(2)} €</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
-                  <span title="Pagó Jessica" style={{ ...styles.payIcon, ...styles.payJessica }}>👩</span>
-                  <span style={{ fontWeight: "600" }}>Jessica → {totalJessica.toFixed(2)} €</span>
-                </div>
+                {participanteA ? (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+                    <span title={`Pagó ${participanteA.nombre}`} style={{ ...styles.payIcon, ...getBadgeStyleByGender(participanteA.sexo) }}>{getBadgeIconByGender(participanteA.sexo)}</span>
+                    <span style={{ fontWeight: "600" }}>{participanteA.nombre} → {totalParticipanteA.toFixed(2)} €</span>
+                  </div>
+                ) : null}
+
+                {participanteB ? (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+                    <span title={`Pagó ${participanteB.nombre}`} style={{ ...styles.payIcon, ...getBadgeStyleByGender(participanteB.sexo) }}>{getBadgeIconByGender(participanteB.sexo)}</span>
+                    <span style={{ fontWeight: "600" }}>{participanteB.nombre} → {totalParticipanteB.toFixed(2)} €</span>
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -1440,8 +1568,9 @@ function App() {
                 <input value={editComercio} onChange={(e) => setEditComercio(e.target.value)} style={styles.input} />
                 <input type="number" value={editImporte} onChange={(e) => setEditImporte(e.target.value)} style={styles.input} />
                 <select value={editPagadoPor} onChange={(e) => setEditPagadoPor(e.target.value)} style={styles.input}>
-                  <option value="mirmilmor@gmail.com">Mirko</option>
-                  <option value="jessica.alca87@gmail.com">Jessica</option>
+                  {participantesGrupo.map((p) => (
+                    <option key={p.email} value={p.email}>{p.nombre}</option>
+                  ))}
                 </select>
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px" }}>
                   <button onClick={() => setGastoEditando(null)} style={styles.button}>Cancelar</button>
@@ -1828,15 +1957,19 @@ function App() {
               </div>
 
               <div style={{ marginTop: "40px", display: "flex", justifyContent: "center", gap: "60px", flexWrap: "wrap" }}>
-                <div style={{ textAlign: "center" }}>
-                  <h3>Mirko</h3>
-                  <p style={{ fontSize: "20px", fontWeight: "600" }}>{totalMirko.toFixed(2)} €</p>
-                </div>
+                {participanteA ? (
+                  <div style={{ textAlign: "center" }}>
+                    <h3>{participanteA.nombre}</h3>
+                    <p style={{ fontSize: "20px", fontWeight: "600" }}>{totalParticipanteA.toFixed(2)} €</p>
+                  </div>
+                ) : null}
 
-                <div style={{ textAlign: "center" }}>
-                  <h3>Jessica</h3>
-                  <p style={{ fontSize: "20px", fontWeight: "600" }}>{totalJessica.toFixed(2)} €</p>
-                </div>
+                {participanteB ? (
+                  <div style={{ textAlign: "center" }}>
+                    <h3>{participanteB.nombre}</h3>
+                    <p style={{ fontSize: "20px", fontWeight: "600" }}>{totalParticipanteB.toFixed(2)} €</p>
+                  </div>
+                ) : null}
               </div>
             </>
           )}
