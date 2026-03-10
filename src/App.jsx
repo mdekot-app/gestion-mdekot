@@ -538,53 +538,66 @@ function App() {
   }, [usuarioAuth]);
 
   useEffect(() => {
-    const cargarGrupo = async () => {
-      if (!grupoId) {
-        setGroupProfile(null);
-        setGroupMembers([]);
-        return;
-      }
+  const cargarGrupo = async () => {
+    if (!grupoId) {
+      setGroupProfile(null);
+      setGroupMembers([]);
+      return;
+    }
 
-      try {
-        const grupoSnap = await getDoc(doc(db, "grupos", grupoId));
-        if (grupoSnap.exists()) {
-          setGroupProfile({ id: grupoSnap.id, ...grupoSnap.data() });
-          const miembrosIds = Array.isArray(grupoSnap.data().miembros) ? grupoSnap.data().miembros : [];
+    try {
+      const grupoSnap = await getDoc(doc(db, "grupos", grupoId));
 
-          if (miembrosIds.length > 0) {
-            const chunks = [];
-            for (let i = 0; i < miembrosIds.length; i += 10) chunks.push(miembrosIds.slice(i, i + 10));
+      if (grupoSnap.exists()) {
+        const grupoData = grupoSnap.data() || {};
+        setGroupProfile({ id: grupoSnap.id, ...grupoData });
 
-            let users = [];
-            for (const chunk of chunks) {
-              const qUsers = query(collection(db, "usuarios"), where(documentId(), "in", chunk));
-              const usersSnap = await getDocs(qUsers);
-              users = [...users, ...usersSnap.docs.map((d) => ({ id: d.id, ...d.data() }))];
-            }
+        const miembrosIds = Array.isArray(grupoData.miembros) ? grupoData.miembros : [];
 
-            users.sort((a, b) => {
-              const ia = miembrosIds.indexOf(a.id);
-              const ib = miembrosIds.indexOf(b.id);
-              return ia - ib;
-            });
+        if (miembrosIds.length >= 2) {
+          const chunks = [];
+          for (let i = 0; i < miembrosIds.length; i += 10) chunks.push(miembrosIds.slice(i, i + 10));
 
-            setGroupMembers(users);
-          } else {
-            setGroupMembers([]);
+          let users = [];
+          for (const chunk of chunks) {
+            const qUsers = query(collection(db, "usuarios"), where(documentId(), "in", chunk));
+            const usersSnap = await getDocs(qUsers);
+            users = [...users, ...usersSnap.docs.map((d) => ({ id: d.id, ...d.data() }))];
           }
-        } else {
-          setGroupProfile(null);
-          setGroupMembers([]);
-        }
-      } catch (e) {
-        console.error("Error cargando grupo:", e);
-        setGroupProfile(null);
-        setGroupMembers([]);
-      }
-    };
 
-    cargarGrupo();
-  }, [grupoId]);
+          users.sort((a, b) => {
+            const ia = miembrosIds.indexOf(a.id);
+            const ib = miembrosIds.indexOf(b.id);
+            return ia - ib;
+          });
+
+          setGroupMembers(users);
+          return;
+        }
+      } else {
+        setGroupProfile(null);
+      }
+
+      const qUsuariosGrupo = query(collection(db, "usuarios"), where("grupoId", "==", grupoId));
+      const usuariosGrupoSnap = await getDocs(qUsuariosGrupo);
+      const usuariosGrupo = usuariosGrupoSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+      usuariosGrupo.sort((a, b) => {
+        const fa = a.createdAt?.seconds || 0;
+        const fb = b.createdAt?.seconds || 0;
+        return fa - fb;
+      });
+
+      setGroupMembers(usuariosGrupo);
+    } catch (e) {
+      console.error("Error cargando grupo:", e);
+      setGroupProfile(null);
+      setGroupMembers([]);
+    }
+  };
+
+  cargarGrupo();
+}, [grupoId]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
