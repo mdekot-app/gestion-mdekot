@@ -72,6 +72,7 @@ function App() {
     localStorage.getItem("notificationsEnabled") !== "false"
   );
   const [pushReady, setPushReady] = useState(false);
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
   const SUPERS = [
     { key: "MERCADONA", defaultName: "MERCADONA" },
@@ -377,6 +378,7 @@ function App() {
 
   const cerrarSesion = async () => {
     try {
+      setMenuAbierto(false);
       await signOut(auth);
     } catch (e) {
       console.error(e);
@@ -647,6 +649,10 @@ function App() {
 
     if ("Notification" in window && "serviceWorker" in navigator) initForegroundListener();
   }, []);
+
+  useEffect(() => {
+    setMenuAbierto(false);
+  }, [vista]);
 
   const meses = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -1436,6 +1442,71 @@ function App() {
 
   return (
     <div style={{ ...styles.container, padding: isMobile ? "16px" : "40px" }}>
+      <button
+        onClick={() => setMenuAbierto(true)}
+        style={styles.hamburgerButton}
+        aria-label="Abrir menú"
+        title="Abrir menú"
+      >
+        ☰
+      </button>
+
+      {menuAbierto && <div style={styles.menuOverlay} onClick={() => setMenuAbierto(false)} />}
+
+      <div
+        style={{
+          ...styles.sideMenu,
+          transform: menuAbierto ? "translateX(0)" : "translateX(-100%)"
+        }}
+      >
+        <div style={styles.sideMenuHeader}>
+          <div style={styles.sideMenuAvatar}>
+            {(userProfile?.nombre || usuarioAuth?.email || "U").charAt(0).toUpperCase()}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={styles.sideMenuUserName}>{userProfile?.nombre || usuarioAuth?.email || "Usuario"}</div>
+            <div style={styles.sideMenuSubtext}>{groupProfile?.nombre || userProfile?.grupoNombre || "Sin grupo"}</div>
+          </div>
+        </div>
+
+        <div style={styles.sideMenuSection}>
+          <div style={styles.sideMenuItem}>
+            <span style={styles.sideMenuLabel}>Usuario</span>
+            <span style={styles.sideMenuValue}>{userProfile?.nombre || usuarioAuth?.email || "Usuario"}</span>
+          </div>
+
+          <div style={styles.sideMenuItem}>
+            <span style={styles.sideMenuLabel}>Grupo</span>
+            <span style={styles.sideMenuValue}>{groupProfile?.nombre || userProfile?.grupoNombre || "Sin grupo"}</span>
+          </div>
+
+          {userProfile?.grupoCodigo ? (
+            <div style={styles.sideMenuItem}>
+              <span style={styles.sideMenuLabel}>Código invitación</span>
+              <span style={styles.sideMenuValue}>{userProfile.grupoCodigo}</span>
+            </div>
+          ) : null}
+        </div>
+
+        <div style={styles.sideMenuDivider} />
+
+        <div style={styles.sideMenuSection}>
+          <button
+            onClick={toggleNotificaciones}
+            style={notificacionesActivas ? styles.sideMenuNotifOn : styles.sideMenuNotifOff}
+            title={pushReady ? "Activar u ocultar notificaciones en este dispositivo" : "Se configurará automáticamente cuando el navegador lo permita"}
+          >
+            {notificacionesActivas ? "🔔 Notificaciones activadas" : "🔕 Notificaciones desactivadas"}
+          </button>
+        </div>
+
+        <div style={{ marginTop: "auto" }}>
+          <button onClick={cerrarSesion} style={{ ...styles.buttonDanger, width: "100%" }}>
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+
       <div style={styles.tabs}>
         <button onClick={() => setVista("dashboard")} style={vista === "dashboard" ? styles.tabActive : styles.tab}>Dashboard</button>
         <button onClick={() => setVista("grafico")} style={vista === "grafico" ? styles.tabActive : styles.tab}>Gráfico Mensual</button>
@@ -1446,32 +1517,6 @@ function App() {
       {vista === "dashboard" && (
         <>
           <h1 style={styles.title}>💰💶 GESTIÓN MDEKOT 💶💰</h1>
-
-          <p style={{ textAlign: "center", marginBottom: "10px", fontWeight: "600" }}>
-            Usuario: {userProfile?.nombre || usuarioAuth?.email} | Grupo: {groupProfile?.nombre || userProfile?.grupoNombre || "Sin grupo"}
-          </p>
-
-          {userProfile?.grupoCodigo ? (
-            <p style={{ textAlign: "center", marginBottom: "20px", fontWeight: "700", color: "#93c5fd" }}>
-              Código de invitación: {userProfile.grupoCodigo}
-            </p>
-          ) : null}
-
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
-            <button onClick={cerrarSesion} style={styles.buttonDanger}>
-              Cerrar sesión
-            </button>
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
-            <button
-              onClick={toggleNotificaciones}
-              style={notificacionesActivas ? styles.buttonNotifOn : styles.buttonNotifOff}
-              title={pushReady ? "Activar u ocultar notificaciones en este dispositivo" : "Se configurará automáticamente cuando el navegador lo permita"}
-            >
-              {notificacionesActivas ? "🔔 Notificaciones activadas" : "🔕 Notificaciones desactivadas"}
-            </button>
-          </div>
 
           <div style={styles.selectorRow}>
             <select value={mesActual} onChange={(e) => setMesActual(Number(e.target.value))} style={styles.select}>
@@ -2086,7 +2131,145 @@ const styles = {
   dotGreenPc: { width: "12px", height: "12px", borderRadius: "999px", background: "#39ff14", boxShadow: "0 0 10px rgba(57,255,20,0.8)" },
   dotGreenMobile: { width: "8px", height: "8px", borderRadius: "999px", background: "#39ff14", boxShadow: "0 0 8px rgba(57,255,20,0.8)" },
 
-  dayDetailRow: { background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "10px" }
+  dayDetailRow: { background: "rgba(255,255,255,0.06)", borderRadius: "10px", padding: "10px" },
+
+  hamburgerButton: {
+    position: "fixed",
+    top: "16px",
+    left: "16px",
+    width: "48px",
+    height: "48px",
+    borderRadius: "10px",
+    border: "none",
+    background: "#1e293b",
+    color: "white",
+    fontSize: "28px",
+    lineHeight: 1,
+    cursor: "pointer",
+    zIndex: 10001,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 8px 18px rgba(0,0,0,0.25)"
+  },
+
+  menuOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.45)",
+    zIndex: 10000
+  },
+
+  sideMenu: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "min(340px, 86vw)",
+    height: "100vh",
+    background: "#1e293b",
+    zIndex: 10002,
+    padding: "22px 18px",
+    boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+    transition: "transform 0.25s ease"
+  },
+
+  sideMenuHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    paddingBottom: "14px",
+    borderBottom: "1px solid rgba(255,255,255,0.12)"
+  },
+
+  sideMenuAvatar: {
+    width: "54px",
+    height: "54px",
+    borderRadius: "999px",
+    background: "#3b82f6",
+    color: "white",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "24px",
+    fontWeight: 800,
+    flexShrink: 0
+  },
+
+  sideMenuUserName: {
+    fontSize: "18px",
+    fontWeight: 800,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis"
+  },
+
+  sideMenuSubtext: {
+    fontSize: "14px",
+    opacity: 0.85,
+    marginTop: "4px",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis"
+  },
+
+  sideMenuSection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px"
+  },
+
+  sideMenuItem: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    textAlign: "left",
+    background: "rgba(255,255,255,0.04)",
+    borderRadius: "10px",
+    padding: "12px"
+  },
+
+  sideMenuLabel: {
+    fontSize: "13px",
+    opacity: 0.75,
+    fontWeight: 700
+  },
+
+  sideMenuValue: {
+    fontSize: "16px",
+    fontWeight: 800,
+    wordBreak: "break-word"
+  },
+
+  sideMenuDivider: {
+    height: "1px",
+    background: "rgba(255,255,255,0.12)",
+    margin: "2px 0"
+  },
+
+  sideMenuNotifOn: {
+    background: "#22c55e",
+    color: "#111827",
+    padding: "12px 14px",
+    border: "none",
+    borderRadius: "10px",
+    cursor: "pointer",
+    fontWeight: 800,
+    width: "100%"
+  },
+
+  sideMenuNotifOff: {
+    background: "#64748b",
+    color: "white",
+    padding: "12px 14px",
+    border: "none",
+    borderRadius: "10px",
+    cursor: "pointer",
+    fontWeight: 800,
+    width: "100%"
+  }
 };
 
 export default App;
