@@ -11,20 +11,35 @@ import {
   setDoc,
   getDoc,
   where,
-  orderBy
+  orderBy,
+  getDocs,
+  limit,
+  runTransaction
 } from "firebase/firestore";
 import { auth, db, getFirebaseMessaging, VAPID_KEY } from "./firebase";
 import { getToken, onMessage } from "firebase/messaging";
-import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut,
+  createUserWithEmailAndPassword,
+  deleteUser
+} from "firebase/auth";
 
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
 function App() {
   const [usuarioAuth, setUsuarioAuth] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+
+  const [authMode, setAuthMode] = useState("login"); // login | register-create | register-join
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [registerName, setRegisterName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [loginError, setLoginError] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+
   const [userProfile, setUserProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
@@ -38,17 +53,13 @@ function App() {
   const [mesActual, setMesActual] = useState(new Date().getMonth() + 1);
   const [anioActual, setAnioActual] = useState(new Date().getFullYear());
 
-  console.log("MES ACTUAL:", new Date().getMonth() + 1, new Date().getFullYear());
-
   const [gastoEditando, setGastoEditando] = useState(null);
   const [editComercio, setEditComercio] = useState("");
   const [editImporte, setEditImporte] = useState("");
   const [editPagadoPor, setEditPagadoPor] = useState("");
-
   const [gastoAEliminar, setGastoAEliminar] = useState(null);
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
   const [superMobile, setSuperMobile] = useState("MERCADONA");
 
   const [notificacionesActivas, setNotificacionesActivas] = useState(
@@ -117,13 +128,180 @@ function App() {
 
   const getPlatform = () => (window.innerWidth < 768 ? "mobile" : "pc");
 
+  const normalizarCodigoInvitacion = (value) =>
+    String(value || "")
+      .toUpperCase()
+      .replace(/\s+/g, "")
+      .trim();
+
+  const generarCodigoBase = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let out = "";
+    for (let i = 0; i < 6; i++) {
+      out += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return out;
+  };
+
+  const generarCodigoInvitacionUnico = async () => {
+    for (let i = 0; i < 10; i++) {
+      const code = generarCodigoBase();
+      const q = query(collection(db, "grupos"), where("codigoInvitacion", "==", code), limit(1));
+      const snap = await getDocs(q);
+      if (snap.empty) return code;
+    }
+    throw new Error("No se pudo generar un código único");
+  };
+
+  const limpiarFormularioAuth = () => {
+    setLoginEmail("");
+    setLoginPassword("");
+    setRegisterName("");
+    setInviteCode("");
+    setLoginError("");
+  };
+
   const iniciarSesion = async () => {
     try {
+      setAuthBusy(true);
       setLoginError("");
       await signInWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
     } catch (e) {
       console.error(e);
       setLoginError("Email o contraseña incorrectos");
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const crearCuentaYGrupo = async () => {
+    if (!loginEmail.trim() || !loginPassword.trim()) {
+      setLoginError("Completa email y contraseña");
+      return;
+    }
+
+    try {
+      setAuthBusy(true);
+      setLoginError("");
+
+      const userCredential = await createUserWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
+      const uid = userCredential.user.uid;
+
+      const codigoInvitacion = await generarCodigoInvitacionUnico();
+      const grupoRef = doc(collection(db, "grupos"));
+      const nombreUsuario = (registerName || "").trim() || loginEmail.trim().split("@")[0];
+
+      await setDoc(grupoRef, {
+        codigoInvitacion,
+        createdAt: new Date(),
+        createdBy: uid,
+        miembrosCount: 1,
+        maxMiembros: 2,
+        miembros: [uid]
+      });
+
+      await setDoc(doc(db, "usuarios", uid), {
+        nombre: nombreUsuario,
+        email: loginEmail.trim(),
+        grupoId: grupoRef.id,
+        grupoCodigo: codigoInvitacion,
+        createdAt: new Date()
+      });
+
+      limpiarFormularioAuth();
+      setAuthMode("login");
+    } catch (e) {
+      console.error(e);
+      if (e.code === "auth/email-already-in-use") setLoginError("Ese email ya está registrado");
+      else if (e.code === "auth/weak-password") setLoginError("La contraseña debe tener al menos 6 caracteres");
+      else setLoginError("No se pudo crear la cuenta");
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const crearCuentaYUnirseAGrupo = async () => {
+    const codigo = normalizarCodigoInvitacion(inviteCode);
+
+    if (!loginEmail.trim() || !loginPassword.trim() || !codigo) {
+      setLoginError("Completa email, contraseña y código");
+      return;
+    }
+
+    let userCredential = null;
+
+    try {
+      setAuthBusy(true);
+      setLoginError("");
+
+      const q = query(collection(db, "grupos"), where("codigoInvitacion", "==", codigo), limit(1));
+      const snap = await getDocs(q);
+
+      if (snap.empty) {
+        setLoginError("Ese código no existe");
+        setAuthBusy(false);
+        return;
+      }
+
+      const grupoDoc = snap.docs[0];
+      const grupoRef = doc(db, "grupos", grupoDoc.id);
+
+      userCredential = await createUserWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
+      const uid = userCredential.user.uid;
+      const nombreUsuario = (registerName || "").trim() || loginEmail.trim().split("@")[0];
+
+      await runTransaction(db, async (transaction) => {
+        const grupoSnap = await transaction.get(grupoRef);
+
+        if (!grupoSnap.exists()) {
+          throw new Error("El grupo ya no existe");
+        }
+
+        const data = grupoSnap.data() || {};
+        const miembros = Array.isArray(data.miembros) ? data.miembros : [];
+        const miembrosCount = Number(data.miembrosCount || miembros.length || 0);
+        const maxMiembros = Number(data.maxMiembros || 2);
+
+        if (miembrosCount >= maxMiembros) {
+          throw new Error("Este grupo ya tiene 2 personas");
+        }
+
+        const nuevosMiembros = miembros.includes(uid) ? miembros : [...miembros, uid];
+
+        transaction.update(grupoRef, {
+          miembrosCount: Math.min(miembrosCount + 1, 2),
+          miembros: nuevosMiembros,
+          updatedAt: new Date()
+        });
+
+        transaction.set(doc(db, "usuarios", uid), {
+          nombre: nombreUsuario,
+          email: loginEmail.trim(),
+          grupoId: grupoRef.id,
+          grupoCodigo: data.codigoInvitacion || codigo,
+          createdAt: new Date()
+        });
+      });
+
+      limpiarFormularioAuth();
+      setAuthMode("login");
+    } catch (e) {
+      console.error(e);
+
+      if (userCredential?.user) {
+        try {
+          await deleteUser(userCredential.user);
+        } catch (cleanupError) {
+          console.error("No se pudo limpiar el usuario creado tras error:", cleanupError);
+        }
+      }
+
+      if (e.code === "auth/email-already-in-use") setLoginError("Ese email ya está registrado");
+      else if (e.code === "auth/weak-password") setLoginError("La contraseña debe tener al menos 6 caracteres");
+      else if (String(e.message || "").includes("2 personas")) setLoginError("Ese grupo ya tiene 2 personas");
+      else setLoginError("No se pudo unir al grupo");
+    } finally {
+      setAuthBusy(false);
     }
   };
 
@@ -243,7 +421,6 @@ function App() {
       });
 
       const data = await res.json().catch(() => null);
-      console.log("📨 Push API response:", data);
 
       if (!res.ok || !data?.ok) {
         return { ok: false, data };
@@ -328,8 +505,6 @@ function App() {
 
         onMessage(messaging, async (payload) => {
           try {
-            console.log("📩 FCM foreground payload:", payload);
-
             const activadas = localStorage.getItem("notificationsEnabled") !== "false";
             if (!activadas) return;
             if (Notification.permission !== "granted") return;
@@ -942,7 +1117,6 @@ function App() {
   });
 
   const totalMes = totalMirko + totalJessica;
-
   const debtInfo = getDebtInfo(balance);
 
   const getBalanceCardStyle = () => {
@@ -985,9 +1159,8 @@ function App() {
     const celdas = [];
     for (let i = 0; i < totalCeldas; i++) {
       const dayNum = i - firstDowMonday0 + 1;
-      if (dayNum < 1 || dayNum > lastDay) {
-        celdas.push({ empty: true, key: `e-${i}` });
-      } else {
+      if (dayNum < 1 || dayNum > lastDay) celdas.push({ empty: true, key: `e-${i}` });
+      else {
         const fechaStr = ymd(calAnio, calMes, dayNum);
         const esHoy = fechaStr === ymd(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate());
         celdas.push({ empty: false, key: fechaStr, dayNum, fechaStr, esHoy });
@@ -1011,17 +1184,78 @@ function App() {
   if (!usuarioAuth) {
     return (
       <div style={{ ...styles.container, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ ...styles.card, maxWidth: "420px", width: "100%" }}>
-          <h1 style={styles.title}>🔐 Iniciar sesión</h1>
+        <div style={{ ...styles.card, maxWidth: "440px", width: "100%" }}>
+          <h1 style={styles.title}>
+            {authMode === "login" ? "🔐 Iniciar sesión" : authMode === "register-create" ? "✨ Crear cuenta y grupo" : "🤝 Unirme a un grupo"}
+          </h1>
 
-          <input type="email" placeholder="Email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} style={styles.input} />
-          <input type="password" placeholder="Contraseña" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} style={styles.input} />
+          <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
+            <button onClick={() => { setAuthMode("login"); setLoginError(""); }} style={authMode === "login" ? styles.tabActive : styles.tab}>
+              Entrar
+            </button>
+            <button onClick={() => { setAuthMode("register-create"); setLoginError(""); }} style={authMode === "register-create" ? styles.tabActive : styles.tab}>
+              Crear grupo
+            </button>
+            <button onClick={() => { setAuthMode("register-join"); setLoginError(""); }} style={authMode === "register-join" ? styles.tabActive : styles.tab}>
+              Unirme
+            </button>
+          </div>
 
-          {loginError ? <p style={{ color: "#f87171" }}>{loginError}</p> : null}
+          {authMode !== "login" && (
+            <input
+              type="text"
+              placeholder="Nombre (opcional)"
+              value={registerName}
+              onChange={(e) => setRegisterName(e.target.value)}
+              style={styles.input}
+            />
+          )}
 
-          <button onClick={iniciarSesion} style={styles.button}>
-            Entrar
-          </button>
+          <input
+            type="email"
+            placeholder="Email"
+            value={loginEmail}
+            onChange={(e) => setLoginEmail(e.target.value)}
+            style={styles.input}
+          />
+
+          <input
+            type="password"
+            placeholder="Contraseña"
+            value={loginPassword}
+            onChange={(e) => setLoginPassword(e.target.value)}
+            style={styles.input}
+          />
+
+          {authMode === "register-join" && (
+            <input
+              type="text"
+              placeholder="Código de invitación"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(normalizarCodigoInvitacion(e.target.value))}
+              style={styles.input}
+            />
+          )}
+
+          {loginError ? <p style={{ color: "#f87171", marginBottom: "12px" }}>{loginError}</p> : null}
+
+          {authMode === "login" && (
+            <button onClick={iniciarSesion} style={styles.button} disabled={authBusy}>
+              {authBusy ? "Entrando..." : "Entrar"}
+            </button>
+          )}
+
+          {authMode === "register-create" && (
+            <button onClick={crearCuentaYGrupo} style={styles.buttonPaid} disabled={authBusy}>
+              {authBusy ? "Creando..." : "Crear cuenta y grupo"}
+            </button>
+          )}
+
+          {authMode === "register-join" && (
+            <button onClick={crearCuentaYUnirseAGrupo} style={styles.buttonPaid} disabled={authBusy}>
+              {authBusy ? "Uniendo..." : "Crear cuenta y unirme"}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -1064,9 +1298,15 @@ function App() {
         <>
           <h1 style={styles.title}>💰💶 GESTIÓN MDEKOT 💶💰</h1>
 
-          <p style={{ textAlign: "center", marginBottom: "20px", fontWeight: "600" }}>
+          <p style={{ textAlign: "center", marginBottom: "10px", fontWeight: "600" }}>
             Usuario: {userProfile?.nombre || usuarioAuth?.email} | Grupo: {userProfile?.grupoId || "Sin grupo"}
           </p>
+
+          {userProfile?.grupoCodigo ? (
+            <p style={{ textAlign: "center", marginBottom: "20px", fontWeight: "700", color: "#93c5fd" }}>
+              Código de invitación: {userProfile.grupoCodigo}
+            </p>
+          ) : null}
 
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
             <button onClick={cerrarSesion} style={styles.buttonDanger}>
@@ -1122,8 +1362,7 @@ function App() {
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0 }}>
                           <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle, flexShrink: 0 }}>{badgeIcon}</span>
                           <span title={`${g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"} - ${g.comercio}`} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: 1, textAlign: "left", fontSize: "14px", lineHeight: 1.2 }}>
-                            {g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"}{" "}
-                            - {g.comercio}
+                            {g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"} - {g.comercio}
                           </span>
                         </div>
 
@@ -1137,8 +1376,7 @@ function App() {
                       <>
                         <span style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
                           <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle }}>{badgeIcon}</span>
-                          {g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"}{" "}
-                          - {g.comercio}
+                          {g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"} - {g.comercio}
                         </span>
 
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
