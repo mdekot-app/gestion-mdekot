@@ -170,15 +170,14 @@ function App() {
   const getNombreUsuarioPorEmail = (email) => {
     const miembro = groupMembers.find((m) => m.email === email);
     if (miembro?.nombre) return miembro.nombre;
-    if (email === "mirmilmor@gmail.com") return "Mirko";
-    if (email === "jessica.alca87@gmail.com") return "Jessica";
+    if (userProfile?.email === email) return userProfile?.nombre || email;
     return email || "Usuario";
   };
 
   const getGeneroPorEmail = (email) => {
     const miembro = groupMembers.find((m) => m.email === email);
     if (miembro?.sexo) return miembro.sexo;
-    if (email === "jessica.alca87@gmail.com") return "mujer";
+    if (userProfile?.email === email) return userProfile?.sexo || "hombre";
     return "hombre";
   };
 
@@ -195,24 +194,37 @@ function App() {
         sexo: m.sexo || "hombre"
       }));
 
-    if (miembrosValidos.length >= 2) return miembrosValidos.slice(0, 2);
+    if (miembrosValidos.length > 0) return miembrosValidos.slice(0, 2);
 
-    if (miembrosValidos.length === 1) return miembrosValidos;
+    if (userProfile?.email) {
+      return [
+        {
+          uid: userProfile.id || usuarioAuth?.uid || "self",
+          nombre: userProfile.nombre || userProfile.email,
+          email: userProfile.email,
+          sexo: userProfile.sexo || "hombre"
+        }
+      ];
+    }
 
-    return [
-      { uid: "mirko", nombre: "Mirko", email: "mirmilmor@gmail.com", sexo: "hombre" },
-      { uid: "jessica", nombre: "Jessica", email: "jessica.alca87@gmail.com", sexo: "mujer" }
-    ];
-  }, [groupMembers]);
+    return [];
+  }, [groupMembers, userProfile, usuarioAuth]);
 
   const participanteA = participantesGrupo[0] || null;
   const participanteB = participantesGrupo[1] || null;
 
   useEffect(() => {
-    if (!pagadoPor && participanteA?.email) {
-      setPagadoPor(participanteA.email);
+    const emailsValidos = participantesGrupo.map((p) => p.email).filter(Boolean);
+
+    if (emailsValidos.length === 0) {
+      setPagadoPor("");
+      return;
     }
-  }, [pagadoPor, participanteA]);
+
+    if (!pagadoPor || !emailsValidos.includes(pagadoPor)) {
+      setPagadoPor(emailsValidos[0]);
+    }
+  }, [participantesGrupo, pagadoPor]);
 
   const iniciarSesion = async () => {
     try {
@@ -692,13 +704,24 @@ function App() {
         if (data.mes === mesActual && data.anio === anioActual && data.liquidado === false) {
           lista.push({ id: documento.id, ...data });
 
-          const parte = Number(data.importe || 0) / Number(data.participantesCount || 2);
+          const importeNum = Number(data.importe || 0);
+          const participantesCount = Math.max(
+            Number(data.participantesCount || 0),
+            Array.isArray(data.divididoEntre) ? data.divididoEntre.length : 0,
+            1
+          );
+          const parte = importeNum / participantesCount;
 
-          if (data.pagadoPor === participanteA?.email) {
-            totalPagadoA += Number(data.importe || 0);
-            totalDebeA += parte;
-          } else if (data.pagadoPor === participanteB?.email) {
-            totalDebeA += parte;
+          if (participanteA?.email && data.pagadoPor === participanteA.email) {
+            totalPagadoA += importeNum;
+          }
+
+          if (participanteA?.email) {
+            if (Array.isArray(data.divididoEntre) && data.divididoEntre.includes(participanteA.email)) {
+              totalDebeA += parte;
+            } else if (!Array.isArray(data.divididoEntre) && data.pagadoPor === participanteA.email) {
+              totalDebeA += parte;
+            }
           }
         }
       });
@@ -713,7 +736,7 @@ function App() {
     });
 
     return () => unsub();
-  }, [grupoId, mesActual, anioActual, participanteA?.email, participanteB?.email]);
+  }, [grupoId, mesActual, anioActual, participanteA?.email]);
 
   useEffect(() => {
     const cargarEstadoLiquidacion = async () => {
@@ -913,11 +936,13 @@ function App() {
 
   const agregarGasto = async () => {
     if (!importe || !comercio || !grupoId) return;
-    if (!participanteA?.email || !participanteB?.email) return;
+    if (!pagadoPor) return;
 
     try {
       const importeNum = Number(importe);
       const comercioFmt = formatearComercio(comercio);
+      const emailsParticipantes = participantesGrupo.map((p) => p.email).filter(Boolean);
+      const participantesCount = Math.max(emailsParticipantes.length, 1);
 
       await addDoc(collection(db, "grupos", grupoId, "gastos"), {
         importe: importeNum,
@@ -925,8 +950,8 @@ function App() {
         mes: mesActual,
         anio: anioActual,
         liquidado: false,
-        divididoEntre: [participanteA.email, participanteB.email],
-        participantesCount: 2,
+        divididoEntre: emailsParticipantes,
+        participantesCount,
         comercio: comercioFmt,
         fecha: new Date()
       });
@@ -1196,7 +1221,7 @@ function App() {
   const resumenComercio = {};
   gastos.forEach((g) => {
     if (!resumenComercio[g.comercio]) resumenComercio[g.comercio] = 0;
-    resumenComercio[g.comercio] += g.importe;
+    resumenComercio[g.comercio] += Number(g.importe || 0);
   });
 
   const dataGraficoBase = Object.entries(resumenComercio)
@@ -1230,6 +1255,10 @@ function App() {
   };
 
   const renderBalanceText = () => {
+    if (!participanteA || !participanteB) {
+      return <h2>👥 Falta que se una la otra persona al grupo</h2>;
+    }
+
     if (balance === 0) return <h2>⚖️ Estáis en empate</h2>;
 
     if (estadoDeuda === "paid") {
@@ -1240,8 +1269,8 @@ function App() {
       return <h2 style={styles.balanceCardBigText}>{`${debtInfo.debtorName} NO HA PAGADO LA DEUDA DE ${debtInfo.amount.toFixed(2)} €`}</h2>;
     }
 
-    if (balance > 0) return <h2>{participanteB?.nombre} debe {balance.toFixed(2)} € a {participanteA?.nombre}</h2>;
-    return <h2>{participanteA?.nombre} debe {Math.abs(balance).toFixed(2)} € a {participanteB?.nombre}</h2>;
+    if (balance > 0) return <h2>{participanteB.nombre} debe {balance.toFixed(2)} € a {participanteA.nombre}</h2>;
+    return <h2>{participanteA.nombre} debe {Math.abs(balance).toFixed(2)} € a {participanteB.nombre}</h2>;
   };
 
   const chartHeight = isMobile ? 320 : 440;
