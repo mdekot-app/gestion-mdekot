@@ -65,7 +65,7 @@ function App() {
   const [editPagadoPor, setEditPagadoPor] = useState("");
   const [gastoAEliminar, setGastoAEliminar] = useState(null);
 
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(typeof window !== "undefined" ? window.innerWidth < 768 : false);
   const [superMobile, setSuperMobile] = useState("MERCADONA");
 
   const [notificacionesActivas, setNotificacionesActivas] = useState(
@@ -133,7 +133,7 @@ function App() {
 
   const grupoId = userProfile?.grupoId || null;
 
-  const getPlatform = () => (window.innerWidth < 768 ? "mobile" : "pc");
+  const getPlatform = () => (typeof window !== "undefined" && window.innerWidth < 768 ? "mobile" : "pc");
 
   const normalizarCodigoInvitacion = (value) =>
     String(value || "")
@@ -385,14 +385,20 @@ function App() {
     }
   };
 
-  const guardarTokenEnFirestore = async (token, enabled) => {
+  const guardarTokenEnFirestore = async (token, enabled, extra = {}) => {
     if (!token) return;
 
     await setDoc(
       doc(db, "pushTokens", token),
       {
         token,
+        uid: extra.uid || "",
+        email: extra.email || "",
+        nombre: extra.nombre || "",
+        grupoId: extra.grupoId || "",
+        grupoNombre: extra.grupoNombre || "",
         createdAt: new Date(),
+        updatedAt: new Date(),
         userAgent: navigator.userAgent || "",
         platform: getPlatform(),
         notificationsEnabled: enabled
@@ -422,7 +428,13 @@ function App() {
       if (!token) return false;
 
       localStorage.setItem("fcmToken", token);
-      await guardarTokenEnFirestore(token, localStorage.getItem("notificationsEnabled") !== "false");
+      await guardarTokenEnFirestore(token, localStorage.getItem("notificationsEnabled") !== "false", {
+        uid: usuarioAuth?.uid || "",
+        email: userProfile?.email || usuarioAuth?.email || "",
+        nombre: userProfile?.nombre || "",
+        grupoId: grupoId || "",
+        grupoNombre: groupProfile?.nombre || userProfile?.grupoNombre || ""
+      });
       setPushReady(true);
       return true;
     } catch (e) {
@@ -450,7 +462,13 @@ function App() {
 
       const token = localStorage.getItem("fcmToken");
       if (token) {
-        await setDoc(doc(db, "pushTokens", token), { notificationsEnabled: true }, { merge: true });
+        await guardarTokenEnFirestore(token, true, {
+          uid: usuarioAuth?.uid || "",
+          email: userProfile?.email || usuarioAuth?.email || "",
+          nombre: userProfile?.nombre || "",
+          grupoId: grupoId || "",
+          grupoNombre: groupProfile?.nombre || userProfile?.grupoNombre || ""
+        });
       }
 
       return true;
@@ -476,19 +494,27 @@ function App() {
       setNotificacionesActivas(false);
 
       if (token) {
-        await setDoc(doc(db, "pushTokens", token), { notificationsEnabled: false }, { merge: true });
+        await guardarTokenEnFirestore(token, false, {
+          uid: usuarioAuth?.uid || "",
+          email: userProfile?.email || usuarioAuth?.email || "",
+          nombre: userProfile?.nombre || "",
+          grupoId: grupoId || "",
+          grupoNombre: groupProfile?.nombre || userProfile?.grupoNombre || ""
+        });
       }
     } catch (e) {
       console.error("❌ toggleNotificaciones:", e);
     }
   };
 
-  const enviarPushATodos = async ({ title, body, link }) => {
+  const enviarPushAGrupoActual = async ({ title, body, link }) => {
     try {
+      if (!grupoId) return { ok: false, error: "Sin grupoId" };
+
       const res = await fetch("/api/push", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, body, link })
+        body: JSON.stringify({ title, body, link, grupoId })
       });
 
       const data = await res.json().catch(() => null);
@@ -538,66 +564,66 @@ function App() {
   }, [usuarioAuth]);
 
   useEffect(() => {
-  const cargarGrupo = async () => {
-    if (!grupoId) {
-      setGroupProfile(null);
-      setGroupMembers([]);
-      return;
-    }
-
-    try {
-      const grupoSnap = await getDoc(doc(db, "grupos", grupoId));
-
-      if (grupoSnap.exists()) {
-        const grupoData = grupoSnap.data() || {};
-        setGroupProfile({ id: grupoSnap.id, ...grupoData });
-
-        const miembrosIds = Array.isArray(grupoData.miembros) ? grupoData.miembros : [];
-
-        if (miembrosIds.length >= 2) {
-          const chunks = [];
-          for (let i = 0; i < miembrosIds.length; i += 10) chunks.push(miembrosIds.slice(i, i + 10));
-
-          let users = [];
-          for (const chunk of chunks) {
-            const qUsers = query(collection(db, "usuarios"), where(documentId(), "in", chunk));
-            const usersSnap = await getDocs(qUsers);
-            users = [...users, ...usersSnap.docs.map((d) => ({ id: d.id, ...d.data() }))];
-          }
-
-          users.sort((a, b) => {
-            const ia = miembrosIds.indexOf(a.id);
-            const ib = miembrosIds.indexOf(b.id);
-            return ia - ib;
-          });
-
-          setGroupMembers(users);
-          return;
-        }
-      } else {
+    const cargarGrupo = async () => {
+      if (!grupoId) {
         setGroupProfile(null);
+        setGroupMembers([]);
+        return;
       }
 
-      const qUsuariosGrupo = query(collection(db, "usuarios"), where("grupoId", "==", grupoId));
-      const usuariosGrupoSnap = await getDocs(qUsuariosGrupo);
-      const usuariosGrupo = usuariosGrupoSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      try {
+        const grupoSnap = await getDoc(doc(db, "grupos", grupoId));
 
-      usuariosGrupo.sort((a, b) => {
-        const fa = a.createdAt?.seconds || 0;
-        const fb = b.createdAt?.seconds || 0;
-        return fa - fb;
-      });
+        if (grupoSnap.exists()) {
+          const grupoData = grupoSnap.data() || {};
+          setGroupProfile({ id: grupoSnap.id, ...grupoData });
 
-      setGroupMembers(usuariosGrupo);
-    } catch (e) {
-      console.error("Error cargando grupo:", e);
-      setGroupProfile(null);
-      setGroupMembers([]);
-    }
-  };
+          const miembrosIds = Array.isArray(grupoData.miembros) ? grupoData.miembros : [];
 
-  cargarGrupo();
-}, [grupoId]);
+          if (miembrosIds.length >= 2) {
+            const chunks = [];
+            for (let i = 0; i < miembrosIds.length; i += 10) chunks.push(miembrosIds.slice(i, i + 10));
+
+            let users = [];
+            for (const chunk of chunks) {
+              const qUsers = query(collection(db, "usuarios"), where(documentId(), "in", chunk));
+              const usersSnap = await getDocs(qUsers);
+              users = [...users, ...usersSnap.docs.map((d) => ({ id: d.id, ...d.data() }))];
+            }
+
+            users.sort((a, b) => {
+              const ia = miembrosIds.indexOf(a.id);
+              const ib = miembrosIds.indexOf(b.id);
+              return ia - ib;
+            });
+
+            setGroupMembers(users);
+            return;
+          }
+        } else {
+          setGroupProfile(null);
+        }
+
+        const qUsuariosGrupo = query(collection(db, "usuarios"), where("grupoId", "==", grupoId));
+        const usuariosGrupoSnap = await getDocs(qUsuariosGrupo);
+        const usuariosGrupo = usuariosGrupoSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+        usuariosGrupo.sort((a, b) => {
+          const fa = a.createdAt?.seconds || 0;
+          const fb = b.createdAt?.seconds || 0;
+          return fa - fb;
+        });
+
+        setGroupMembers(usuariosGrupo);
+      } catch (e) {
+        console.error("Error cargando grupo:", e);
+        setGroupProfile(null);
+        setGroupMembers([]);
+      }
+    };
+
+    cargarGrupo();
+  }, [grupoId]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -623,12 +649,14 @@ function App() {
   }, []);
 
   useEffect(() => {
+    let unsubscribe = null;
+
     const initForegroundListener = async () => {
       try {
         const messaging = await getFirebaseMessaging();
         if (!messaging) return;
 
-        onMessage(messaging, async (payload) => {
+        unsubscribe = onMessage(messaging, async (payload) => {
           try {
             const activadas = localStorage.getItem("notificationsEnabled") !== "false";
             if (!activadas) return;
@@ -661,11 +689,36 @@ function App() {
     };
 
     if ("Notification" in window && "serviceWorker" in navigator) initForegroundListener();
+
+    return () => {
+      if (typeof unsubscribe === "function") unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
     setMenuAbierto(false);
   }, [vista]);
+
+  useEffect(() => {
+    const syncPushTokenConUsuarioYGrupo = async () => {
+      try {
+        const token = localStorage.getItem("fcmToken");
+        if (!token) return;
+
+        await guardarTokenEnFirestore(token, localStorage.getItem("notificationsEnabled") !== "false", {
+          uid: usuarioAuth?.uid || "",
+          email: userProfile?.email || usuarioAuth?.email || "",
+          nombre: userProfile?.nombre || "",
+          grupoId: grupoId || "",
+          grupoNombre: groupProfile?.nombre || userProfile?.grupoNombre || ""
+        });
+      } catch (e) {
+        console.error("❌ syncPushTokenConUsuarioYGrupo:", e);
+      }
+    };
+
+    if (usuarioAuth?.uid && userProfile) syncPushTokenConUsuarioYGrupo();
+  }, [usuarioAuth, userProfile, grupoId, groupProfile]);
 
   const meses = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -812,12 +865,19 @@ function App() {
 
   useEffect(() => {
     const cargarNombres = async () => {
+      if (!grupoId) {
+        const defaults = {};
+        SUPERS.forEach((s) => (defaults[s.key] = s.defaultName));
+        setNombresSupers(defaults);
+        return;
+      }
+
       try {
-        const ref = doc(db, "config", "supers");
+        const ref = doc(db, "grupos", grupoId, "config", "supers");
         const snap = await getDoc(ref);
         if (snap.exists()) {
           const data = snap.data() || {};
-          const merged = { ...nombresSupers };
+          const merged = {};
           SUPERS.forEach((s) => {
             merged[s.key] = data[s.key] || s.defaultName;
           });
@@ -832,7 +892,7 @@ function App() {
       }
     };
     cargarNombres();
-  }, []);
+  }, [grupoId]);
 
   const abrirEditarSuper = (superKey) => {
     setSuperEditando(superKey);
@@ -840,7 +900,7 @@ function App() {
   };
 
   const guardarNombreSuper = async () => {
-    if (!superEditando) return;
+    if (!superEditando || !grupoId) return;
     const nuevo = (editSuperNombre || "").trim();
     if (!nuevo) return;
 
@@ -848,7 +908,7 @@ function App() {
     setNombresSupers(updated);
 
     try {
-      await setDoc(doc(db, "config", "supers"), { [superEditando]: nuevo }, { merge: true });
+      await setDoc(doc(db, "grupos", grupoId, "config", "supers"), { [superEditando]: nuevo }, { merge: true });
     } catch (e) {
       console.error(e);
     }
@@ -905,7 +965,9 @@ function App() {
 
   const guardarEdicionProducto = async () => {
     if (!productoEditando || !grupoId) return;
-    await updateDoc(doc(db, "grupos", grupoId, "listaCompra", productoEditando.id), { nombre: editProductoNombre });
+    const nombreLimpio = (editProductoNombre || "").trim();
+    if (!nombreLimpio) return;
+    await updateDoc(doc(db, "grupos", grupoId, "listaCompra", productoEditando.id), { nombre: nombreLimpio });
     setProductoEditando(null);
   };
 
@@ -959,6 +1021,8 @@ function App() {
 
     try {
       const importeNum = Number(importe);
+      if (!Number.isFinite(importeNum) || importeNum <= 0) return;
+
       const comercioFmt = formatearComercio(comercio);
       const emailsParticipantes = participantesGrupo.map((p) => p.email).filter(Boolean);
       const participantesCount = Math.max(emailsParticipantes.length, 1);
@@ -978,7 +1042,7 @@ function App() {
       const quien = getNombreUsuarioPorEmail(pagadoPor);
       const euros = importeNum.toFixed(2).replace(".", ",");
 
-      const pushResult = await enviarPushATodos({
+      const pushResult = await enviarPushAGrupoActual({
         title: "💸 Nuevo gasto",
         body: `${quien} pagó ${euros}€ en ${comercioFmt}`,
         link: window.location.origin
@@ -1607,16 +1671,16 @@ function App() {
 
             <div style={styles.card}>
               <h3>· GASTO INDIVIDUAL ·</h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "10px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "18px", marginTop: "14px", alignItems: "center", justifyContent: "center" }}>
                 {participanteA ? (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "8px", textAlign: "center" }}>
                     <span title={`Pagó ${participanteA.nombre}`} style={{ ...styles.payIcon, ...getBadgeStyleByGender(participanteA.sexo) }}>{getBadgeIconByGender(participanteA.sexo)}</span>
                     <span style={{ fontWeight: "600" }}>{participanteA.nombre} → {totalParticipanteA.toFixed(2)} €</span>
                   </div>
                 ) : null}
 
                 {participanteB ? (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "8px", textAlign: "center" }}>
                     <span title={`Pagó ${participanteB.nombre}`} style={{ ...styles.payIcon, ...getBadgeStyleByGender(participanteB.sexo) }}>{getBadgeIconByGender(participanteB.sexo)}</span>
                     <span style={{ fontWeight: "600" }}>{participanteB.nombre} → {totalParticipanteB.toFixed(2)} €</span>
                   </div>
@@ -2072,7 +2136,7 @@ const styles = {
   selectorRow: { display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" },
   select: { padding: "8px", borderRadius: "6px" },
 
-  balanceCard: { background: "#1e293b", padding: "20px", borderRadius: "10px", marginBottom: "30px", textAlign: "center", maxWidth: "600px", margin: "0 auto 30px auto" },
+  balanceCard: { background: "#1e293b", padding: "20px", borderRadius: "10px", textAlign: "center", maxWidth: "600px", margin: "0 auto 30px auto" },
   balanceCardPaid: { background: "#22c55e" },
   balanceCardUnpaid: { background: "#ef4444" },
   balanceCardBigText: { color: "#111827", textTransform: "uppercase", fontWeight: 900 },
