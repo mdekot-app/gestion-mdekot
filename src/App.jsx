@@ -25,6 +25,8 @@ function App() {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
+  const [userProfile, setUserProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   const [vista, setVista] = useState("dashboard");
   const [balance, setBalance] = useState(0);
@@ -266,6 +268,36 @@ function App() {
 
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    const cargarPerfilUsuario = async () => {
+      if (!usuarioAuth?.uid) {
+        setUserProfile(null);
+        setProfileLoading(false);
+        return;
+      }
+
+      setProfileLoading(true);
+
+      try {
+        const ref = doc(db, "usuarios", usuarioAuth.uid);
+        const snap = await getDoc(ref);
+
+        if (snap.exists()) {
+          setUserProfile({ id: snap.id, ...snap.data() });
+        } else {
+          setUserProfile(null);
+        }
+      } catch (e) {
+        console.error("Error cargando perfil de usuario:", e);
+        setUserProfile(null);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    cargarPerfilUsuario();
+  }, [usuarioAuth]);
 
   // ✅ Step 1: resize + registrar SW + auto init push si ya hay permiso
   useEffect(() => {
@@ -997,6 +1029,32 @@ function App() {
     );
   }
 
+  if (profileLoading) {
+    return (
+      <div style={{ ...styles.container, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={styles.card}>
+          <h2>Cargando perfil...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userProfile) {
+    return (
+      <div style={{ ...styles.container, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ ...styles.card, maxWidth: "420px", width: "100%" }}>
+          <h2 style={{ marginBottom: "12px" }}>Perfil no encontrado</h2>
+          <p style={{ marginBottom: "16px" }}>
+            No se encontró el perfil del usuario en Firestore.
+          </p>
+          <button onClick={cerrarSesion} style={styles.buttonDanger}>
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ ...styles.container, padding: isMobile ? "16px" : "40px" }}>
       <div style={styles.tabs}>
@@ -1009,6 +1067,10 @@ function App() {
       {vista === "dashboard" && (
         <>
           <h1 style={styles.title}>💰💶 GESTIÓN MDEKOT 💶💰</h1>
+
+          <p style={{ textAlign: "center", marginBottom: "20px", fontWeight: "600" }}>
+            Usuario: {userProfile?.nombre || usuarioAuth?.email} | Grupo: {userProfile?.grupoId || "Sin grupo"}
+          </p>
 
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
             <button onClick={cerrarSesion} style={styles.buttonDanger}>
