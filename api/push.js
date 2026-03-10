@@ -45,12 +45,25 @@ export default async function handler(req, res) {
       }
     }
 
-    const { title, body, link } = payloadIn || {};
+    const { title, body, link, grupoId } = payloadIn || {};
+
     const t = title || "Gestión Mdekot";
     const b = body || "Notificación";
     const l = link || "https://gestion-mdekot.vercel.app";
+    const g = String(grupoId || "").trim();
 
-    const snap = await db.collection("pushTokens").get();
+    if (!g) {
+      return res.status(400).json({
+        ok: false,
+        error: "Falta grupoId",
+      });
+    }
+
+    const snap = await db
+      .collection("pushTokens")
+      .where("grupoId", "==", g)
+      .get();
+
     const tokens = [];
     const tokenDocs = [];
 
@@ -75,7 +88,8 @@ export default async function handler(req, res) {
       return res.status(200).json({
         ok: true,
         sent: 0,
-        msg: "No hay tokens MOBILE activos con notificationsEnabled=true",
+        msg: "No hay tokens MOBILE activos para este grupo",
+        grupoId: g,
       });
     }
 
@@ -84,6 +98,7 @@ export default async function handler(req, res) {
         title: String(t),
         body: String(b),
         link: String(l),
+        grupoId: g,
       },
       android: {
         priority: "high",
@@ -125,11 +140,12 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       ok: true,
+      grupoId: g,
       tokens: uniqTokens.length,
       success: result.successCount,
       failure: result.failureCount,
       invalidRemoved: invalid.length,
-      target: "mobile_enabled_only_data_mode",
+      target: "mobile_enabled_only_group_filtered",
     });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e?.message || String(e) });
