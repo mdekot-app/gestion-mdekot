@@ -540,24 +540,31 @@ function App() {
   };
 
   useEffect(() => {
-    const q = query(collection(db, "listaCompra"));
+    if (!grupoId) {
+      setProductos([]);
+      return;
+    }
+
+    const q = query(collection(db, "grupos", grupoId, "listaCompra"));
     const unsub = onSnapshot(q, (snapshot) => {
       let lista = [];
       snapshot.forEach((docu) => lista.push({ id: docu.id, ...docu.data() }));
       setProductos(lista);
     });
     return () => unsub();
-  }, []);
+  }, [grupoId]);
 
   const setInputSuper = (superKey, value) => {
     setInputsSuper((prev) => ({ ...prev, [superKey]: value }));
   };
 
   const agregarProducto = async (superKey) => {
+    if (!grupoId) return;
+
     const texto = (inputsSuper[superKey] || "").trim();
     if (!texto) return;
 
-    await addDoc(collection(db, "listaCompra"), {
+    await addDoc(collection(db, "grupos", grupoId, "listaCompra"), {
       nombre: texto,
       comprado: false,
       fecha: new Date(),
@@ -568,18 +575,19 @@ function App() {
   };
 
   const toggleComprado = async (producto) => {
-    await updateDoc(doc(db, "listaCompra", producto.id), { comprado: !producto.comprado });
+    if (!grupoId) return;
+    await updateDoc(doc(db, "grupos", grupoId, "listaCompra", producto.id), { comprado: !producto.comprado });
   };
 
   const confirmarEliminarProducto = async () => {
-    if (!productoAEliminar) return;
-    await deleteDoc(doc(db, "listaCompra", productoAEliminar.id));
+    if (!productoAEliminar || !grupoId) return;
+    await deleteDoc(doc(db, "grupos", grupoId, "listaCompra", productoAEliminar.id));
     setProductoAEliminar(null);
   };
 
   const guardarEdicionProducto = async () => {
-    if (!productoEditando) return;
-    await updateDoc(doc(db, "listaCompra", productoEditando.id), { nombre: editProductoNombre });
+    if (!productoEditando || !grupoId) return;
+    await updateDoc(doc(db, "grupos", grupoId, "listaCompra", productoEditando.id), { nombre: editProductoNombre });
     setProductoEditando(null);
   };
 
@@ -590,6 +598,8 @@ function App() {
   };
 
   const confirmarLimpiarComprados = async () => {
+    if (!grupoId) return;
+
     const superKey = limpiarCompradosConfirm.superKey;
     if (!superKey) {
       setLimpiarCompradosConfirm({ open: false, superKey: null });
@@ -603,7 +613,7 @@ function App() {
     }
 
     const batch = writeBatch(db);
-    comprados.forEach((p) => batch.delete(doc(db, "listaCompra", p.id)));
+    comprados.forEach((p) => batch.delete(doc(db, "grupos", grupoId, "listaCompra", p.id)));
     await batch.commit();
     setLimpiarCompradosConfirm({ open: false, superKey: null });
   };
