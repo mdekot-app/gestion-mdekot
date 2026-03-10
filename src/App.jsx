@@ -49,16 +49,13 @@ function App() {
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  // ✅ SOLO MOVIL: selector para elegir supermercado
   const [superMobile, setSuperMobile] = useState("MERCADONA");
 
-  // ===== PUSH UI SIMPLE =====
   const [notificacionesActivas, setNotificacionesActivas] = useState(
     localStorage.getItem("notificationsEnabled") !== "false"
   );
   const [pushReady, setPushReady] = useState(false);
 
-  // ===== LISTA COMPRA (4 SUPERS) =====
   const SUPERS = [
     { key: "MERCADONA", defaultName: "MERCADONA" },
     { key: "LIDL", defaultName: "LIDL" },
@@ -94,13 +91,10 @@ function App() {
   const [superEditando, setSuperEditando] = useState(null);
   const [editSuperNombre, setEditSuperNombre] = useState("");
 
-  // ===== LIQUIDACIÓN =====
   const [liquidarConfirmOpen, setLiquidarConfirmOpen] = useState(false);
   const [estadoDeuda, setEstadoDeuda] = useState(null);
-
   const [liquidacionGuardada, setLiquidacionGuardada] = useState(null);
 
-  // ===== CALENDARIO =====
   const hoy = new Date();
   const [calMes, setCalMes] = useState(hoy.getMonth() + 1);
   const [calAnio, setCalAnio] = useState(hoy.getFullYear());
@@ -118,6 +112,8 @@ function App() {
 
   const [diaDetalleOpen, setDiaDetalleOpen] = useState(false);
   const [diaDetalleFecha, setDiaDetalleFecha] = useState("");
+
+  const grupoId = userProfile?.grupoId || null;
 
   const getPlatform = () => (window.innerWidth < 768 ? "mobile" : "pc");
 
@@ -299,7 +295,6 @@ function App() {
     cargarPerfilUsuario();
   }, [usuarioAuth]);
 
-  // ✅ Step 1: resize + registrar SW + auto init push si ya hay permiso
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", handleResize);
@@ -325,7 +320,6 @@ function App() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ✅ Foreground listener visible también con móvil abierto
   useEffect(() => {
     const initForegroundListener = async () => {
       try {
@@ -370,18 +364,8 @@ function App() {
   }, []);
 
   const meses = [
-    "Enero",
-    "Febrero",
-    "Marzo",
-    "Abril",
-    "Mayo",
-    "Junio",
-    "Julio",
-    "Agosto",
-    "Septiembre",
-    "Octubre",
-    "Noviembre",
-    "Diciembre"
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
   ];
 
   const formatearComercio = (texto) => {
@@ -412,9 +396,14 @@ function App() {
 
   const idLiquidacion = `${anioActual}-${String(mesActual).padStart(2, "0")}`;
 
-  // ===== GASTOS (TIEMPO REAL) =====
   useEffect(() => {
-    const q = query(collection(db, "gastos"));
+    if (!grupoId) {
+      setGastos([]);
+      setBalance(0);
+      return;
+    }
+
+    const q = query(collection(db, "grupos", grupoId, "gastos"));
     const unsub = onSnapshot(q, (snapshot) => {
       let totalPagado = 0;
       let totalDebe = 0;
@@ -447,13 +436,17 @@ function App() {
     });
 
     return () => unsub();
-  }, [mesActual, anioActual]);
+  }, [grupoId, mesActual, anioActual]);
 
-  // ===== CARGAR ESTADO DE LIQUIDACIÓN POR MES/AÑO =====
   useEffect(() => {
     const cargarEstadoLiquidacion = async () => {
+      if (!grupoId) {
+        setLiquidacionGuardada(null);
+        return;
+      }
+
       try {
-        const ref = doc(db, "liquidaciones", idLiquidacion);
+        const ref = doc(db, "grupos", grupoId, "liquidaciones", idLiquidacion);
         const snap = await getDoc(ref);
         if (snap.exists()) {
           const data = snap.data() || {};
@@ -472,7 +465,7 @@ function App() {
       }
     };
     cargarEstadoLiquidacion();
-  }, [idLiquidacion]);
+  }, [grupoId, idLiquidacion]);
 
   useEffect(() => {
     if (balance === 0) {
@@ -498,7 +491,6 @@ function App() {
     else setEstadoDeuda(null);
   }, [balance, liquidacionGuardada]);
 
-  // ===== NOMBRES SUPERS (FIRESTORE CONFIG) =====
   useEffect(() => {
     const cargarNombres = async () => {
       try {
@@ -547,7 +539,6 @@ function App() {
     setEditSuperNombre("");
   };
 
-  // ===== LISTA COMPRA (TIEMPO REAL) =====
   useEffect(() => {
     const q = query(collection(db, "listaCompra"));
     const unsub = onSnapshot(q, (snapshot) => {
@@ -634,15 +625,14 @@ function App() {
   const totalPendientesSuper = (superKey) =>
     productos.filter((p) => (p.super || "MERCADONA") === superKey && !p.comprado).length;
 
-  // ===== GASTOS =====
   const agregarGasto = async () => {
-    if (!importe || !comercio) return;
+    if (!importe || !comercio || !grupoId) return;
 
     try {
       const importeNum = Number(importe);
       const comercioFmt = formatearComercio(comercio);
 
-      await addDoc(collection(db, "gastos"), {
+      await addDoc(collection(db, "grupos", grupoId, "gastos"), {
         importe: importeNum,
         pagadoPor,
         mes: mesActual,
@@ -675,7 +665,8 @@ function App() {
   };
 
   const confirmarEliminar = async () => {
-    await deleteDoc(doc(db, "gastos", gastoAEliminar.id));
+    if (!gastoAEliminar || !grupoId) return;
+    await deleteDoc(doc(db, "grupos", grupoId, "gastos", gastoAEliminar.id));
     setGastoAEliminar(null);
   };
 
@@ -687,7 +678,9 @@ function App() {
   };
 
   const guardarEdicion = async () => {
-    await updateDoc(doc(db, "gastos", gastoEditando.id), {
+    if (!gastoEditando || !grupoId) return;
+
+    await updateDoc(doc(db, "grupos", grupoId, "gastos", gastoEditando.id), {
       comercio: formatearComercio(editComercio),
       importe: Number(editImporte),
       pagadoPor: editPagadoPor
@@ -695,13 +688,14 @@ function App() {
     setGastoEditando(null);
   };
 
-  // ===== LIQUIDAR MES (NO BORRA NADA) =====
   const liquidarMes = () => {
     if (balance === 0) return;
     setLiquidarConfirmOpen(true);
   };
 
   const guardarEstadoLiquidacion = async (status) => {
+    if (!grupoId) return;
+
     const info = getDebtInfo(balance);
     if (!info.debtorName || info.amount === 0) {
       setEstadoDeuda(null);
@@ -721,7 +715,7 @@ function App() {
 
     try {
       await setDoc(
-        doc(db, "liquidaciones", idLiquidacion),
+        doc(db, "grupos", grupoId, "liquidaciones", idLiquidacion),
         {
           status,
           mes: mesActual,
@@ -740,7 +734,6 @@ function App() {
     setLiquidarConfirmOpen(false);
   };
 
-  // ===== CALENDARIO (TIEMPO REAL POR MES) =====
   const pad2 = (n) => String(n).padStart(2, "0");
   const ymd = (y, m, d) => `${y}-${pad2(m)}-${pad2(d)}`;
 
@@ -1003,21 +996,8 @@ function App() {
         <div style={{ ...styles.card, maxWidth: "420px", width: "100%" }}>
           <h1 style={styles.title}>🔐 Iniciar sesión</h1>
 
-          <input
-            type="email"
-            placeholder="Email"
-            value={loginEmail}
-            onChange={(e) => setLoginEmail(e.target.value)}
-            style={styles.input}
-          />
-
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={loginPassword}
-            onChange={(e) => setLoginPassword(e.target.value)}
-            style={styles.input}
-          />
+          <input type="email" placeholder="Email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} style={styles.input} />
+          <input type="password" placeholder="Contraseña" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} style={styles.input} />
 
           {loginError ? <p style={{ color: "#f87171" }}>{loginError}</p> : null}
 
@@ -1044,9 +1024,7 @@ function App() {
       <div style={{ ...styles.container, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ ...styles.card, maxWidth: "420px", width: "100%" }}>
           <h2 style={{ marginBottom: "12px" }}>Perfil no encontrado</h2>
-          <p style={{ marginBottom: "16px" }}>
-            No se encontró el perfil del usuario en Firestore.
-          </p>
+          <p style={{ marginBottom: "16px" }}>No se encontró el perfil del usuario en Firestore.</p>
           <button onClick={cerrarSesion} style={styles.buttonDanger}>
             Cerrar sesión
           </button>
