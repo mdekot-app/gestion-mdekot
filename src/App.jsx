@@ -13,12 +13,19 @@ import {
   where,
   orderBy
 } from "firebase/firestore";
-import { db, getFirebaseMessaging, VAPID_KEY } from "./firebase";
+import { auth, db, getFirebaseMessaging, VAPID_KEY } from "./firebase";
 import { getToken, onMessage } from "firebase/messaging";
+import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
 
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
 function App() {
+  const [usuarioAuth, setUsuarioAuth] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+
   const [vista, setVista] = useState("dashboard");
   const [balance, setBalance] = useState(0);
   const [importe, setImporte] = useState("");
@@ -111,6 +118,24 @@ function App() {
   const [diaDetalleFecha, setDiaDetalleFecha] = useState("");
 
   const getPlatform = () => (window.innerWidth < 768 ? "mobile" : "pc");
+
+  const iniciarSesion = async () => {
+    try {
+      setLoginError("");
+      await signInWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
+    } catch (e) {
+      console.error(e);
+      setLoginError("Email o contraseña incorrectos");
+    }
+  };
+
+  const cerrarSesion = async () => {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const guardarTokenEnFirestore = async (token, enabled) => {
     if (!token) return;
@@ -232,6 +257,15 @@ function App() {
       return { ok: false, error: e };
     }
   };
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setUsuarioAuth(user || null);
+      setAuthLoading(false);
+    });
+
+    return () => unsub();
+  }, []);
 
   // ✅ Step 1: resize + registrar SW + auto init push si ya hay permiso
   useEffect(() => {
@@ -921,6 +955,48 @@ function App() {
 
   const calendarCells = buildCalendarCells();
 
+  if (authLoading) {
+    return (
+      <div style={{ ...styles.container, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={styles.card}>
+          <h2>Cargando...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (!usuarioAuth) {
+    return (
+      <div style={{ ...styles.container, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ ...styles.card, maxWidth: "420px", width: "100%" }}>
+          <h1 style={styles.title}>🔐 Iniciar sesión</h1>
+
+          <input
+            type="email"
+            placeholder="Email"
+            value={loginEmail}
+            onChange={(e) => setLoginEmail(e.target.value)}
+            style={styles.input}
+          />
+
+          <input
+            type="password"
+            placeholder="Contraseña"
+            value={loginPassword}
+            onChange={(e) => setLoginPassword(e.target.value)}
+            style={styles.input}
+          />
+
+          {loginError ? <p style={{ color: "#f87171" }}>{loginError}</p> : null}
+
+          <button onClick={iniciarSesion} style={styles.button}>
+            Entrar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ ...styles.container, padding: isMobile ? "16px" : "40px" }}>
       <div style={styles.tabs}>
@@ -933,6 +1009,12 @@ function App() {
       {vista === "dashboard" && (
         <>
           <h1 style={styles.title}>💰💶 GESTIÓN MDEKOT 💶💰</h1>
+
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
+            <button onClick={cerrarSesion} style={styles.buttonDanger}>
+              Cerrar sesión
+            </button>
+          </div>
 
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
             <button
