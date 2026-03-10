@@ -15,21 +15,21 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// ✅ Mostrar UNA notificación cuando la app está en segundo plano o móvil bloqueado
 messaging.onBackgroundMessage((payload) => {
   const title = payload?.data?.title || "Gestión Mdekot";
   const body = payload?.data?.body || "";
   const link = payload?.data?.link || "https://gestion-mdekot.vercel.app";
+  const grupoId = payload?.data?.grupoId || "";
 
   self.registration.showNotification(title, {
     body,
     icon: "/vite.svg",
     badge: "/vite.svg",
-    data: { link }
+    data: { link, grupoId },
+    tag: grupoId ? `grupo-${grupoId}` : `push-${Date.now()}`
   });
 });
 
-// ✅ Abrir la app al tocar la notificación
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
