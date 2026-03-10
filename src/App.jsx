@@ -234,21 +234,19 @@ function App() {
       setAuthBusy(true);
       setLoginError("");
 
+      userCredential = await createUserWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
+      const uid = userCredential.user.uid;
+      const nombreUsuario = (registerName || "").trim() || loginEmail.trim().split("@")[0];
+
       const q = query(collection(db, "grupos"), where("codigoInvitacion", "==", codigo), limit(1));
       const snap = await getDocs(q);
 
       if (snap.empty) {
-        setLoginError("Ese código no existe");
-        setAuthBusy(false);
-        return;
+        throw new Error("Ese código no existe");
       }
 
       const grupoDoc = snap.docs[0];
       const grupoRef = doc(db, "grupos", grupoDoc.id);
-
-      userCredential = await createUserWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
-      const uid = userCredential.user.uid;
-      const nombreUsuario = (registerName || "").trim() || loginEmail.trim().split("@")[0];
 
       await runTransaction(db, async (transaction) => {
         const grupoSnap = await transaction.get(grupoRef);
@@ -299,6 +297,7 @@ function App() {
       if (e.code === "auth/email-already-in-use") setLoginError("Ese email ya está registrado");
       else if (e.code === "auth/weak-password") setLoginError("La contraseña debe tener al menos 6 caracteres");
       else if (String(e.message || "").includes("2 personas")) setLoginError("Ese grupo ya tiene 2 personas");
+      else if (String(e.message || "").includes("no existe")) setLoginError("Ese código no existe");
       else setLoginError("No se pudo unir al grupo");
     } finally {
       setAuthBusy(false);
