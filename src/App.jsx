@@ -745,10 +745,15 @@ function App() {
   };
 
   useEffect(() => {
+    if (!grupoId) {
+      setEventos([]);
+      return;
+    }
+
     const { start, end } = getMonthRange(calAnio, calMes);
 
     const qEv = query(
-      collection(db, "eventos"),
+      collection(db, "grupos", grupoId, "eventos"),
       where("fecha", ">=", start),
       where("fecha", "<=", end),
       orderBy("fecha", "asc")
@@ -778,7 +783,7 @@ function App() {
     );
 
     return () => unsub();
-  }, [calMes, calAnio]);
+  }, [grupoId, calMes, calAnio]);
 
   const abrirNuevoEvento = (fechaPreseleccionada) => {
     setEvTitulo("");
@@ -790,6 +795,8 @@ function App() {
   };
 
   const guardarNuevoEvento = async () => {
+    if (!grupoId) return;
+
     const t = (evTitulo || "").trim();
     const f = (evFecha || "").trim();
     if (!t || !f) return;
@@ -797,7 +804,7 @@ function App() {
     const horaFinal = (evHora || "").trim() || "00:00";
     const eventAt = new Date(`${f}T${horaFinal}:00`);
 
-    await addDoc(collection(db, "eventos"), {
+    await addDoc(collection(db, "grupos", grupoId, "eventos"), {
       titulo: t,
       tipo: (evTipo || "OTRO").trim(),
       fecha: f,
@@ -821,7 +828,8 @@ function App() {
   };
 
   const guardarEdicionEvento = async () => {
-    if (!eventoEditando) return;
+    if (!eventoEditando || !grupoId) return;
+
     const t = (evTitulo || "").trim();
     const f = (evFecha || "").trim();
     if (!t || !f) return;
@@ -829,7 +837,7 @@ function App() {
     const horaFinal = (evHora || "").trim() || "00:00";
     const eventAt = new Date(`${f}T${horaFinal}:00`);
 
-    await updateDoc(doc(db, "eventos", eventoEditando.id), {
+    await updateDoc(doc(db, "grupos", grupoId, "eventos", eventoEditando.id), {
       titulo: t,
       tipo: (evTipo || "OTRO").trim(),
       fecha: f,
@@ -844,8 +852,8 @@ function App() {
   };
 
   const confirmarEliminarEvento = async () => {
-    if (!eventoAEliminar) return;
-    await deleteDoc(doc(db, "eventos", eventoAEliminar.id));
+    if (!eventoAEliminar || !grupoId) return;
+    await deleteDoc(doc(db, "grupos", grupoId, "eventos", eventoAEliminar.id));
     setEventoAEliminar(null);
   };
 
