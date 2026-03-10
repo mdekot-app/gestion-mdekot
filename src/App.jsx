@@ -46,7 +46,7 @@ function App() {
   const [vista, setVista] = useState("dashboard");
   const [balance, setBalance] = useState(0);
   const [importe, setImporte] = useState("");
-  const [pagadoPor, setPagadoPor] = useState("mdekot@gmail.com");
+  const [pagadoPor, setPagadoPor] = useState("mirmilmor@gmail.com");
   const [comercio, setComercio] = useState("");
   const [gastos, setGastos] = useState([]);
 
@@ -592,7 +592,7 @@ function App() {
 
           const parte = data.importe / data.participantesCount;
 
-          if (data.pagadoPor === "mdekot@gmail.com") {
+          if (data.pagadoPor === "mirmilmor@gmail.com") {
             totalPagado += data.importe;
             totalDebe += parte;
           } else {
@@ -823,13 +823,13 @@ function App() {
         mes: mesActual,
         anio: anioActual,
         liquidado: false,
-        divididoEntre: ["mdekot@gmail.com", "jessica.alca87@gmail.com"],
+        divididoEntre: ["mirmilmor@gmail.com", "jessica.alca87@gmail.com"],
         participantesCount: 2,
         comercio: comercioFmt,
         fecha: new Date()
       });
 
-      const quien = pagadoPor === "mdekot@gmail.com" ? "Mirko" : "Jessica";
+      const quien = pagadoPor === "mirmilmor@gmail.com" ? "Mirko" : "Jessica";
       const euros = importeNum.toFixed(2).replace(".", ",");
 
       const pushResult = await enviarPushATodos({
@@ -1112,7 +1112,7 @@ function App() {
   let totalJessica = 0;
 
   gastos.forEach((g) => {
-    if (g.pagadoPor === "mdekot@gmail.com") totalMirko += g.importe;
+    if (g.pagadoPor === "mirmilmor@gmail.com") totalMirko += g.importe;
     else totalJessica += g.importe;
   });
 
@@ -1339,7 +1339,7 @@ function App() {
               <input type="text" placeholder="Comercio" value={comercio} onChange={(e) => setComercio(e.target.value)} style={styles.input} />
               <input type="number" placeholder="Importe" value={importe} onChange={(e) => setImporte(e.target.value)} style={styles.input} />
               <select value={pagadoPor} onChange={(e) => setPagadoPor(e.target.value)} style={styles.input}>
-                <option value="mdekot@gmail.com">Mirko</option>
+                <option value="mirmilmor@gmail.com">Mirko</option>
                 <option value="jessica.alca87@gmail.com">Jessica</option>
               </select>
               <button onClick={agregarGasto} style={styles.button}>Guardar</button>
@@ -1350,7 +1350,7 @@ function App() {
             <div style={styles.card}>
               <h3>· GASTOS DEL MES ·</h3>
               {gastos.map((g) => {
-                const esMirko = g.pagadoPor === "mdekot@gmail.com";
+                const esMirko = g.pagadoPor === "mirmilmor@gmail.com";
                 const badgeStyle = esMirko ? styles.payMirko : styles.payJessica;
                 const badgeIcon = esMirko ? "👨" : "👩";
                 const badgeTitle = esMirko ? "Pagó Mirko" : "Pagó Jessica";
@@ -1441,7 +1441,7 @@ function App() {
                 <input value={editComercio} onChange={(e) => setEditComercio(e.target.value)} style={styles.input} />
                 <input type="number" value={editImporte} onChange={(e) => setEditImporte(e.target.value)} style={styles.input} />
                 <select value={editPagadoPor} onChange={(e) => setEditPagadoPor(e.target.value)} style={styles.input}>
-                  <option value="mdekot@gmail.com">Mirko</option>
+                  <option value="mirmilmor@gmail.com">Mirko</option>
                   <option value="jessica.alca87@gmail.com">Jessica</option>
                 </select>
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "10px" }}>
