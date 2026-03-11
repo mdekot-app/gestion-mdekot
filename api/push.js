@@ -94,6 +94,10 @@ export default async function handler(req, res) {
     }
 
     const payload = {
+      notification: {
+        title: String(t),
+        body: String(b),
+      },
       data: {
         title: String(t),
         body: String(b),
@@ -102,10 +106,27 @@ export default async function handler(req, res) {
       },
       android: {
         priority: "high",
+        notification: {
+          title: String(t),
+          body: String(b),
+        },
       },
       webpush: {
         headers: {
           Urgency: "high",
+        },
+        notification: {
+          title: String(t),
+          body: String(b),
+          icon: "/vite.svg",
+          badge: "/vite.svg",
+          data: {
+            link: String(l),
+            grupoId: g,
+          },
+        },
+        fcmOptions: {
+          link: String(l),
         },
       },
     };
@@ -146,6 +167,12 @@ export default async function handler(req, res) {
       failure: result.failureCount,
       invalidRemoved: invalid.length,
       target: "mobile_enabled_only_group_filtered",
+      responses: result.responses.map((r, i) => ({
+        token: uniqTokens[i],
+        success: r.success,
+        error: r.error?.message || null,
+        code: r.error?.code || null,
+      })),
     });
   } catch (e) {
     return res.status(500).json({ ok: false, error: e?.message || String(e) });
