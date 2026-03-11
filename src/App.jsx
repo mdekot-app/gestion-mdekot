@@ -9,7 +9,6 @@ import {
   query,
   writeBatch,
   setDoc,
-  getDoc,
   where,
   orderBy,
   getDocs,
@@ -673,23 +672,7 @@ function App() {
             if (!activadas) return;
             if (Notification.permission !== "granted") return;
 
-            const title = payload?.data?.title || payload?.notification?.title || "Gestión Mdekot";
-            const body = payload?.data?.body || payload?.notification?.body || "";
-            const link = payload?.data?.link || window.location.origin;
-
-            const reg =
-              (await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js")) ||
-              (await navigator.serviceWorker.ready);
-
-            if (!reg) return;
-
-            await reg.showNotification(title, {
-              body,
-              icon: "/vite.svg",
-              badge: "/vite.svg",
-              data: { link },
-              tag: `push-${Date.now()}`
-            });
+            console.log("📩 Push recibido en foreground:", payload);
           } catch (e) {
             console.error("onMessage error:", e);
           }
