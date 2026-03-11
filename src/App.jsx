@@ -659,35 +659,29 @@ function App() {
   }, []);
 
   useEffect(() => {
-    let unsubscribe = null;
+  let unsubscribe = null;
 
-    const initForegroundListener = async () => {
-      try {
-        const messaging = await getFirebaseMessaging();
-        if (!messaging) return;
+  const initForegroundListener = async () => {
+    try {
+      const messaging = await getFirebaseMessaging();
+      if (!messaging) return;
 
-        unsubscribe = onMessage(messaging, async (payload) => {
-          try {
-            const activadas = localStorage.getItem("notificationsEnabled") !== "false";
-            if (!activadas) return;
-            if (Notification.permission !== "granted") return;
+      unsubscribe = onMessage(messaging, async () => {
+        // No mostramos notificación manual aquí.
+        // El service worker se encarga del background
+        // y así evitamos duplicadas en escritorio.
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
-            console.log("📩 Push recibido en foreground:", payload);
-          } catch (e) {
-            console.error("onMessage error:", e);
-          }
-        });
-      } catch (e) {
-        console.error(e);
-      }
-    };
+  if ("Notification" in window && "serviceWorker" in navigator) initForegroundListener();
 
-    if ("Notification" in window && "serviceWorker" in navigator) initForegroundListener();
-
-    return () => {
-      if (typeof unsubscribe === "function") unsubscribe();
-    };
-  }, []);
+  return () => {
+    if (typeof unsubscribe === "function") unsubscribe();
+  };
+}, []);
 
   useEffect(() => {
     setMenuAbierto(false);

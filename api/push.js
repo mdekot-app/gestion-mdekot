@@ -59,20 +59,15 @@ export default async function handler(req, res) {
       });
     }
 
-    const snap = await db
-      .collection("pushTokens")
-      .where("grupoId", "==", g)
-      .get();
+    const snap = await db.collection("pushTokens").where("grupoId", "==", g).get();
 
     const tokens = [];
     const tokenDocs = [];
 
     snap.forEach((docu) => {
       const data = docu.data() || {};
-      const platform = String(data.platform || "").toLowerCase();
       const enabled = data.notificationsEnabled !== false;
 
-      if (platform !== "mobile") return;
       if (!enabled) return;
 
       const tok = data.token || docu.id;
@@ -88,46 +83,28 @@ export default async function handler(req, res) {
       return res.status(200).json({
         ok: true,
         sent: 0,
-        msg: "No hay tokens MOBILE activos para este grupo",
+        msg: "No hay tokens activos para este grupo",
         grupoId: g,
       });
     }
 
     const payload = {
-      notification: {
-        title: String(t),
-        body: String(b),
-      },
       data: {
         title: String(t),
         body: String(b),
         link: String(l),
-        grupoId: g,
-      },
-      android: {
-        priority: "high",
-        notification: {
-          title: String(t),
-          body: String(b),
-        },
+        grupoId: String(g),
       },
       webpush: {
         headers: {
           Urgency: "high",
         },
-        notification: {
-          title: String(t),
-          body: String(b),
-          icon: "/vite.svg",
-          badge: "/vite.svg",
-          data: {
-            link: String(l),
-            grupoId: g,
-          },
-        },
         fcmOptions: {
           link: String(l),
         },
+      },
+      android: {
+        priority: "high",
       },
     };
 
@@ -166,7 +143,6 @@ export default async function handler(req, res) {
       success: result.successCount,
       failure: result.failureCount,
       invalidRemoved: invalid.length,
-      target: "mobile_enabled_only_group_filtered",
       responses: result.responses.map((r, i) => ({
         token: uniqTokens[i],
         success: r.success,

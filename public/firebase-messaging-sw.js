@@ -16,8 +16,8 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  const title = payload?.data?.title || "Gestión Mdekot";
-  const body = payload?.data?.body || "";
+  const title = payload?.data?.title || payload?.notification?.title || "Gestión Mdekot";
+  const body = payload?.data?.body || payload?.notification?.body || "";
   const link = payload?.data?.link || "https://gestion-mdekot.vercel.app";
   const grupoId = payload?.data?.grupoId || "";
 
