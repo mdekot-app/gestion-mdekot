@@ -1425,6 +1425,32 @@ function App() {
 
   const calendarCells = buildCalendarCells();
 
+  const dashboardTitleStyle = isMobile
+    ? {
+        ...styles.title,
+        fontSize: "22px",
+        lineHeight: 1.1,
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        maxWidth: "100%",
+        margin: "0 auto 20px auto"
+      }
+    : styles.title;
+
+  const listTitleStyle = isMobile
+    ? {
+        ...styles.title,
+        fontSize: "20px",
+        lineHeight: 1.1,
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        maxWidth: "100%",
+        margin: "0 auto 20px auto"
+      }
+    : styles.title;
+
   if (authLoading) {
     return (
       <div style={{ ...styles.container, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1740,7 +1766,7 @@ function App() {
 
       {vista === "dashboard" && (
         <>
-          <h1 style={styles.title}>💰💶 GESTIÓN MDEKOT 💶💰</h1>
+          <h1 style={dashboardTitleStyle}>💰💶 GESTIÓN MDEKOT 💶💰</h1>
 
           <div style={styles.selectorRow}>
             <select value={mesActual} onChange={(e) => setMesActual(Number(e.target.value))} style={styles.select}>
@@ -1818,18 +1844,62 @@ function App() {
 
             <div style={styles.card}>
               <h3>· GASTO INDIVIDUAL ·</h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: "18px", marginTop: "14px", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? "14px" : "18px", marginTop: "14px", alignItems: "center", justifyContent: "center" }}>
                 {participanteA ? (
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "8px", textAlign: "center" }}>
-                    <span title={`Pagó ${participanteA.nombre}`} style={{ ...styles.payIcon, ...getBadgeStyleByGender(participanteA.sexo) }}>{getBadgeIconByGender(participanteA.sexo)}</span>
-                    <span style={{ fontWeight: "600" }}>{participanteA.nombre} → {totalParticipanteA.toFixed(2)} €</span>
+                  <div
+                    style={
+                      isMobile
+                        ? {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "10px",
+                            width: "100%",
+                            textAlign: "center"
+                          }
+                        : {
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                            textAlign: "center"
+                          }
+                    }
+                  >
+                    <span title={`Pagó ${participanteA.nombre}`} style={{ ...styles.payIcon, ...getBadgeStyleByGender(participanteA.sexo) }}>
+                      {getBadgeIconByGender(participanteA.sexo)}
+                    </span>
+                    <span style={{ fontWeight: "600", whiteSpace: "nowrap" }}>{participanteA.nombre} → {totalParticipanteA.toFixed(2)} €</span>
                   </div>
                 ) : null}
 
                 {participanteB ? (
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "8px", textAlign: "center" }}>
-                    <span title={`Pagó ${participanteB.nombre}`} style={{ ...styles.payIcon, ...getBadgeStyleByGender(participanteB.sexo) }}>{getBadgeIconByGender(participanteB.sexo)}</span>
-                    <span style={{ fontWeight: "600" }}>{participanteB.nombre} → {totalParticipanteB.toFixed(2)} €</span>
+                  <div
+                    style={
+                      isMobile
+                        ? {
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "10px",
+                            width: "100%",
+                            textAlign: "center"
+                          }
+                        : {
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                            textAlign: "center"
+                          }
+                    }
+                  >
+                    <span title={`Pagó ${participanteB.nombre}`} style={{ ...styles.payIcon, ...getBadgeStyleByGender(participanteB.sexo) }}>
+                      {getBadgeIconByGender(participanteB.sexo)}
+                    </span>
+                    <span style={{ fontWeight: "600", whiteSpace: "nowrap" }}>{participanteB.nombre} → {totalParticipanteB.toFixed(2)} €</span>
                   </div>
                 ) : null}
               </div>
@@ -2047,7 +2117,7 @@ function App() {
 
       {vista === "lista" && (
         <>
-          <h1 style={styles.title}>🛒 LISTA DE LA COMPRA</h1>
+          <h1 style={listTitleStyle}>🛒 LISTA DE LA COMPRA</h1>
 
           {isMobile ? (
             <>
