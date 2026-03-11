@@ -33,7 +33,7 @@ function App() {
   const [usuarioAuth, setUsuarioAuth] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  const [authMode, setAuthMode] = useState("login"); // login | register-create | register-join
+  const [authMode, setAuthMode] = useState("login");
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [registerName, setRegisterName] = useState("");
@@ -784,6 +784,7 @@ function App() {
   }, []);
 
   const valorMesAnio = `${anioActual}-${String(mesActual).padStart(2, "0")}`;
+  const valorCalMesAnio = `${calAnio}-${String(calMes).padStart(2, "0")}`;
 
   const formatearComercio = (texto) => {
     if (!texto) return "";
@@ -1838,38 +1839,24 @@ function App() {
                 const badgeTitle = `Pagó ${nombrePagador}`;
 
                 return (
-                  <div key={g.id} style={{ ...styles.gastoItem, flexDirection: "row", alignItems: "center", gap: isMobile ? "8px" : "0", flexWrap: "nowrap" }}>
-                    {isMobile ? (
-                      <>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0 }}>
-                          <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle, flexShrink: 0 }}>{badgeIcon}</span>
-                          <span title={`${g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"} - ${g.comercio}`} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0, flex: 1, textAlign: "left", fontSize: "14px", lineHeight: 1.2 }}>
-                            {g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"} - {g.comercio}
-                          </span>
-                        </div>
+                  <div key={g.id} style={{ ...styles.gastoItem, alignItems: "center", flexWrap: "nowrap" }}>
+                    <div style={styles.gastoLeft}>
+                      <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle, flexShrink: 0 }}>{badgeIcon}</span>
+                      <span
+                        title={`${g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"} - ${g.comercio}`}
+                        style={styles.gastoTexto}
+                      >
+                        {g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"} - {g.comercio}
+                      </span>
+                    </div>
 
-                        <div style={styles.mobileActionColumn}>
-                          <span style={{ fontWeight: 700, fontSize: "14px", whiteSpace: "nowrap" }}>{Number(g.importe).toFixed(2)} €</span>
-                          <div style={styles.mobileIconButtonsWrap}>
-                            <button onClick={() => abrirModalEditar(g)} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>✏</button>
-                            <button onClick={() => setGastoAEliminar(g)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>🗑</button>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <span style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
-                          <span title={badgeTitle} style={{ ...styles.payIcon, ...badgeStyle }}>{badgeIcon}</span>
-                          {g.fecha ? new Date(g.fecha.seconds * 1000).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" }) : "--/--"} - {g.comercio}
-                        </span>
-
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                          <span style={{ minWidth: "90px", textAlign: "right", fontWeight: "600" }}>{Number(g.importe).toFixed(2)} €</span>
-                          <button onClick={() => abrirModalEditar(g)} style={styles.buttonEdit}>✏</button>
-                          <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDelete}>🗑</button>
-                        </div>
-                      </>
-                    )}
+                    <div style={styles.gastoRight}>
+                      <span style={styles.gastoImporte}>{Number(g.importe).toFixed(2)} €</span>
+                      <div style={styles.mobileIconButtonsWrap}>
+                        <button onClick={() => abrirModalEditar(g)} style={styles.buttonEditMini}>✏</button>
+                        <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDeleteMini}>🗑</button>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
@@ -1882,62 +1869,26 @@ function App() {
 
             <div style={styles.card}>
               <h3>· GASTO INDIVIDUAL ·</h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? "14px" : "18px", marginTop: "14px", alignItems: "center", justifyContent: "center" }}>
+              <div style={styles.gastoIndividualWrap}>
                 {participanteA ? (
-                  <div
-                    style={
-                      isMobile
-                        ? {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "10px",
-                            width: "100%",
-                            textAlign: "center"
-                          }
-                        : {
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "8px",
-                            textAlign: "center"
-                          }
-                    }
-                  >
+                  <div style={styles.gastoIndividualRow}>
                     <span title={`Pagó ${participanteA.nombre}`} style={{ ...styles.payIcon, ...getBadgeStyleByGender(participanteA.sexo) }}>
                       {getBadgeIconByGender(participanteA.sexo)}
                     </span>
-                    <span style={{ fontWeight: "600", whiteSpace: "nowrap" }}>{participanteA.nombre} → {totalParticipanteA.toFixed(2)} €</span>
+                    <span style={styles.gastoIndividualNombre}>{participanteA.nombre}</span>
+                    <span style={styles.gastoIndividualArrow}>→</span>
+                    <span style={styles.gastoIndividualImporte}>{totalParticipanteA.toFixed(2)} €</span>
                   </div>
                 ) : null}
 
                 {participanteB ? (
-                  <div
-                    style={
-                      isMobile
-                        ? {
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "10px",
-                            width: "100%",
-                            textAlign: "center"
-                          }
-                        : {
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            gap: "8px",
-                            textAlign: "center"
-                          }
-                    }
-                  >
+                  <div style={styles.gastoIndividualRow}>
                     <span title={`Pagó ${participanteB.nombre}`} style={{ ...styles.payIcon, ...getBadgeStyleByGender(participanteB.sexo) }}>
                       {getBadgeIconByGender(participanteB.sexo)}
                     </span>
-                    <span style={{ fontWeight: "600", whiteSpace: "nowrap" }}>{participanteB.nombre} → {totalParticipanteB.toFixed(2)} €</span>
+                    <span style={styles.gastoIndividualNombre}>{participanteB.nombre}</span>
+                    <span style={styles.gastoIndividualArrow}>→</span>
+                    <span style={styles.gastoIndividualImporte}>{totalParticipanteB.toFixed(2)} €</span>
                   </div>
                 ) : null}
               </div>
@@ -2007,18 +1958,29 @@ function App() {
 
           <div style={{ ...styles.calendarPageWrap, ...(isMobile ? styles.calendarPageWrapMobile : {}) }}>
             <div style={{ ...styles.cardFull, padding: isMobile ? "14px 12px" : "18px", marginBottom: isMobile ? "14px" : "30px" }}>
-              <div style={{ ...styles.calHeader, flexDirection: isMobile ? "column" : "row", gap: isMobile ? "10px" : "12px" }}>
+              <div style={{ ...styles.calHeader, flexDirection: "column", gap: "12px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", justifyContent: "center" }}>
                   <button onClick={irMesAnterior} style={styles.button}>◀</button>
                   <button onClick={irHoy} style={styles.button}>Hoy</button>
                   <button onClick={irMesSiguiente} style={styles.button}>▶</button>
+                </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <select value={calMes} onChange={(e) => setCalMes(Number(e.target.value))} style={styles.select}>
-                      {meses.map((m, idx) => (<option key={m} value={idx + 1}>{m}</option>))}
-                    </select>
-                    <input type="number" value={calAnio} onChange={(e) => setCalAnio(Number(e.target.value))} style={styles.select} />
-                  </div>
+                <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+                  <select
+                    value={valorCalMesAnio}
+                    onChange={(e) => {
+                      const [anio, mes] = e.target.value.split("-");
+                      setCalAnio(Number(anio));
+                      setCalMes(Number(mes));
+                    }}
+                    style={styles.monthYearSelect}
+                  >
+                    {opcionesMesAnio.map((op) => (
+                      <option key={`cal-${op.value}`} value={op.value}>
+                        {op.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "center" }}>
@@ -2088,8 +2050,8 @@ function App() {
                           </div>
 
                           <div style={isMobile ? styles.mobileIconButtonsColumn : { display: "flex", gap: "8px", flexShrink: 0 }}>
-                            <button onClick={() => abrirEditarEvento(ev)} style={styles.buttonEdit}>✏</button>
-                            <button onClick={() => setEventoAEliminar(ev)} style={styles.buttonDelete}>🗑</button>
+                            <button onClick={() => abrirEditarEvento(ev)} style={styles.buttonEditMini}>✏</button>
+                            <button onClick={() => setEventoAEliminar(ev)} style={styles.buttonDeleteMini}>🗑</button>
                           </div>
                         </div>
                       </div>
@@ -2202,10 +2164,10 @@ function App() {
                             </span>
                           </div>
 
-                          <div style={styles.mobileActionColumn}>
+                          <div style={styles.gastoRight}>
                             <div style={styles.mobileIconButtonsWrap}>
-                              <button onClick={() => { setProductoEditando(p); setEditProductoNombre(p.nombre); }} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>✏</button>
-                              <button onClick={() => setProductoAEliminar(p)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>🗑</button>
+                              <button onClick={() => { setProductoEditando(p); setEditProductoNombre(p.nombre); }} style={styles.buttonEditMini}>✏</button>
+                              <button onClick={() => setProductoAEliminar(p)} style={styles.buttonDeleteMini}>🗑</button>
                             </div>
                           </div>
                         </div>
@@ -2261,8 +2223,8 @@ function App() {
                         </div>
 
                         <div style={{ display: "flex", gap: "8px" }}>
-                          <button onClick={() => { setProductoEditando(p); setEditProductoNombre(p.nombre); }} style={styles.buttonEdit}>✏</button>
-                          <button onClick={() => setProductoAEliminar(p)} style={styles.buttonDelete}>🗑</button>
+                          <button onClick={() => { setProductoEditando(p); setEditProductoNombre(p.nombre); }} style={styles.buttonEditMini}>✏</button>
+                          <button onClick={() => setProductoAEliminar(p)} style={styles.buttonDeleteMini}>🗑</button>
                         </div>
                       </div>
                     ))}
@@ -2408,7 +2370,7 @@ const styles = {
 
   monthYearSelect: {
     width: "100%",
-    maxWidth: "240px",
+    maxWidth: "200px",
     padding: "10px 14px",
     borderRadius: "12px",
     border: "2px solid rgba(255,255,255,0.12)",
@@ -2417,7 +2379,9 @@ const styles = {
     color: "#111827",
     outline: "none",
     display: "block",
-    margin: "0 auto"
+    margin: "0 auto",
+    textAlign: "center",
+    textAlignLast: "center"
   },
 
   authScreen: {
@@ -2723,7 +2687,7 @@ const styles = {
   },
   grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px", marginBottom: "30px" },
   card: { background: "#1e293b", padding: "20px", borderRadius: "10px", textAlign: "center", boxSizing: "border-box", width: "100%" },
-  gastoItem: { display: "flex", justifyContent: "space-between", marginBottom: "8px" },
+  gastoItem: { display: "flex", justifyContent: "space-between", marginBottom: "10px", gap: "10px" },
   input: { display: "block", width: "100%", marginBottom: "10px", padding: "8px", borderRadius: "6px", border: "none" },
   inputCompact: {
     display: "block",
@@ -2734,6 +2698,74 @@ const styles = {
     border: "none",
     boxSizing: "border-box",
     textAlign: "left"
+  },
+
+  gastoLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    flex: 1,
+    minWidth: 0,
+    textAlign: "left"
+  },
+
+  gastoTexto: {
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    minWidth: 0,
+    flex: 1,
+    textAlign: "left",
+    fontSize: "14px",
+    lineHeight: 1.2
+  },
+
+  gastoRight: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: "8px",
+    flexShrink: 0
+  },
+
+  gastoImporte: {
+    fontWeight: 700,
+    fontSize: "14px",
+    whiteSpace: "nowrap"
+  },
+
+  gastoIndividualWrap: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "14px",
+    marginTop: "14px",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+
+  gastoIndividualRow: {
+    display: "grid",
+    gridTemplateColumns: "28px 90px 24px 80px",
+    alignItems: "center",
+    columnGap: "10px",
+    justifyContent: "center"
+  },
+
+  gastoIndividualNombre: {
+    textAlign: "left",
+    fontWeight: "600",
+    whiteSpace: "nowrap"
+  },
+
+  gastoIndividualArrow: {
+    textAlign: "center",
+    fontWeight: "700"
+  },
+
+  gastoIndividualImporte: {
+    textAlign: "left",
+    fontWeight: "700",
+    whiteSpace: "nowrap"
   },
 
   cardHeaderRow: { position: "relative", display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: "10px", minHeight: "34px" },
@@ -2772,6 +2804,31 @@ const styles = {
 
   buttonEdit: { background: "#facc15", border: "none", borderRadius: "5px", padding: "4px 8px", marginRight: "5px", cursor: "pointer" },
   buttonDelete: { background: "#ef4444", border: "none", borderRadius: "5px", padding: "4px 8px", cursor: "pointer" },
+
+  buttonEditMini: {
+    background: "#facc15",
+    border: "none",
+    borderRadius: "5px",
+    padding: "3px 6px",
+    minWidth: "28px",
+    height: "28px",
+    cursor: "pointer",
+    fontSize: "12px",
+    lineHeight: 1
+  },
+
+  buttonDeleteMini: {
+    background: "#ef4444",
+    border: "none",
+    borderRadius: "5px",
+    padding: "3px 6px",
+    minWidth: "28px",
+    height: "28px",
+    cursor: "pointer",
+    fontSize: "12px",
+    lineHeight: 1
+  },
+
   buttonCenter: { display: "flex", justifyContent: "center" },
 
   mobileActionColumn: {
