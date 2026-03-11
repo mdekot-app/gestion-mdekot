@@ -1451,6 +1451,10 @@ function App() {
       }
     : styles.title;
 
+  const topTabsContainerStyle = isMobile
+    ? styles.topTabsContainerMobile
+    : styles.topTabsContainer;
+
   if (authLoading) {
     return (
       <div style={{ ...styles.container, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1757,11 +1761,11 @@ function App() {
         </div>
       </div>
 
-      <div style={styles.tabs}>
-        <button onClick={() => setVista("dashboard")} style={vista === "dashboard" ? styles.tabActive : styles.tab}>Dashboard</button>
-        <button onClick={() => setVista("grafico")} style={vista === "grafico" ? styles.tabActive : styles.tab}>Gráfico Mensual</button>
-        <button onClick={() => setVista("lista")} style={vista === "lista" ? styles.tabActive : styles.tab}>Lista de la Compra</button>
-        <button onClick={() => setVista("calendario")} style={vista === "calendario" ? styles.tabActive : styles.tab}>Calendario</button>
+      <div style={topTabsContainerStyle}>
+        <button onClick={() => setVista("dashboard")} style={vista === "dashboard" ? styles.topTabActive : styles.topTab}>Gastos</button>
+        <button onClick={() => setVista("grafico")} style={vista === "grafico" ? styles.topTabActive : styles.topTab}>Gráfico</button>
+        <button onClick={() => setVista("lista")} style={vista === "lista" ? styles.topTabActive : styles.topTab}>Lista Compras</button>
+        <button onClick={() => setVista("calendario")} style={vista === "calendario" ? styles.topTabActive : styles.topTab}>Calendario</button>
       </div>
 
       {vista === "dashboard" && (
@@ -1812,10 +1816,12 @@ function App() {
                           </span>
                         </div>
 
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
-                          <span style={{ fontWeight: 600, fontSize: "14px", whiteSpace: "nowrap" }}>{Number(g.importe).toFixed(2)} €</span>
-                          <button onClick={() => abrirModalEditar(g)} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>✏</button>
-                          <button onClick={() => setGastoAEliminar(g)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>🗑</button>
+                        <div style={styles.mobileActionColumn}>
+                          <span style={{ fontWeight: 700, fontSize: "14px", whiteSpace: "nowrap" }}>{Number(g.importe).toFixed(2)} €</span>
+                          <div style={styles.mobileIconButtonsWrap}>
+                            <button onClick={() => abrirModalEditar(g)} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>✏</button>
+                            <button onClick={() => setGastoAEliminar(g)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>🗑</button>
+                          </div>
                         </div>
                       </>
                     ) : (
@@ -2049,7 +2055,7 @@ function App() {
                             {ev.notas ? <div style={{ opacity: 0.9, fontSize: "13px", textAlign: "left", marginTop: "6px" }}>{ev.notas}</div> : null}
                           </div>
 
-                          <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
+                          <div style={isMobile ? styles.mobileIconButtonsColumn : { display: "flex", gap: "8px", flexShrink: 0 }}>
                             <button onClick={() => abrirEditarEvento(ev)} style={styles.buttonEdit}>✏</button>
                             <button onClick={() => setEventoAEliminar(ev)} style={styles.buttonDelete}>🗑</button>
                           </div>
@@ -2164,21 +2170,23 @@ function App() {
                             </span>
                           </div>
 
-                          <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
-                            <button onClick={() => { setProductoEditando(p); setEditProductoNombre(p.nombre); }} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>✏</button>
-                            <button onClick={() => setProductoAEliminar(p)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>🗑</button>
+                          <div style={styles.mobileActionColumn}>
+                            <div style={styles.mobileIconButtonsWrap}>
+                              <button onClick={() => { setProductoEditando(p); setEditProductoNombre(p.nombre); }} style={{ ...styles.buttonEdit, marginRight: 0, padding: "4px 7px" }}>✏</button>
+                              <button onClick={() => setProductoAEliminar(p)} style={{ ...styles.buttonDelete, padding: "4px 7px" }}>🗑</button>
+                            </div>
                           </div>
                         </div>
                       ))}
 
                       <div style={{ display: "flex", justifyContent: "center", marginTop: "14px" }}>
-                        <button onClick={() => limpiarComprados(s.key)} style={styles.buttonDanger}>Limpiar comprados</button>
+                        <button onClick={() => limpiarComprados(s.key)} style={styles.buttonDangerSmall}>Borrar Comprados</button>
                       </div>
 
                       {limpiarCompradosConfirm.open && limpiarCompradosConfirm.superKey === s.key && (
                         <div style={styles.modalOverlay}>
                           <div style={styles.modal}>
-                            <h3>🧹 Limpiar comprados</h3>
+                            <h3>🧹 Borrar comprados</h3>
                             <p style={{ marginBottom: "20px" }}>¿Eliminar {totalComprados} producto(s) ya comprados de {nombreVisible}?</p>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
                               <button onClick={() => setLimpiarCompradosConfirm({ open: false, superKey: null })} style={styles.button}>Cancelar</button>
@@ -2228,13 +2236,13 @@ function App() {
                     ))}
 
                     <div style={{ display: "flex", justifyContent: "center", marginTop: "14px" }}>
-                      <button onClick={() => limpiarComprados(s.key)} style={styles.buttonDanger}>Limpiar comprados</button>
+                      <button onClick={() => limpiarComprados(s.key)} style={styles.buttonDangerSmall}>Borrar Comprados</button>
                     </div>
 
                     {limpiarCompradosConfirm.open && limpiarCompradosConfirm.superKey === s.key && (
                       <div style={styles.modalOverlay}>
                         <div style={styles.modal}>
-                          <h3>🧹 Limpiar comprados</h3>
+                          <h3>🧹 Borrar comprados</h3>
                           <p style={{ marginBottom: "20px" }}>¿Eliminar {totalComprados} producto(s) ya comprados de {nombreVisible}?</p>
                           <div style={{ display: "flex", justifyContent: "space-between" }}>
                             <button onClick={() => setLimpiarCompradosConfirm({ open: false, superKey: null })} style={styles.button}>Cancelar</button>
@@ -2350,8 +2358,21 @@ function App() {
 const styles = {
   container: { background: "#4a505e", minHeight: "100vh", width: "100%", padding: "40px", color: "white", boxSizing: "border-box" },
   title: { fontSize: "32px", marginBottom: "20px", textAlign: "center" },
-  selectorRow: { display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" },
-  select: { padding: "8px", borderRadius: "6px" },
+
+  selectorRow: {
+    display: "flex",
+    gap: "10px",
+    marginBottom: "20px",
+    flexWrap: "wrap",
+    justifyContent: "center"
+  },
+
+  select: {
+    padding: "10px 14px",
+    borderRadius: "10px",
+    border: "1px solid rgba(255,255,255,0.08)",
+    minHeight: "44px"
+  },
 
   authScreen: {
     minHeight: "100vh",
@@ -2570,6 +2591,64 @@ const styles = {
     boxShadow: "0 16px 34px rgba(34,197,94,0.28)"
   },
 
+  topTabsContainer: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gap: "10px",
+    maxWidth: "920px",
+    margin: "0 auto 22px auto",
+    background: "rgba(15,23,42,0.25)",
+    padding: "8px",
+    borderRadius: "18px",
+    backdropFilter: "blur(8px)"
+  },
+
+  topTabsContainerMobile: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gap: "8px",
+    width: "100%",
+    maxWidth: "100%",
+    margin: "0 auto 18px auto",
+    background: "rgba(15,23,42,0.28)",
+    padding: "8px",
+    borderRadius: "18px",
+    boxSizing: "border-box",
+    backdropFilter: "blur(10px)"
+  },
+
+  topTab: {
+    background: "rgba(15,23,42,0.86)",
+    color: "#cbd5e1",
+    padding: "12px 6px",
+    border: "1px solid rgba(255,255,255,0.06)",
+    borderRadius: "14px",
+    cursor: "pointer",
+    fontWeight: 800,
+    fontSize: "12px",
+    minHeight: "48px",
+    boxShadow: "0 10px 24px rgba(15,23,42,0.18)",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis"
+  },
+
+  topTabActive: {
+    background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+    color: "white",
+    padding: "12px 6px",
+    border: "none",
+    borderRadius: "14px",
+    cursor: "pointer",
+    fontWeight: 900,
+    fontSize: "12px",
+    minHeight: "48px",
+    boxShadow: "0 14px 30px rgba(37,99,235,0.36)",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis"
+  },
+
   balanceCard: { background: "#1e293b", padding: "20px", borderRadius: "10px", textAlign: "center", maxWidth: "600px", margin: "0 auto 30px auto" },
   balanceCardPaid: { background: "#22c55e" },
   balanceCardUnpaid: { background: "#ef4444" },
@@ -2587,10 +2666,31 @@ const styles = {
 
   superFormRow: { display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", marginBottom: "10px", width: "100%", boxSizing: "border-box" },
   inputSuper: { display: "block", width: "70%", maxWidth: "260px", padding: "8px", borderRadius: "6px", border: "none" },
-  buttonAddInline: { background: "#3b82f6", color: "white", padding: "10px 14px", border: "none", borderRadius: "6px", cursor: "pointer", whiteSpace: "nowrap" },
+
+  buttonAddInline: {
+    background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+    color: "white",
+    padding: "10px 14px",
+    border: "none",
+    borderRadius: "10px",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    fontWeight: 800,
+    boxShadow: "0 12px 24px rgba(37,99,235,0.28)"
+  },
 
   button: { background: "#3b82f6", color: "white", padding: "10px", border: "none", borderRadius: "6px", cursor: "pointer" },
   buttonDanger: { background: "#ef4444", color: "white", padding: "10px 15px", border: "none", borderRadius: "6px", cursor: "pointer" },
+  buttonDangerSmall: {
+    background: "#ef4444",
+    color: "white",
+    padding: "8px 14px",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontSize: "13px",
+    fontWeight: 700
+  },
   buttonPaid: { background: "#22c55e", color: "#111827", padding: "10px 15px", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 800 },
   buttonNotifOn: { background: "#22c55e", color: "#111827", padding: "12px 18px", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 800 },
   buttonNotifOff: { background: "#64748b", color: "white", padding: "12px 18px", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: 800 },
@@ -2598,9 +2698,34 @@ const styles = {
   buttonEdit: { background: "#facc15", border: "none", borderRadius: "5px", padding: "4px 8px", marginRight: "5px", cursor: "pointer" },
   buttonDelete: { background: "#ef4444", border: "none", borderRadius: "5px", padding: "4px 8px", cursor: "pointer" },
   buttonCenter: { display: "flex", justifyContent: "center" },
-  tabs: { display: "flex", justifyContent: "center", gap: "10px", marginBottom: "20px", flexWrap: "wrap" },
-  tab: { background: "#1e293b", color: "white", padding: "10px 20px", border: "none", borderRadius: "6px", cursor: "pointer" },
-  tabActive: { background: "#3b82f6", color: "white", padding: "10px 20px", border: "none", borderRadius: "6px", cursor: "pointer" },
+
+  mobileActionColumn: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "6px",
+    flexShrink: 0,
+    minWidth: "58px"
+  },
+
+  mobileIconButtonsWrap: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: "6px",
+    width: "100%"
+  },
+
+  mobileIconButtonsColumn: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0
+  },
+
   modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999 },
   modal: { background: "#1e293b", padding: "25px", borderRadius: "10px", width: "90%", maxWidth: "340px" },
 
