@@ -764,6 +764,27 @@ function App() {
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
   ];
 
+  const opcionesMesAnio = useMemo(() => {
+    const base = [];
+    const yearStart = new Date().getFullYear() - 2;
+    const yearEnd = new Date().getFullYear() + 3;
+
+    for (let anio = yearStart; anio <= yearEnd; anio++) {
+      for (let mes = 1; mes <= 12; mes++) {
+        base.push({
+          value: `${anio}-${String(mes).padStart(2, "0")}`,
+          label: `${meses[mes - 1]} ${anio}`,
+          anio,
+          mes
+        });
+      }
+    }
+
+    return base;
+  }, []);
+
+  const valorMesAnio = `${anioActual}-${String(mesActual).padStart(2, "0")}`;
+
   const formatearComercio = (texto) => {
     if (!texto) return "";
     return texto
@@ -1381,7 +1402,7 @@ function App() {
       return <h2>👥 Falta que se una la otra persona al grupo</h2>;
     }
 
-    if (balance === 0) return <h2>⚖️ Estáis en empate</h2>;
+    if (balance === 0) return <h2 style={styles.balanceNeutralText}>Nadie debe nada 😜</h2>;
 
     if (estadoDeuda === "paid") {
       return <h2 style={styles.balanceCardBigText}>{`${debtInfo.debtorName} HA PAGADO LA DEUDA DE ${debtInfo.amount.toFixed(2)} €`}</h2>;
@@ -1764,7 +1785,7 @@ function App() {
       <div style={topTabsContainerStyle}>
         <button onClick={() => setVista("dashboard")} style={vista === "dashboard" ? styles.topTabActive : styles.topTab}>Gastos</button>
         <button onClick={() => setVista("grafico")} style={vista === "grafico" ? styles.topTabActive : styles.topTab}>Gráfico</button>
-        <button onClick={() => setVista("lista")} style={vista === "lista" ? styles.topTabActive : styles.topTab}>Lista Compras</button>
+        <button onClick={() => setVista("lista")} style={vista === "lista" ? styles.topTabActive : styles.topTab}>Listas</button>
         <button onClick={() => setVista("calendario")} style={vista === "calendario" ? styles.topTabActive : styles.topTab}>Calendario</button>
       </div>
 
@@ -1773,10 +1794,21 @@ function App() {
           <h1 style={dashboardTitleStyle}>💰💶 GESTIÓN MDEKOT 💶💰</h1>
 
           <div style={styles.selectorRow}>
-            <select value={mesActual} onChange={(e) => setMesActual(Number(e.target.value))} style={styles.select}>
-              {meses.map((mes, index) => (<option key={index} value={index + 1}>{mes}</option>))}
+            <select
+              value={valorMesAnio}
+              onChange={(e) => {
+                const [anio, mes] = e.target.value.split("-");
+                setAnioActual(Number(anio));
+                setMesActual(Number(mes));
+              }}
+              style={styles.monthYearSelect}
+            >
+              {opcionesMesAnio.map((op) => (
+                <option key={op.value} value={op.value}>
+                  {op.label}
+                </option>
+              ))}
             </select>
-            <input type="number" value={anioActual} onChange={(e) => setAnioActual(Number(e.target.value))} style={styles.select} />
           </div>
 
           <div style={getBalanceCardStyle()}>{renderBalanceText()}</div>
@@ -1784,9 +1816,9 @@ function App() {
           <div style={styles.cardFull}>
             <h3>· Añadir Nuevo Gasto ·</h3>
             <div style={styles.formContainer}>
-              <input type="text" placeholder="Comercio" value={comercio} onChange={(e) => setComercio(e.target.value)} style={styles.input} />
-              <input type="number" placeholder="Importe" value={importe} onChange={(e) => setImporte(e.target.value)} style={styles.input} />
-              <select value={pagadoPor} onChange={(e) => setPagadoPor(e.target.value)} style={styles.input}>
+              <input type="text" placeholder="Comercio" value={comercio} onChange={(e) => setComercio(e.target.value)} style={styles.inputCompact} />
+              <input type="number" placeholder="Importe" value={importe} onChange={(e) => setImporte(e.target.value)} style={styles.inputCompact} />
+              <select value={pagadoPor} onChange={(e) => setPagadoPor(e.target.value)} style={styles.inputCompact}>
                 {participantesGrupo.map((p) => (
                   <option key={p.email} value={p.email}>{p.nombre}</option>
                 ))}
@@ -2374,6 +2406,20 @@ const styles = {
     minHeight: "44px"
   },
 
+  monthYearSelect: {
+    width: "100%",
+    maxWidth: "240px",
+    padding: "10px 14px",
+    borderRadius: "12px",
+    border: "2px solid rgba(255,255,255,0.12)",
+    minHeight: "46px",
+    background: "white",
+    color: "#111827",
+    outline: "none",
+    display: "block",
+    margin: "0 auto"
+  },
+
   authScreen: {
     minHeight: "100vh",
     width: "100%",
@@ -2649,17 +2695,46 @@ const styles = {
     textOverflow: "ellipsis"
   },
 
-  balanceCard: { background: "#1e293b", padding: "20px", borderRadius: "10px", textAlign: "center", maxWidth: "600px", margin: "0 auto 30px auto" },
+  balanceCard: {
+    background: "#1e293b",
+    padding: "14px 18px",
+    borderRadius: "10px",
+    textAlign: "center",
+    maxWidth: "520px",
+    minHeight: "68px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    margin: "0 auto 24px auto"
+  },
   balanceCardPaid: { background: "#22c55e" },
   balanceCardUnpaid: { background: "#ef4444" },
-  balanceCardBigText: { color: "#111827", textTransform: "uppercase", fontWeight: 900 },
+  balanceCardBigText: { color: "#111827", textTransform: "uppercase", fontWeight: 900, margin: 0 },
+  balanceNeutralText: { margin: 0, fontSize: "18px", fontWeight: 800 },
 
   cardFull: { background: "#1e293b", padding: "20px", borderRadius: "10px", marginBottom: "30px", textAlign: "center" },
-  formContainer: { width: "100%", maxWidth: "500px", margin: "0 auto" },
+  formContainer: {
+    width: "100%",
+    maxWidth: "280px",
+    margin: "0 auto",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center"
+  },
   grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px", marginBottom: "30px" },
   card: { background: "#1e293b", padding: "20px", borderRadius: "10px", textAlign: "center", boxSizing: "border-box", width: "100%" },
   gastoItem: { display: "flex", justifyContent: "space-between", marginBottom: "8px" },
   input: { display: "block", width: "100%", marginBottom: "10px", padding: "8px", borderRadius: "6px", border: "none" },
+  inputCompact: {
+    display: "block",
+    width: "100%",
+    marginBottom: "10px",
+    padding: "10px 12px",
+    borderRadius: "8px",
+    border: "none",
+    boxSizing: "border-box",
+    textAlign: "left"
+  },
 
   cardHeaderRow: { position: "relative", display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: "10px", minHeight: "34px" },
   cardTitle: { position: "absolute", left: "50%", transform: "translateX(-50%)", margin: 0, width: "100%", textAlign: "center", pointerEvents: "none" },
