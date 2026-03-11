@@ -42,6 +42,7 @@ function App() {
   const [inviteCode, setInviteCode] = useState("");
   const [loginError, setLoginError] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
+  const [authBootstrapActive, setAuthBootstrapActive] = useState(false);
 
   const [userProfile, setUserProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -134,6 +135,8 @@ function App() {
   const grupoId = userProfile?.grupoId || null;
 
   const getPlatform = () => (typeof window !== "undefined" && window.innerWidth < 768 ? "mobile" : "pc");
+
+  const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   const normalizarCodigoInvitacion = (value) =>
     String(value || "")
@@ -231,6 +234,7 @@ function App() {
     try {
       setAuthBusy(true);
       setLoginError("");
+      setAuthBootstrapActive(false);
       await signInWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
     } catch (e) {
       console.error(e);
@@ -254,13 +258,15 @@ function App() {
     try {
       setAuthBusy(true);
       setLoginError("");
+      setAuthBootstrapActive(true);
 
-      const userCredential = await createUserWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
+      const emailNormalizado = loginEmail.trim().toLowerCase();
+      const userCredential = await createUserWithEmailAndPassword(auth, emailNormalizado, loginPassword);
       const uid = userCredential.user.uid;
 
       const codigoInvitacion = await generarCodigoInvitacionUnico();
       const grupoRef = doc(collection(db, "grupos"));
-      const nombreUsuario = (registerName || "").trim() || loginEmail.trim().split("@")[0];
+      const nombreUsuario = (registerName || "").trim() || emailNormalizado.split("@")[0];
 
       await setDoc(grupoRef, {
         nombre: registerGroupName.trim(),
@@ -272,20 +278,24 @@ function App() {
         miembros: [uid]
       });
 
-      await setDoc(doc(db, "usuarios", uid), {
+      const perfilNuevo = {
         nombre: nombreUsuario,
         sexo: registerGender,
-        email: loginEmail.trim(),
+        email: emailNormalizado,
         grupoId: grupoRef.id,
         grupoCodigo: codigoInvitacion,
         grupoNombre: registerGroupName.trim(),
         createdAt: new Date()
-      });
+      };
 
+      await setDoc(doc(db, "usuarios", uid), perfilNuevo);
+
+      setUserProfile({ id: uid, ...perfilNuevo });
+      setProfileLoading(false);
       limpiarFormularioAuth();
-      setAuthMode("login");
     } catch (e) {
       console.error(e);
+      setAuthBootstrapActive(false);
       if (e.code === "auth/email-already-in-use") setLoginError("Ese email ya está registrado");
       else if (e.code === "auth/weak-password") setLoginError("La contraseña debe tener al menos 6 caracteres");
       else setLoginError("No se pudo crear la cuenta");
@@ -307,10 +317,12 @@ function App() {
     try {
       setAuthBusy(true);
       setLoginError("");
+      setAuthBootstrapActive(true);
 
-      userCredential = await createUserWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
+      const emailNormalizado = loginEmail.trim().toLowerCase();
+      userCredential = await createUserWithEmailAndPassword(auth, emailNormalizado, loginPassword);
       const uid = userCredential.user.uid;
-      const nombreUsuario = (registerName || "").trim() || loginEmail.trim().split("@")[0];
+      const nombreUsuario = (registerName || "").trim() || emailNormalizado.split("@")[0];
 
       const q = query(collection(db, "grupos"), where("codigoInvitacion", "==", codigo), limit(1));
       const snap = await getDocs(q);
@@ -321,6 +333,7 @@ function App() {
 
       const grupoDoc = snap.docs[0];
       const grupoRef = doc(db, "grupos", grupoDoc.id);
+      let perfilNuevo = null;
 
       await runTransaction(db, async (transaction) => {
         const grupoSnap = await transaction.get(grupoRef);
@@ -342,19 +355,25 @@ function App() {
           updatedAt: new Date()
         });
 
-        transaction.set(doc(db, "usuarios", uid), {
+        perfilNuevo = {
           nombre: nombreUsuario,
           sexo: registerGender,
-          email: loginEmail.trim(),
+          email: emailNormalizado,
           grupoId: grupoRef.id,
           grupoCodigo: data.codigoInvitacion || codigo,
           grupoNombre: data.nombre || "Grupo",
           createdAt: new Date()
-        });
+        };
+
+        transaction.set(doc(db, "usuarios", uid), perfilNuevo);
       });
 
+      if (perfilNuevo) {
+        setUserProfile({ id: uid, ...perfilNuevo });
+        setProfileLoading(false);
+      }
+
       limpiarFormularioAuth();
-      setAuthMode("login");
     } catch (e) {
       console.error(e);
 
@@ -365,6 +384,8 @@ function App() {
           console.error("No se pudo limpiar el usuario creado tras error:", cleanupError);
         }
       }
+
+      setAuthBootstrapActive(false);
 
       if (e.code === "auth/email-already-in-use") setLoginError("Ese email ya está registrado");
       else if (e.code === "auth/weak-password") setLoginError("La contraseña debe tener al menos 6 caracteres");
@@ -379,6 +400,7 @@ function App() {
   const cerrarSesion = async () => {
     try {
       setMenuAbierto(false);
+      setAuthBootstrapActive(false);
       await signOut(auth);
     } catch (e) {
       console.error(e);
@@ -530,6 +552,10 @@ function App() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
       setUsuarioAuth(user || null);
+      if (!user) {
+        setUserProfile(null);
+        setAuthBootstrapActive(false);
+      }
       setAuthLoading(false);
     });
 
@@ -548,10 +574,23 @@ function App() {
 
       try {
         const ref = doc(db, "usuarios", usuarioAuth.uid);
-        const snap = await getDoc(ref);
 
-        if (snap.exists()) setUserProfile({ id: snap.id, ...snap.data() });
-        else setUserProfile(null);
+        for (let intento = 0; intento < (authBootstrapActive ? 8 : 1); intento++) {
+          const snap = await getDoc(ref);
+
+          if (snap.exists()) {
+            setUserProfile({ id: snap.id, ...snap.data() });
+            setAuthBootstrapActive(false);
+            setProfileLoading(false);
+            return;
+          }
+
+          if (authBootstrapActive && intento < 7) {
+            await esperar(350);
+          }
+        }
+
+        setUserProfile(null);
       } catch (e) {
         console.error("Error cargando perfil de usuario:", e);
         setUserProfile(null);
@@ -561,7 +600,7 @@ function App() {
     };
 
     cargarPerfilUsuario();
-  }, [usuarioAuth]);
+  }, [usuarioAuth, authBootstrapActive]);
 
   useEffect(() => {
     const cargarGrupo = async () => {
@@ -1397,107 +1436,167 @@ function App() {
   }
 
   if (!usuarioAuth) {
-    return (
-      <div style={{ ...styles.container, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ ...styles.card, maxWidth: "460px", width: "100%" }}>
-          <h1 style={styles.title}>
-            {authMode === "login" ? "🔐 Iniciar sesión" : authMode === "register-create" ? "✨ Crear cuenta y grupo" : "🤝 Unirme a un grupo"}
-          </h1>
+    const authTitle =
+      authMode === "login"
+        ? "🔐 Iniciar sesión"
+        : authMode === "register-create"
+          ? "✨ Crear cuenta y grupo"
+          : "🤝 Unirme a un grupo";
 
-          <div style={{ display: "flex", justifyContent: "center", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
-            <button onClick={() => { setAuthMode("login"); setLoginError(""); }} style={authMode === "login" ? styles.tabActive : styles.tab}>
-              Entrar
-            </button>
-            <button onClick={() => { setAuthMode("register-create"); setLoginError(""); }} style={authMode === "register-create" ? styles.tabActive : styles.tab}>
-              Crear grupo
-            </button>
-            <button onClick={() => { setAuthMode("register-join"); setLoginError(""); }} style={authMode === "register-join" ? styles.tabActive : styles.tab}>
-              Unirme
-            </button>
+    const authSubtitle =
+      authMode === "login"
+        ? "Accede a tu grupo y sigue gestionando gastos, lista de compra y calendario."
+        : authMode === "register-create"
+          ? "Crea tu espacio compartido y entra directamente sin pasos extra."
+          : "Únete con tu código, crea tu cuenta y entra directamente en la app.";
+
+    const authButtonText =
+      authMode === "login"
+        ? authBusy ? "Entrando..." : "Entrar"
+        : authMode === "register-create"
+          ? authBusy ? "Creando..." : "Crear cuenta y grupo"
+          : authBusy ? "Uniendo..." : "Crear cuenta y unirme";
+
+    const authButtonStyle = authMode === "login" ? styles.authPrimaryButtonBlue : styles.authPrimaryButtonGreen;
+
+    return (
+      <div style={styles.authScreen}>
+        <div style={styles.authGlowOne} />
+        <div style={styles.authGlowTwo} />
+
+        <div style={styles.authWrapper}>
+          <div style={styles.authBrandBlock}>
+            <div style={styles.authBrandBadge}>GESTIÓN MDEKOT</div>
+            <h1 style={styles.authHeroTitle}>Comparte gastos y organización en una sola app</h1>
+            <p style={styles.authHeroText}>
+              Controla el mes, la compra y el calendario del grupo con una interfaz clara, rápida y hecha para usarla cada día.
+            </p>
+
+            {!isMobile && (
+              <div style={styles.authFeatureGrid}>
+                <div style={styles.authFeatureCard}>
+                  <div style={styles.authFeatureIcon}>💸</div>
+                  <div style={styles.authFeatureTitle}>Gastos</div>
+                  <div style={styles.authFeatureText}>Balance mensual, comercios y liquidación.</div>
+                </div>
+                <div style={styles.authFeatureCard}>
+                  <div style={styles.authFeatureIcon}>🛒</div>
+                  <div style={styles.authFeatureTitle}>Compra</div>
+                  <div style={styles.authFeatureText}>Lista separada por supermercados y seguimiento rápido.</div>
+                </div>
+                <div style={styles.authFeatureCard}>
+                  <div style={styles.authFeatureIcon}>📅</div>
+                  <div style={styles.authFeatureTitle}>Calendario</div>
+                  <div style={styles.authFeatureText}>Eventos del grupo siempre visibles y ordenados.</div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {authMode !== "login" && (
-            <>
+          <div style={styles.authCard}>
+            <div style={styles.authCardTop}>
+              <h2 style={styles.authTitle}>{authTitle}</h2>
+              <p style={styles.authSubtitle}>{authSubtitle}</p>
+            </div>
+
+            <div style={styles.authTabsWrap}>
+              <button onClick={() => { setAuthMode("login"); setLoginError(""); }} style={authMode === "login" ? styles.authTabActive : styles.authTab}>
+                Entrar
+              </button>
+              <button onClick={() => { setAuthMode("register-create"); setLoginError(""); }} style={authMode === "register-create" ? styles.authTabActive : styles.authTab}>
+                Crear grupo
+              </button>
+              <button onClick={() => { setAuthMode("register-join"); setLoginError(""); }} style={authMode === "register-join" ? styles.authTabActive : styles.authTab}>
+                Unirme
+              </button>
+            </div>
+
+            <div style={styles.authForm}>
+              {authMode !== "login" && (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Nombre para mostrar"
+                    value={registerName}
+                    onChange={(e) => setRegisterName(e.target.value)}
+                    style={styles.authInput}
+                  />
+
+                  <select value={registerGender} onChange={(e) => setRegisterGender(e.target.value)} style={styles.authInput}>
+                    <option value="hombre">Hombre</option>
+                    <option value="mujer">Mujer</option>
+                  </select>
+                </>
+              )}
+
+              {authMode === "register-create" && (
+                <input
+                  type="text"
+                  placeholder="Nombre del grupo"
+                  value={registerGroupName}
+                  onChange={(e) => setRegisterGroupName(e.target.value)}
+                  style={styles.authInput}
+                />
+              )}
+
               <input
-                type="text"
-                placeholder="Nombre para mostrar"
-                value={registerName}
-                onChange={(e) => setRegisterName(e.target.value)}
-                style={styles.input}
+                type="email"
+                placeholder="Email"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                style={styles.authInput}
               />
 
-              <select value={registerGender} onChange={(e) => setRegisterGender(e.target.value)} style={styles.input}>
-                <option value="hombre">Hombre</option>
-                <option value="mujer">Mujer</option>
-              </select>
-            </>
-          )}
+              <input
+                type="password"
+                placeholder="Contraseña"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                style={styles.authInput}
+              />
 
-          {authMode === "register-create" && (
-            <input
-              type="text"
-              placeholder="Nombre del grupo"
-              value={registerGroupName}
-              onChange={(e) => setRegisterGroupName(e.target.value)}
-              style={styles.input}
-            />
-          )}
+              {authMode === "register-join" && (
+                <input
+                  type="text"
+                  placeholder="Código de invitación"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(normalizarCodigoInvitacion(e.target.value))}
+                  style={styles.authInput}
+                />
+              )}
 
-          <input
-            type="email"
-            placeholder="Email"
-            value={loginEmail}
-            onChange={(e) => setLoginEmail(e.target.value)}
-            style={styles.input}
-          />
+              {loginError ? <div style={styles.authErrorBox}>{loginError}</div> : null}
 
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={loginPassword}
-            onChange={(e) => setLoginPassword(e.target.value)}
-            style={styles.input}
-          />
+              {authMode === "login" && (
+                <button onClick={iniciarSesion} style={{ ...authButtonStyle, opacity: authBusy ? 0.85 : 1 }} disabled={authBusy}>
+                  {authButtonText}
+                </button>
+              )}
 
-          {authMode === "register-join" && (
-            <input
-              type="text"
-              placeholder="Código de invitación"
-              value={inviteCode}
-              onChange={(e) => setInviteCode(normalizarCodigoInvitacion(e.target.value))}
-              style={styles.input}
-            />
-          )}
+              {authMode === "register-create" && (
+                <button onClick={crearCuentaYGrupo} style={{ ...authButtonStyle, opacity: authBusy ? 0.85 : 1 }} disabled={authBusy}>
+                  {authButtonText}
+                </button>
+              )}
 
-          {loginError ? <p style={{ color: "#f87171", marginBottom: "12px" }}>{loginError}</p> : null}
-
-          {authMode === "login" && (
-            <button onClick={iniciarSesion} style={styles.button} disabled={authBusy}>
-              {authBusy ? "Entrando..." : "Entrar"}
-            </button>
-          )}
-
-          {authMode === "register-create" && (
-            <button onClick={crearCuentaYGrupo} style={styles.buttonPaid} disabled={authBusy}>
-              {authBusy ? "Creando..." : "Crear cuenta y grupo"}
-            </button>
-          )}
-
-          {authMode === "register-join" && (
-            <button onClick={crearCuentaYUnirseAGrupo} style={styles.buttonPaid} disabled={authBusy}>
-              {authBusy ? "Uniendo..." : "Crear cuenta y unirme"}
-            </button>
-          )}
+              {authMode === "register-join" && (
+                <button onClick={crearCuentaYUnirseAGrupo} style={{ ...authButtonStyle, opacity: authBusy ? 0.85 : 1 }} disabled={authBusy}>
+                  {authButtonText}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (profileLoading) {
+  if (profileLoading || authBootstrapActive) {
     return (
       <div style={{ ...styles.container, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={styles.card}>
-          <h2>Cargando perfil...</h2>
+        <div style={{ ...styles.card, maxWidth: "420px", width: "100%" }}>
+          <h2 style={{ marginBottom: "10px" }}>Cargando perfil...</h2>
+          <p style={{ opacity: 0.85, margin: 0 }}>Estamos preparando tu acceso.</p>
         </div>
       </div>
     );
@@ -2135,6 +2234,223 @@ const styles = {
   title: { fontSize: "32px", marginBottom: "20px", textAlign: "center" },
   selectorRow: { display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" },
   select: { padding: "8px", borderRadius: "6px" },
+
+  authScreen: {
+    minHeight: "100vh",
+    width: "100%",
+    position: "relative",
+    overflow: "hidden",
+    background: "linear-gradient(135deg, #0f172a 0%, #1e293b 45%, #334155 100%)",
+    color: "white",
+    padding: "24px",
+    boxSizing: "border-box",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  authGlowOne: {
+    position: "absolute",
+    width: "420px",
+    height: "420px",
+    borderRadius: "999px",
+    background: "rgba(59,130,246,0.20)",
+    filter: "blur(70px)",
+    top: "-80px",
+    left: "-80px",
+    pointerEvents: "none"
+  },
+  authGlowTwo: {
+    position: "absolute",
+    width: "360px",
+    height: "360px",
+    borderRadius: "999px",
+    background: "rgba(34,197,94,0.18)",
+    filter: "blur(70px)",
+    bottom: "-90px",
+    right: "-70px",
+    pointerEvents: "none"
+  },
+  authWrapper: {
+    position: "relative",
+    zIndex: 2,
+    width: "100%",
+    maxWidth: "1160px",
+    display: "grid",
+    gridTemplateColumns: "1.05fr 0.95fr",
+    gap: "28px",
+    alignItems: "stretch"
+  },
+  authBrandBlock: {
+    padding: "24px 10px 24px 0",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center"
+  },
+  authBrandBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    background: "rgba(255,255,255,0.08)",
+    border: "1px solid rgba(255,255,255,0.14)",
+    color: "#e2e8f0",
+    padding: "10px 14px",
+    borderRadius: "999px",
+    fontSize: "12px",
+    fontWeight: 800,
+    letterSpacing: "0.08em",
+    marginBottom: "18px",
+    backdropFilter: "blur(8px)"
+  },
+  authHeroTitle: {
+    fontSize: "clamp(32px, 5vw, 56px)",
+    lineHeight: 1.04,
+    fontWeight: 900,
+    margin: "0 0 16px 0",
+    maxWidth: "620px"
+  },
+  authHeroText: {
+    fontSize: "17px",
+    lineHeight: 1.7,
+    color: "#cbd5e1",
+    maxWidth: "600px",
+    margin: 0
+  },
+  authFeatureGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: "14px",
+    marginTop: "28px",
+    maxWidth: "760px"
+  },
+  authFeatureCard: {
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.10)",
+    borderRadius: "18px",
+    padding: "18px 16px",
+    backdropFilter: "blur(10px)",
+    boxShadow: "0 18px 40px rgba(15,23,42,0.18)"
+  },
+  authFeatureIcon: {
+    fontSize: "22px",
+    marginBottom: "10px"
+  },
+  authFeatureTitle: {
+    fontSize: "15px",
+    fontWeight: 800,
+    marginBottom: "6px"
+  },
+  authFeatureText: {
+    fontSize: "13px",
+    lineHeight: 1.5,
+    color: "#cbd5e1"
+  },
+  authCard: {
+    width: "100%",
+    maxWidth: "500px",
+    margin: "0 auto",
+    background: "rgba(15,23,42,0.72)",
+    border: "1px solid rgba(255,255,255,0.10)",
+    borderRadius: "24px",
+    padding: "26px",
+    boxSizing: "border-box",
+    backdropFilter: "blur(18px)",
+    boxShadow: "0 28px 70px rgba(2,6,23,0.40)"
+  },
+  authCardTop: {
+    marginBottom: "18px",
+    textAlign: "center"
+  },
+  authTitle: {
+    margin: "0 0 10px 0",
+    fontSize: "30px",
+    fontWeight: 900
+  },
+  authSubtitle: {
+    margin: 0,
+    color: "#cbd5e1",
+    fontSize: "14px",
+    lineHeight: 1.6
+  },
+  authTabsWrap: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: "8px",
+    background: "rgba(255,255,255,0.05)",
+    borderRadius: "16px",
+    padding: "7px",
+    marginBottom: "18px"
+  },
+  authTab: {
+    background: "transparent",
+    color: "#cbd5e1",
+    padding: "11px 8px",
+    border: "none",
+    borderRadius: "12px",
+    cursor: "pointer",
+    fontWeight: 800,
+    fontSize: "13px"
+  },
+  authTabActive: {
+    background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+    color: "white",
+    padding: "11px 8px",
+    border: "none",
+    borderRadius: "12px",
+    cursor: "pointer",
+    fontWeight: 800,
+    fontSize: "13px",
+    boxShadow: "0 10px 22px rgba(37,99,235,0.35)"
+  },
+  authForm: {
+    width: "100%"
+  },
+  authInput: {
+    display: "block",
+    width: "100%",
+    marginBottom: "12px",
+    padding: "15px 16px",
+    borderRadius: "14px",
+    border: "1px solid rgba(255,255,255,0.10)",
+    background: "rgba(255,255,255,0.06)",
+    color: "white",
+    outline: "none",
+    boxSizing: "border-box",
+    fontSize: "15px"
+  },
+  authErrorBox: {
+    background: "rgba(239,68,68,0.16)",
+    border: "1px solid rgba(248,113,113,0.35)",
+    color: "#fecaca",
+    padding: "12px 14px",
+    borderRadius: "14px",
+    marginBottom: "14px",
+    fontSize: "14px",
+    lineHeight: 1.5
+  },
+  authPrimaryButtonBlue: {
+    width: "100%",
+    background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+    color: "white",
+    padding: "15px 16px",
+    border: "none",
+    borderRadius: "14px",
+    cursor: "pointer",
+    fontWeight: 900,
+    fontSize: "15px",
+    boxShadow: "0 16px 34px rgba(37,99,235,0.34)"
+  },
+  authPrimaryButtonGreen: {
+    width: "100%",
+    background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
+    color: "#062b13",
+    padding: "15px 16px",
+    border: "none",
+    borderRadius: "14px",
+    cursor: "pointer",
+    fontWeight: 900,
+    fontSize: "15px",
+    boxShadow: "0 16px 34px rgba(34,197,94,0.28)"
+  },
 
   balanceCard: { background: "#1e293b", padding: "20px", borderRadius: "10px", textAlign: "center", maxWidth: "600px", margin: "0 auto 30px auto" },
   balanceCardPaid: { background: "#22c55e" },
