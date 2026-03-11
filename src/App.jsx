@@ -1460,19 +1460,27 @@ function App() {
     const authButtonStyle = authMode === "login" ? styles.authPrimaryButtonBlue : styles.authPrimaryButtonGreen;
 
     return (
-      <div style={styles.authScreen}>
+      <div style={{ ...styles.authScreen, padding: isMobile ? "16px" : "24px" }}>
         <div style={styles.authGlowOne} />
         <div style={styles.authGlowTwo} />
 
-        <div style={styles.authWrapper}>
-          <div style={styles.authBrandBlock}>
-            <div style={styles.authBrandBadge}>GESTIÓN MDEKOT</div>
-            <h1 style={styles.authHeroTitle}>Comparte gastos y organización en una sola app</h1>
-            <p style={styles.authHeroText}>
-              Controla el mes, la compra y el calendario del grupo con una interfaz clara, rápida y hecha para usarla cada día.
-            </p>
+        <div
+          style={{
+            ...styles.authWrapper,
+            maxWidth: isMobile ? "520px" : "1160px",
+            gridTemplateColumns: isMobile ? "1fr" : "1.05fr 0.95fr",
+            gap: isMobile ? "0px" : "28px",
+            alignItems: "center"
+          }}
+        >
+          {!isMobile && (
+            <div style={styles.authBrandBlock}>
+              <div style={styles.authBrandBadge}>GESTIÓN MDEKOT</div>
+              <h1 style={styles.authHeroTitle}>Comparte gastos y organización en una sola app</h1>
+              <p style={styles.authHeroText}>
+                Controla el mes, la compra y el calendario del grupo con una interfaz clara, rápida y hecha para usarla cada día.
+              </p>
 
-            {!isMobile && (
               <div style={styles.authFeatureGrid}>
                 <div style={styles.authFeatureCard}>
                   <div style={styles.authFeatureIcon}>💸</div>
@@ -1490,23 +1498,59 @@ function App() {
                   <div style={styles.authFeatureText}>Eventos del grupo siempre visibles y ordenados.</div>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          <div style={styles.authCard}>
+          <div
+            style={{
+              ...styles.authCard,
+              maxWidth: isMobile ? "100%" : "500px",
+              borderRadius: isMobile ? "20px" : "24px",
+              padding: isMobile ? "20px 16px" : "26px"
+            }}
+          >
             <div style={styles.authCardTop}>
-              <h2 style={styles.authTitle}>{authTitle}</h2>
-              <p style={styles.authSubtitle}>{authSubtitle}</p>
+              <h2 style={{ ...styles.authTitle, fontSize: isMobile ? "24px" : "30px" }}>{authTitle}</h2>
+              <p style={{ ...styles.authSubtitle, fontSize: isMobile ? "13px" : "14px" }}>{authSubtitle}</p>
             </div>
 
-            <div style={styles.authTabsWrap}>
-              <button onClick={() => { setAuthMode("login"); setLoginError(""); }} style={authMode === "login" ? styles.authTabActive : styles.authTab}>
+            <div
+              style={{
+                ...styles.authTabsWrap,
+                gap: isMobile ? "6px" : "8px",
+                padding: isMobile ? "6px" : "7px"
+              }}
+            >
+              <button
+                onClick={() => { setAuthMode("login"); setLoginError(""); }}
+                style={
+                  authMode === "login"
+                    ? { ...styles.authTabActive, padding: isMobile ? "10px 4px" : "11px 8px", fontSize: isMobile ? "12px" : "13px" }
+                    : { ...styles.authTab, padding: isMobile ? "10px 4px" : "11px 8px", fontSize: isMobile ? "12px" : "13px" }
+                }
+              >
                 Entrar
               </button>
-              <button onClick={() => { setAuthMode("register-create"); setLoginError(""); }} style={authMode === "register-create" ? styles.authTabActive : styles.authTab}>
+
+              <button
+                onClick={() => { setAuthMode("register-create"); setLoginError(""); }}
+                style={
+                  authMode === "register-create"
+                    ? { ...styles.authTabActive, padding: isMobile ? "10px 4px" : "11px 8px", fontSize: isMobile ? "12px" : "13px" }
+                    : { ...styles.authTab, padding: isMobile ? "10px 4px" : "11px 8px", fontSize: isMobile ? "12px" : "13px" }
+                }
+              >
                 Crear grupo
               </button>
-              <button onClick={() => { setAuthMode("register-join"); setLoginError(""); }} style={authMode === "register-join" ? styles.authTabActive : styles.authTab}>
+
+              <button
+                onClick={() => { setAuthMode("register-join"); setLoginError(""); }}
+                style={
+                  authMode === "register-join"
+                    ? { ...styles.authTabActive, padding: isMobile ? "10px 4px" : "11px 8px", fontSize: isMobile ? "12px" : "13px" }
+                    : { ...styles.authTab, padding: isMobile ? "10px 4px" : "11px 8px", fontSize: isMobile ? "12px" : "13px" }
+                }
+              >
                 Unirme
               </button>
             </div>
@@ -1519,10 +1563,14 @@ function App() {
                     placeholder="Nombre para mostrar"
                     value={registerName}
                     onChange={(e) => setRegisterName(e.target.value)}
-                    style={styles.authInput}
+                    style={{ ...styles.authInput, padding: isMobile ? "14px 14px" : "15px 16px", fontSize: isMobile ? "14px" : "15px" }}
                   />
 
-                  <select value={registerGender} onChange={(e) => setRegisterGender(e.target.value)} style={styles.authInput}>
+                  <select
+                    value={registerGender}
+                    onChange={(e) => setRegisterGender(e.target.value)}
+                    style={{ ...styles.authInput, padding: isMobile ? "14px 14px" : "15px 16px", fontSize: isMobile ? "14px" : "15px" }}
+                  >
                     <option value="hombre">Hombre</option>
                     <option value="mujer">Mujer</option>
                   </select>
@@ -1535,7 +1583,7 @@ function App() {
                   placeholder="Nombre del grupo"
                   value={registerGroupName}
                   onChange={(e) => setRegisterGroupName(e.target.value)}
-                  style={styles.authInput}
+                  style={{ ...styles.authInput, padding: isMobile ? "14px 14px" : "15px 16px", fontSize: isMobile ? "14px" : "15px" }}
                 />
               )}
 
@@ -1544,7 +1592,7 @@ function App() {
                 placeholder="Email"
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
-                style={styles.authInput}
+                style={{ ...styles.authInput, padding: isMobile ? "14px 14px" : "15px 16px", fontSize: isMobile ? "14px" : "15px" }}
               />
 
               <input
@@ -1552,7 +1600,7 @@ function App() {
                 placeholder="Contraseña"
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
-                style={styles.authInput}
+                style={{ ...styles.authInput, padding: isMobile ? "14px 14px" : "15px 16px", fontSize: isMobile ? "14px" : "15px" }}
               />
 
               {authMode === "register-join" && (
@@ -1561,7 +1609,7 @@ function App() {
                   placeholder="Código de invitación"
                   value={inviteCode}
                   onChange={(e) => setInviteCode(normalizarCodigoInvitacion(e.target.value))}
-                  style={styles.authInput}
+                  style={{ ...styles.authInput, padding: isMobile ? "14px 14px" : "15px 16px", fontSize: isMobile ? "14px" : "15px" }}
                 />
               )}
 
@@ -2278,7 +2326,7 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "1.05fr 0.95fr",
     gap: "28px",
-    alignItems: "stretch"
+    alignItems: "center"
   },
   authBrandBlock: {
     padding: "24px 10px 24px 0",
