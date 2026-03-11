@@ -14,8 +14,7 @@ import {
   orderBy,
   getDocs,
   limit,
-  runTransaction,
-  documentId
+  runTransaction
 } from "firebase/firestore";
 import { auth, db, getFirebaseMessaging, VAPID_KEY } from "./firebase";
 import { getToken, onMessage } from "firebase/messaging";
@@ -135,8 +134,6 @@ function App() {
   const grupoId = userProfile?.grupoId || null;
 
   const getPlatform = () => (typeof window !== "undefined" && window.innerWidth < 768 ? "mobile" : "pc");
-
-  const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   const normalizarCodigoInvitacion = (value) =>
     String(value || "")
@@ -290,8 +287,6 @@ function App() {
 
       await setDoc(doc(db, "usuarios", uid), perfilNuevo);
 
-      setUserProfile({ id: uid, ...perfilNuevo });
-      setProfileLoading(false);
       limpiarFormularioAuth();
     } catch (e) {
       console.error(e);
@@ -367,11 +362,6 @@ function App() {
 
         transaction.set(doc(db, "usuarios", uid), perfilNuevo);
       });
-
-      if (perfilNuevo) {
-        setUserProfile({ id: uid, ...perfilNuevo });
-        setProfileLoading(false);
-      }
 
       limpiarFormularioAuth();
     } catch (e) {
@@ -554,6 +544,8 @@ function App() {
       setUsuarioAuth(user || null);
       if (!user) {
         setUserProfile(null);
+        setGroupProfile(null);
+        setGroupMembers([]);
         setAuthBootstrapActive(false);
       }
       setAuthLoading(false);
@@ -563,89 +555,69 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const cargarPerfilUsuario = async () => {
-      if (!usuarioAuth?.uid) {
-        setUserProfile(null);
-        setProfileLoading(false);
-        return;
-      }
+    if (!usuarioAuth?.uid) {
+      setUserProfile(null);
+      setProfileLoading(false);
+      return;
+    }
 
-      setProfileLoading(true);
+    setProfileLoading(true);
 
-      try {
-        const ref = doc(db, "usuarios", usuarioAuth.uid);
-
-        for (let intento = 0; intento < (authBootstrapActive ? 8 : 1); intento++) {
-          const snap = await getDoc(ref);
-
-          if (snap.exists()) {
-            setUserProfile({ id: snap.id, ...snap.data() });
-            setAuthBootstrapActive(false);
-            setProfileLoading(false);
-            return;
-          }
-
-          if (authBootstrapActive && intento < 7) {
-            await esperar(350);
-          }
+    const ref = doc(db, "usuarios", usuarioAuth.uid);
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
+        if (snap.exists()) {
+          setUserProfile({ id: snap.id, ...snap.data() });
+        } else {
+          setUserProfile(null);
         }
-
-        setUserProfile(null);
-      } catch (e) {
+        setAuthBootstrapActive(false);
+        setProfileLoading(false);
+      },
+      (e) => {
         console.error("Error cargando perfil de usuario:", e);
         setUserProfile(null);
-      } finally {
         setProfileLoading(false);
       }
-    };
+    );
 
-    cargarPerfilUsuario();
-  }, [usuarioAuth, authBootstrapActive]);
+    return () => unsub();
+  }, [usuarioAuth?.uid]);
 
   useEffect(() => {
-    const cargarGrupo = async () => {
-      if (!grupoId) {
+    if (!grupoId) {
+      setGroupProfile(null);
+      return;
+    }
+
+    const ref = doc(db, "grupos", grupoId);
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
+        if (snap.exists()) setGroupProfile({ id: snap.id, ...snap.data() });
+        else setGroupProfile(null);
+      },
+      (e) => {
+        console.error("Error cargando grupo:", e);
         setGroupProfile(null);
-        setGroupMembers([]);
-        return;
       }
+    );
 
-      try {
-        const grupoSnap = await getDoc(doc(db, "grupos", grupoId));
+    return () => unsub();
+  }, [grupoId]);
 
-        if (grupoSnap.exists()) {
-          const grupoData = grupoSnap.data() || {};
-          setGroupProfile({ id: grupoSnap.id, ...grupoData });
+  useEffect(() => {
+    if (!grupoId) {
+      setGroupMembers([]);
+      return;
+    }
 
-          const miembrosIds = Array.isArray(grupoData.miembros) ? grupoData.miembros : [];
-
-          if (miembrosIds.length >= 2) {
-            const chunks = [];
-            for (let i = 0; i < miembrosIds.length; i += 10) chunks.push(miembrosIds.slice(i, i + 10));
-
-            let users = [];
-            for (const chunk of chunks) {
-              const qUsers = query(collection(db, "usuarios"), where(documentId(), "in", chunk));
-              const usersSnap = await getDocs(qUsers);
-              users = [...users, ...usersSnap.docs.map((d) => ({ id: d.id, ...d.data() }))];
-            }
-
-            users.sort((a, b) => {
-              const ia = miembrosIds.indexOf(a.id);
-              const ib = miembrosIds.indexOf(b.id);
-              return ia - ib;
-            });
-
-            setGroupMembers(users);
-            return;
-          }
-        } else {
-          setGroupProfile(null);
-        }
-
-        const qUsuariosGrupo = query(collection(db, "usuarios"), where("grupoId", "==", grupoId));
-        const usuariosGrupoSnap = await getDocs(qUsuariosGrupo);
-        const usuariosGrupo = usuariosGrupoSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const qUsuariosGrupo = query(collection(db, "usuarios"), where("grupoId", "==", grupoId));
+    const unsub = onSnapshot(
+      qUsuariosGrupo,
+      (snapshot) => {
+        const usuariosGrupo = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
         usuariosGrupo.sort((a, b) => {
           const fa = a.createdAt?.seconds || 0;
@@ -654,14 +626,14 @@ function App() {
         });
 
         setGroupMembers(usuariosGrupo);
-      } catch (e) {
-        console.error("Error cargando grupo:", e);
-        setGroupProfile(null);
+      },
+      (e) => {
+        console.error("Error cargando miembros del grupo:", e);
         setGroupMembers([]);
       }
-    };
+    );
 
-    cargarGrupo();
+    return () => unsub();
   }, [grupoId]);
 
   useEffect(() => {
@@ -872,15 +844,15 @@ function App() {
   }, [grupoId, mesActual, anioActual, participanteA?.email]);
 
   useEffect(() => {
-    const cargarEstadoLiquidacion = async () => {
-      if (!grupoId) {
-        setLiquidacionGuardada(null);
-        return;
-      }
+    if (!grupoId) {
+      setLiquidacionGuardada(null);
+      return;
+    }
 
-      try {
-        const ref = doc(db, "grupos", grupoId, "liquidaciones", idLiquidacion);
-        const snap = await getDoc(ref);
+    const ref = doc(db, "grupos", grupoId, "liquidaciones", idLiquidacion);
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
         if (snap.exists()) {
           const data = snap.data() || {};
           setLiquidacionGuardada({
@@ -892,12 +864,14 @@ function App() {
         } else {
           setLiquidacionGuardada(null);
         }
-      } catch (e) {
+      },
+      (e) => {
         console.error(e);
         setLiquidacionGuardada(null);
       }
-    };
-    cargarEstadoLiquidacion();
+    );
+
+    return () => unsub();
   }, [grupoId, idLiquidacion]);
 
   useEffect(() => {
@@ -925,17 +899,17 @@ function App() {
   }, [balance, liquidacionGuardada, participanteA, participanteB]);
 
   useEffect(() => {
-    const cargarNombres = async () => {
-      if (!grupoId) {
-        const defaults = {};
-        SUPERS.forEach((s) => (defaults[s.key] = s.defaultName));
-        setNombresSupers(defaults);
-        return;
-      }
+    if (!grupoId) {
+      const defaults = {};
+      SUPERS.forEach((s) => (defaults[s.key] = s.defaultName));
+      setNombresSupers(defaults);
+      return;
+    }
 
-      try {
-        const ref = doc(db, "grupos", grupoId, "config", "supers");
-        const snap = await getDoc(ref);
+    const ref = doc(db, "grupos", grupoId, "config", "supers");
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
         if (snap.exists()) {
           const data = snap.data() || {};
           const merged = {};
@@ -948,11 +922,13 @@ function App() {
           SUPERS.forEach((s) => (defaults[s.key] = s.defaultName));
           setNombresSupers(defaults);
         }
-      } catch (e) {
+      },
+      (e) => {
         console.error(e);
       }
-    };
-    cargarNombres();
+    );
+
+    return () => unsub();
   }, [grupoId]);
 
   const abrirEditarSuper = (superKey) => {
@@ -964,9 +940,6 @@ function App() {
     if (!superEditando || !grupoId) return;
     const nuevo = (editSuperNombre || "").trim();
     if (!nuevo) return;
-
-    const updated = { ...nombresSupers, [superEditando]: nuevo };
-    setNombresSupers(updated);
 
     try {
       await setDoc(doc(db, "grupos", grupoId, "config", "supers"), { [superEditando]: nuevo }, { merge: true });
@@ -1159,15 +1132,6 @@ function App() {
       setLiquidarConfirmOpen(false);
       return;
     }
-
-    setEstadoDeuda(status);
-
-    setLiquidacionGuardada({
-      status,
-      debtor: info.debtorName,
-      creditor: info.creditorName,
-      amount: Number(Number(info.amount).toFixed(2))
-    });
 
     try {
       await setDoc(
