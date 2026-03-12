@@ -1902,8 +1902,8 @@ function App() {
                     <div style={styles.gastoRight}>
                       <span style={styles.gastoImporte}>{Number(g.importe).toFixed(2)} €</span>
                       <div style={styles.mobileIconButtonsWrap}>
-                        <button onClick={() => abrirModalEditar(g)} style={styles.buttonEditMini}>✏</button>
-                        <button onClick={() => setGastoAEliminar(g)} style={styles.buttonDeleteMini}>🗑</button>
+                        <button onClick={() => abrirModalEditar(g)} style={{ ...styles.buttonEditMini, ...styles.buttonMiniTiny }}>✏</button>
+                        <button onClick={() => setGastoAEliminar(g)} style={{ ...styles.buttonDeleteMini, ...styles.buttonMiniTiny }}>🗑</button>
                       </div>
                     </div>
                   </div>
@@ -2225,8 +2225,8 @@ function App() {
 
                           <div style={styles.gastoRight}>
                             <div style={styles.mobileIconButtonsWrap}>
-                              <button onClick={() => { setProductoEditando(p); setEditProductoNombre(p.nombre); }} style={{ ...styles.buttonEditMini, ...styles.buttonMiniMobile }}>✏</button>
-                              <button onClick={() => setProductoAEliminar(p)} style={{ ...styles.buttonDeleteMini, ...styles.buttonMiniMobile }}>🗑</button>
+                              <button onClick={() => { setProductoEditando(p); setEditProductoNombre(p.nombre); }} style={{ ...styles.buttonEditMini, ...styles.buttonMiniTiny }}>✏</button>
+                              <button onClick={() => setProductoAEliminar(p)} style={{ ...styles.buttonDeleteMini, ...styles.buttonMiniTiny }}>🗑</button>
                             </div>
                           </div>
                         </div>
@@ -2282,8 +2282,8 @@ function App() {
                         </div>
 
                         <div style={styles.listItemActionsDesktop}>
-                          <button onClick={() => { setProductoEditando(p); setEditProductoNombre(p.nombre); }} style={styles.buttonEditMini}>✏</button>
-                          <button onClick={() => setProductoAEliminar(p)} style={styles.buttonDeleteMini}>🗑</button>
+                          <button onClick={() => { setProductoEditando(p); setEditProductoNombre(p.nombre); }} style={{ ...styles.buttonEditMini, ...styles.buttonMiniTiny }}>✏</button>
+                          <button onClick={() => setProductoAEliminar(p)} style={{ ...styles.buttonDeleteMini, ...styles.buttonMiniTiny }}>🗑</button>
                         </div>
                       </div>
                     ))}
@@ -3013,7 +3013,7 @@ const styles = {
   },
   listItemRowDesktop: {
     display: "grid",
-    gridTemplateColumns: "minmax(0, 1fr) 112px",
+    gridTemplateColumns: "minmax(0, 1fr) 40px",
     alignItems: "center",
     gap: "8px",
     marginBottom: "10px"
@@ -3022,8 +3022,8 @@ const styles = {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    gap: "8px",
-    width: "112px"
+    gap: "4px",
+    width: "40px"
   },
 
   button: {
@@ -3107,6 +3107,30 @@ const styles = {
     padding: "2px 6px",
     borderRadius: "10px",
     fontSize: "11px"
+  },
+  buttonMiniList: {
+    minWidth: "10px",
+    height: "10px",
+    padding: "0",
+    borderRadius: "4px",
+    fontSize: "8px",
+    boxShadow: "none"
+  },
+  buttonMiniListMobile: {
+    minWidth: "10px",
+    height: "10px",
+    padding: "0",
+    borderRadius: "4px",
+    fontSize: "8px"
+  },
+  buttonMiniTiny: {
+    minWidth: "10px",
+    height: "10px",
+    padding: "0",
+    borderRadius: "4px",
+    fontSize: "8px",
+    lineHeight: 1,
+    boxShadow: "none"
   },
 
   buttonCenter: { display: "flex", justifyContent: "center" },
