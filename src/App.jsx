@@ -3124,11 +3124,11 @@ const styles = {
     fontSize: "8px"
   },
   buttonMiniTiny: {
-    minWidth: "10px",
-    height: "10px",
+    minWidth: "15px",
+    height: "15px",
     padding: "0",
-    borderRadius: "4px",
-    fontSize: "8px",
+    borderRadius: "5px",
+    fontSize: "9px",
     lineHeight: 1,
     boxShadow: "none"
   },
