@@ -1927,10 +1927,12 @@ function App() {
               <div style={styles.gastoIndividualWrap}>
                 {participanteA ? (
                   <div style={styles.gastoIndividualRow}>
-                    <span title={`Pagó ${participanteA.nombre}`} style={{ ...styles.payIcon, ...getBadgeStyleByGender(participanteA.sexo) }}>
-                      {getBadgeIconByGender(participanteA.sexo)}
-                    </span>
-                    <span title={participanteA.nombre} style={styles.gastoIndividualNombre}>{participanteA.nombre}</span>
+                    <div style={styles.gastoIndividualLeft}>
+                      <span title={`Pagó ${participanteA.nombre}`} style={{ ...styles.payIcon, ...getBadgeStyleByGender(participanteA.sexo) }}>
+                        {getBadgeIconByGender(participanteA.sexo)}
+                      </span>
+                      <span title={participanteA.nombre} style={styles.gastoIndividualNombre}>{participanteA.nombre}</span>
+                    </div>
                     <span style={styles.gastoIndividualArrow}>→</span>
                     <span style={styles.gastoIndividualImporte}>{totalParticipanteA.toFixed(2)} €</span>
                   </div>
@@ -1938,10 +1940,12 @@ function App() {
 
                 {participanteB ? (
                   <div style={styles.gastoIndividualRow}>
-                    <span title={`Pagó ${participanteB.nombre}`} style={{ ...styles.payIcon, ...getBadgeStyleByGender(participanteB.sexo) }}>
-                      {getBadgeIconByGender(participanteB.sexo)}
-                    </span>
-                    <span title={participanteB.nombre} style={styles.gastoIndividualNombre}>{participanteB.nombre}</span>
+                    <div style={styles.gastoIndividualLeft}>
+                      <span title={`Pagó ${participanteB.nombre}`} style={{ ...styles.payIcon, ...getBadgeStyleByGender(participanteB.sexo) }}>
+                        {getBadgeIconByGender(participanteB.sexo)}
+                      </span>
+                      <span title={participanteB.nombre} style={styles.gastoIndividualNombre}>{participanteB.nombre}</span>
+                    </div>
                     <span style={styles.gastoIndividualArrow}>→</span>
                     <span style={styles.gastoIndividualImporte}>{totalParticipanteB.toFixed(2)} €</span>
                   </div>
@@ -2829,7 +2833,7 @@ const styles = {
   },
   comercioRow: {
     display: "grid",
-    gridTemplateColumns: "minmax(0, 1fr) 28px minmax(90px, auto)",
+    gridTemplateColumns: "minmax(0, 1fr) 40px minmax(0, 1fr)",
     alignItems: "center",
     gap: "10px",
     width: "100%",
@@ -2853,7 +2857,8 @@ const styles = {
     textAlign: "right",
     justifySelf: "end",
     fontWeight: 700,
-    whiteSpace: "nowrap"
+    whiteSpace: "nowrap",
+    minWidth: "96px"
   },
   gastoItem: { display: "flex", justifyContent: "space-between", marginBottom: "10px", gap: "10px" },
   input: {
@@ -2926,7 +2931,7 @@ const styles = {
 
   gastoIndividualRow: {
     display: "grid",
-    gridTemplateColumns: "28px minmax(0, 1fr) 28px minmax(92px, auto)",
+    gridTemplateColumns: "minmax(0, 1fr) 40px minmax(0, 1fr)",
     alignItems: "center",
     columnGap: "10px",
     justifyContent: "stretch",
@@ -2934,6 +2939,13 @@ const styles = {
     maxWidth: "100%",
     padding: "0 6px",
     boxSizing: "border-box"
+  },
+
+  gastoIndividualLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    minWidth: 0
   },
 
   gastoIndividualNombre: {
