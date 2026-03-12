@@ -2512,7 +2512,7 @@ function App() {
                   return (
                     <div key={s.key} style={{ ...styles.card, padding: "16px 12px", margin: "0 auto" }}>
                       <div style={styles.cardHeaderRow}>
-                        <h3 style={styles.cardTitle}>· {nombreVisible} ·</h3>
+                        <h3 style={styles.cardTitle}>{nombreVisible}</h3>
                         <button onClick={() => abrirEditarSuper(s.key)} style={{ ...styles.buttonSuperEdit, ...styles.buttonSuperEditMobile }} title="Renombrar supermercado">✎</button>
                       </div>
 
@@ -2572,7 +2572,7 @@ function App() {
                 return (
                   <div key={s.key} style={styles.card}>
                     <div style={styles.cardHeaderRow}>
-                      <h3 style={styles.cardTitle}>· {nombreVisible} ·</h3>
+                      <h3 style={styles.cardTitle}>{nombreVisible}</h3>
                       <button onClick={() => abrirEditarSuper(s.key)} style={styles.buttonSuperEdit} title="Renombrar supermercado">✎</button>
                     </div>
 
@@ -3280,15 +3280,33 @@ const styles = {
     minWidth: "92px"
   },
 
-  cardHeaderRow: { position: "relative", display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: "10px", minHeight: "34px" },
-  cardTitle: { position: "absolute", left: "50%", transform: "translateX(-50%)", margin: 0, width: "100%", textAlign: "center", pointerEvents: "none" },
+  cardHeaderRow: { position: "relative", display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: "18px", minHeight: "42px" },
+  cardTitle: {
+    position: "absolute",
+    left: "50%",
+    transform: "translateX(-50%)",
+    margin: 0,
+    textAlign: "center",
+    pointerEvents: "none",
+    padding: "8px 16px",
+    borderRadius: "999px",
+    border: "1px solid rgba(186,230,253,0.42)",
+    background: "linear-gradient(135deg, rgba(14,165,233,0.24) 0%, rgba(45,212,191,0.2) 100%)",
+    color: "#e6f5ff",
+    fontSize: "12px",
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
+    fontWeight: 900,
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.16), 0 12px 24px rgba(8,145,178,0.24)"
+  },
 
-  superFormRow: { display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", marginBottom: "10px", width: "100%", boxSizing: "border-box" },
+  superFormRow: { display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", marginBottom: "18px", width: "100%", boxSizing: "border-box" },
   inputSuper: {
     display: "block",
     width: "70%",
     maxWidth: "260px",
-    padding: "13px 16px",
+    minHeight: "44px",
+    padding: "0 16px",
     borderRadius: "14px",
     border: "1px solid rgba(148,163,184,0.34)",
     background: "linear-gradient(180deg, rgba(248,250,252,0.96) 0%, rgba(241,245,249,0.95) 100%)",
@@ -3299,7 +3317,8 @@ const styles = {
   buttonAddInline: {
     background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 55%, #e2e8f0 100%)",
     color: "#031524",
-    padding: "12px 20px",
+    minHeight: "44px",
+    padding: "0 20px",
     border: "1px solid rgba(224,242,254,0.85)",
     borderRadius: "14px",
     cursor: "pointer",
@@ -3315,7 +3334,8 @@ const styles = {
   },
   buttonAddInlineMobile: {
     minWidth: "96px",
-    padding: "10px 12px",
+    minHeight: "44px",
+    padding: "0 12px",
     fontSize: "11px",
     borderRadius: "12px",
     letterSpacing: "0.02em"
