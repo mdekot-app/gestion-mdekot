@@ -39,6 +39,78 @@ const MESES = [
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
 ];
 
+const THEME_OPTIONS = [
+  { key: "azul", label: "Azul" },
+  { key: "verde", label: "Verde" },
+  { key: "naranja", label: "Naranja" },
+  { key: "rojo", label: "Rojo" },
+  { key: "dorado", label: "Amarillo/Dorado" },
+  { key: "oscuro", label: "Oscuro" }
+];
+
+const THEME_PALETTES = {
+  azul: {
+    "--bg-0": "#050d19",
+    "--bg-1": "#0a1730",
+    "--surface-1": "#102446",
+    "--surface-2": "#18345f",
+    "--accent": "#22d3ee",
+    "--accent-2": "#38bdf8",
+    "--success": "#22c55e",
+    "--danger": "#ef4444"
+  },
+  verde: {
+    "--bg-0": "#07190f",
+    "--bg-1": "#0d2b1b",
+    "--surface-1": "#123424",
+    "--surface-2": "#1f4a33",
+    "--accent": "#34d399",
+    "--accent-2": "#22c55e",
+    "--success": "#22c55e",
+    "--danger": "#ef4444"
+  },
+  naranja: {
+    "--bg-0": "#1a1208",
+    "--bg-1": "#2c1b0d",
+    "--surface-1": "#3a2412",
+    "--surface-2": "#4d3118",
+    "--accent": "#fb923c",
+    "--accent-2": "#f59e0b",
+    "--success": "#22c55e",
+    "--danger": "#ef4444"
+  },
+  rojo: {
+    "--bg-0": "#1a0a10",
+    "--bg-1": "#2f111f",
+    "--surface-1": "#3a1527",
+    "--surface-2": "#4c1c31",
+    "--accent": "#fb7185",
+    "--accent-2": "#ef4444",
+    "--success": "#22c55e",
+    "--danger": "#ef4444"
+  },
+  dorado: {
+    "--bg-0": "#1b1606",
+    "--bg-1": "#2b220a",
+    "--surface-1": "#3a2d0f",
+    "--surface-2": "#4d3a12",
+    "--accent": "#facc15",
+    "--accent-2": "#f59e0b",
+    "--success": "#22c55e",
+    "--danger": "#ef4444"
+  },
+  oscuro: {
+    "--bg-0": "#0b0f14",
+    "--bg-1": "#141a22",
+    "--surface-1": "#1c232d",
+    "--surface-2": "#273241",
+    "--accent": "#94a3b8",
+    "--accent-2": "#cbd5e1",
+    "--success": "#22c55e",
+    "--danger": "#ef4444"
+  }
+};
+
 function App() {
   const [usuarioAuth, setUsuarioAuth] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -85,6 +157,12 @@ function App() {
   const [pushReady, setPushReady] = useState(false);
   const [pushErrorDetalle, setPushErrorDetalle] = useState("");
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [themeVisual, setThemeVisual] = useState(localStorage.getItem("uiTheme") || "azul");
+  const [textSizeMode, setTextSizeMode] = useState(localStorage.getItem("uiTextSize") || "normal");
+  const [groupSettingsOpen, setGroupSettingsOpen] = useState(false);
+  const [groupNameDraft, setGroupNameDraft] = useState("");
+  const [groupSettingsBusy, setGroupSettingsBusy] = useState(false);
+  const [groupSettingsError, setGroupSettingsError] = useState("");
 
   const [productos, setProductos] = useState([]);
 
@@ -137,6 +215,8 @@ function App() {
   const [diaDetalleFecha, setDiaDetalleFecha] = useState("");
 
   const grupoId = userProfile?.grupoId || null;
+
+  const codigoInvitacionActual = groupProfile?.codigoInvitacion || userProfile?.grupoCodigo || "";
 
   const esDispositivoMovilReal = () => {
     if (typeof navigator === "undefined") return false;
@@ -197,7 +277,9 @@ function App() {
   const getBadgeIconByGender = (sexo) => (sexo === "mujer" ? "👩" : "👨");
 
   const participantesGrupo = useMemo(() => {
+    const miembrosPermitidos = Array.isArray(groupProfile?.miembros) ? new Set(groupProfile.miembros) : null;
     const miembrosValidos = groupMembers
+      .filter((m) => !miembrosPermitidos || miembrosPermitidos.has(m.id))
       .filter((m) => m?.email)
       .map((m) => ({
         uid: m.id,
@@ -220,10 +302,23 @@ function App() {
     }
 
     return [];
-  }, [groupMembers, userProfile, usuarioAuth]);
+  }, [groupMembers, groupProfile, userProfile, usuarioAuth]);
 
   const participanteA = participantesGrupo[0] || null;
   const participanteB = participantesGrupo[1] || null;
+
+  const miembrosConfigurables = useMemo(() => {
+    const ids = Array.isArray(groupProfile?.miembros) ? groupProfile.miembros : [];
+    const byId = new Map(groupMembers.map((m) => [m.id, m]));
+    return ids.map((uid) => {
+      const m = byId.get(uid);
+      return {
+        uid,
+        nombre: m?.nombre || (uid === usuarioAuth?.uid ? (userProfile?.nombre || "Tú") : "Miembro"),
+        email: m?.email || ""
+      };
+    });
+  }, [groupProfile, groupMembers, userProfile, usuarioAuth]);
 
   useEffect(() => {
     const emailsValidos = participantesGrupo.map((p) => p.email).filter(Boolean);
@@ -405,6 +500,112 @@ function App() {
       await signOut(auth);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const copiarCodigoInvitacion = async () => {
+    const codigo = String(codigoInvitacionActual || "").trim();
+    if (!codigo) {
+      alert("No hay código de invitación disponible.");
+      return;
+    }
+
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(codigo);
+      } else {
+        const tmp = document.createElement("textarea");
+        tmp.value = codigo;
+        document.body.appendChild(tmp);
+        tmp.select();
+        document.execCommand("copy");
+        document.body.removeChild(tmp);
+      }
+      alert("Código copiado.");
+    } catch (e) {
+      console.error(e);
+      alert("No se pudo copiar el código.");
+    }
+  };
+
+  const abrirGestionGrupo = () => {
+    setGroupSettingsError("");
+    setGroupNameDraft(groupProfile?.nombre || "");
+    setGroupSettingsOpen(true);
+  };
+
+  const guardarNombreGrupo = async () => {
+    if (!grupoId) return;
+    const nuevoNombre = (groupNameDraft || "").trim();
+    if (!nuevoNombre) {
+      setGroupSettingsError("El nombre no puede estar vacío.");
+      return;
+    }
+
+    try {
+      setGroupSettingsBusy(true);
+      setGroupSettingsError("");
+      await updateDoc(doc(db, "grupos", grupoId), { nombre: nuevoNombre, updatedAt: new Date() });
+      setGroupSettingsOpen(false);
+    } catch (e) {
+      console.error(e);
+      setGroupSettingsError("No se pudo cambiar el nombre del grupo.");
+    } finally {
+      setGroupSettingsBusy(false);
+    }
+  };
+
+  const regenerarCodigoGrupo = async () => {
+    if (!grupoId) return;
+
+    try {
+      setGroupSettingsBusy(true);
+      setGroupSettingsError("");
+      const nuevoCodigo = await generarCodigoInvitacionUnico();
+      await updateDoc(doc(db, "grupos", grupoId), {
+        codigoInvitacion: nuevoCodigo,
+        updatedAt: new Date()
+      });
+      alert(`Nuevo código generado: ${nuevoCodigo}`);
+    } catch (e) {
+      console.error(e);
+      setGroupSettingsError("No se pudo regenerar el código.");
+    } finally {
+      setGroupSettingsBusy(false);
+    }
+  };
+
+  const expulsarMiembro = async (uidExpulsar) => {
+    if (!grupoId || !uidExpulsar) return;
+    if (uidExpulsar === usuarioAuth?.uid) {
+      alert("No puedes expulsarte a ti mismo.");
+      return;
+    }
+
+    const confirmado = window.confirm("¿Seguro que quieres expulsar a este miembro del grupo?");
+    if (!confirmado) return;
+
+    try {
+      setGroupSettingsBusy(true);
+      setGroupSettingsError("");
+      const groupRef = doc(db, "grupos", grupoId);
+      await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(groupRef);
+        if (!snap.exists()) throw new Error("Grupo no encontrado");
+        const data = snap.data() || {};
+        const miembros = Array.isArray(data.miembros) ? data.miembros : [];
+        const nuevosMiembros = miembros.filter((u) => u !== uidExpulsar);
+        transaction.update(groupRef, {
+          miembros: nuevosMiembros,
+          miembrosCount: nuevosMiembros.length,
+          updatedAt: new Date()
+        });
+      });
+    } catch (e) {
+      console.error(e);
+      setGroupSettingsError("No se pudo expulsar al miembro.");
+    } finally {
+      setGroupSettingsBusy(false);
     }
   };
 
@@ -783,6 +984,20 @@ function App() {
   useEffect(() => {
     setMenuAbierto(false);
   }, [vista]);
+
+  useEffect(() => {
+    const palette = THEME_PALETTES[themeVisual] || THEME_PALETTES.azul;
+    Object.entries(palette).forEach(([varName, value]) => {
+      document.documentElement.style.setProperty(varName, value);
+    });
+    localStorage.setItem("uiTheme", themeVisual);
+  }, [themeVisual]);
+
+  useEffect(() => {
+    const base = textSizeMode === "compacto" ? "14px" : "15px";
+    document.documentElement.style.setProperty("--app-font-size", base);
+    localStorage.setItem("uiTextSize", textSizeMode);
+  }, [textSizeMode]);
 
   useEffect(() => {
     const syncPushTokenConUsuarioYGrupo = async () => {
@@ -1795,22 +2010,38 @@ function App() {
         </div>
 
         <div style={styles.sideMenuSection}>
-          <div style={styles.sideMenuItem}>
-            <span style={styles.sideMenuLabel}>Usuario</span>
-            <span style={styles.sideMenuValue}>{userProfile?.nombre || usuarioAuth?.email || "Usuario"}</span>
-          </div>
-
-          <div style={styles.sideMenuItem}>
-            <span style={styles.sideMenuLabel}>Grupo</span>
-            <span style={styles.sideMenuValue}>{groupProfile?.nombre || userProfile?.grupoNombre || "Sin grupo"}</span>
-          </div>
-
-          {userProfile?.grupoCodigo ? (
+          {codigoInvitacionActual ? (
             <div style={styles.sideMenuItem}>
               <span style={styles.sideMenuLabel}>Código invitación</span>
-              <span style={styles.sideMenuValue}>{userProfile.grupoCodigo}</span>
+              <div style={styles.inviteCodeRow}>
+                <span style={styles.sideMenuValue}>{codigoInvitacionActual}</span>
+                <button onClick={copiarCodigoInvitacion} style={styles.copyCodeButton} title="Copiar código">
+                  📋
+                </button>
+              </div>
             </div>
           ) : null}
+
+          <button onClick={abrirGestionGrupo} style={styles.sideMenuActionButton}>
+            Editar grupo
+          </button>
+
+          <div style={styles.sideMenuItem}>
+            <span style={styles.sideMenuLabel}>Tema visual</span>
+            <select value={themeVisual} onChange={(e) => setThemeVisual(e.target.value)} style={styles.sideMenuSelect}>
+              {THEME_OPTIONS.map((opt) => (
+                <option key={opt.key} value={opt.key}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div style={styles.sideMenuItem}>
+            <span style={styles.sideMenuLabel}>Tamaño de texto</span>
+            <select value={textSizeMode} onChange={(e) => setTextSizeMode(e.target.value)} style={styles.sideMenuSelect}>
+              <option value="normal">Normal</option>
+              <option value="compacto">Compacto</option>
+            </select>
+          </div>
         </div>
 
         <div style={styles.sideMenuDivider} />
@@ -1831,6 +2062,65 @@ function App() {
           </button>
         </div>
       </div>
+
+      {groupSettingsOpen && (
+        <div style={styles.modalOverlay}>
+          <div style={{ ...styles.modal, maxWidth: "420px", width: "92%" }}>
+            <h3 style={{ marginTop: 0 }}>Editar grupo</h3>
+
+            <div style={{ marginBottom: "12px", textAlign: "left" }}>
+              <label style={styles.sideMenuLabel}>Nombre del grupo</label>
+              <input
+                value={groupNameDraft}
+                onChange={(e) => setGroupNameDraft(e.target.value)}
+                style={styles.input}
+                placeholder="Nombre del grupo"
+              />
+              <button onClick={guardarNombreGrupo} style={{ ...styles.button, width: "100%" }} disabled={groupSettingsBusy}>
+                Guardar nombre
+              </button>
+            </div>
+
+            <div style={{ marginBottom: "14px", textAlign: "left" }}>
+              <label style={styles.sideMenuLabel}>Código invitación</label>
+              <div style={styles.inviteCodeRowModal}>
+                <span style={styles.modalCodeText}>{codigoInvitacionActual || "Sin código"}</span>
+                <button onClick={copiarCodigoInvitacion} style={styles.copyCodeButton} title="Copiar código">📋</button>
+              </div>
+              <button onClick={regenerarCodigoGrupo} style={{ ...styles.buttonPaid, width: "100%", marginTop: "10px" }} disabled={groupSettingsBusy}>
+                Regenerar código
+              </button>
+            </div>
+
+            <div style={{ marginBottom: "14px", textAlign: "left" }}>
+              <label style={styles.sideMenuLabel}>Miembros</label>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "8px" }}>
+                {miembrosConfigurables.map((m) => (
+                  <div key={m.uid} style={styles.memberRow}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 700 }}>{m.nombre}</div>
+                      <div style={{ opacity: 0.8, fontSize: "12px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.email || m.uid}</div>
+                    </div>
+                    {m.uid !== usuarioAuth?.uid ? (
+                      <button onClick={() => expulsarMiembro(m.uid)} style={styles.buttonDangerSmall} disabled={groupSettingsBusy}>
+                        Expulsar
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: "12px", opacity: 0.8 }}>Tú</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {groupSettingsError ? <div style={styles.authErrorBox}>{groupSettingsError}</div> : null}
+
+            <button onClick={() => setGroupSettingsOpen(false)} style={{ ...styles.button, width: "100%" }} disabled={groupSettingsBusy}>
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={topTabsContainerStyle}>
         <button onClick={() => setVista("dashboard")} style={vista === "dashboard" ? topTabActiveStyle : topTabStyle}>Gastos</button>
@@ -3361,6 +3651,66 @@ const styles = {
     borderRadius: "16px",
     padding: "13px",
     border: "1px solid rgba(148,163,184,0.2)"
+  },
+  inviteCodeRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "10px"
+  },
+  inviteCodeRowModal: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "10px",
+    marginTop: "6px"
+  },
+  modalCodeText: {
+    fontWeight: 800,
+    letterSpacing: "0.03em"
+  },
+  copyCodeButton: {
+    background: "linear-gradient(135deg, #22d3ee 0%, #60a5fa 100%)",
+    color: "#031524",
+    border: "1px solid rgba(224,242,254,0.9)",
+    borderRadius: "10px",
+    width: "34px",
+    height: "34px",
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "15px",
+    fontWeight: 800
+  },
+  sideMenuActionButton: {
+    width: "100%",
+    background: "linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)",
+    color: "white",
+    border: "1px solid rgba(191,219,254,0.7)",
+    borderRadius: "12px",
+    padding: "11px 12px",
+    cursor: "pointer",
+    fontWeight: 800
+  },
+  sideMenuSelect: {
+    width: "100%",
+    marginTop: "6px",
+    background: "rgba(255,255,255,0.08)",
+    border: "1px solid rgba(148,163,184,0.28)",
+    borderRadius: "10px",
+    color: "var(--text-main)",
+    padding: "10px 12px",
+    outline: "none"
+  },
+  memberRow: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) auto",
+    alignItems: "center",
+    gap: "8px",
+    background: "rgba(255,255,255,0.05)",
+    borderRadius: "10px",
+    padding: "8px 10px"
   },
 
   sideMenuLabel: {
