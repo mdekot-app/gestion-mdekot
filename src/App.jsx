@@ -83,6 +83,7 @@ function App() {
     localStorage.getItem("notificationsEnabled") !== "false"
   );
   const [pushReady, setPushReady] = useState(false);
+  const [pushErrorDetalle, setPushErrorDetalle] = useState("");
   const [menuAbierto, setMenuAbierto] = useState(false);
 
   const [productos, setProductos] = useState([]);
@@ -409,9 +410,10 @@ function App() {
 
   const guardarTokenEnFirestore = async (token, enabled, extra = {}) => {
     if (!token) return;
+    const tokenDocId = encodeURIComponent(String(token));
 
     await setDoc(
-      doc(db, "pushTokens", token),
+      doc(db, "pushTokens", tokenDocId),
       {
         token,
         uid: extra.uid || "",
@@ -429,7 +431,7 @@ function App() {
     );
   };
 
-  const mostrarAyudaNotificaciones = (motivo) => {
+  const mostrarAyudaNotificaciones = (motivo, detalle = "") => {
     if (motivo === "denied") {
       alert("Notificaciones bloqueadas en el navegador. En Chrome Android: candado > Permisos del sitio > Notificaciones > Permitir, luego recarga la app.");
       return;
@@ -441,7 +443,8 @@ function App() {
     }
 
     if (motivo === "token") {
-      alert("No se pudo registrar el token push. Recarga la app, inicia sesion otra vez y vuelve a activar notificaciones.");
+      const extraMsg = detalle ? `\n\nDetalle tecnico: ${detalle}` : "";
+      alert(`No se pudo registrar el token push. Recarga la app, inicia sesion otra vez y vuelve a activar notificaciones.${extraMsg}`);
       return;
     }
 
@@ -450,6 +453,8 @@ function App() {
 
   const registrarPushSilencioso = async () => {
     try {
+      setPushErrorDetalle("");
+      localStorage.removeItem("pushLastError");
       if (!("Notification" in window)) return false;
       if (Notification.permission !== "granted") return false;
 
@@ -484,6 +489,9 @@ function App() {
       setPushReady(true);
       return true;
     } catch (e) {
+      const detalle = String(e?.code || e?.message || e || "").trim();
+      setPushErrorDetalle(detalle);
+      localStorage.setItem("pushLastError", detalle);
       console.error("❌ registrarPushSilencioso:", e);
       return false;
     }
@@ -516,7 +524,7 @@ function App() {
 
       const ok = await registrarPushSilencioso();
       if (!ok) {
-        mostrarAyudaNotificaciones("token");
+        mostrarAyudaNotificaciones("token", pushErrorDetalle || localStorage.getItem("pushLastError") || "");
         return false;
       }
 
