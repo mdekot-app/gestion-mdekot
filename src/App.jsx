@@ -2829,25 +2829,29 @@ const styles = {
   },
   comercioRow: {
     display: "grid",
-    gridTemplateColumns: "minmax(0, 1fr) 20px auto",
+    gridTemplateColumns: "minmax(0, 1fr) 28px minmax(90px, auto)",
     alignItems: "center",
-    gap: "8px",
+    gap: "10px",
     width: "100%",
-    maxWidth: "290px",
-    margin: "0 auto 8px auto"
+    maxWidth: "100%",
+    margin: "0 0 8px 0",
+    padding: "0 8px",
+    boxSizing: "border-box"
   },
   comercioNombre: {
-    textAlign: "right",
+    textAlign: "left",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis"
   },
   comercioArrow: {
     textAlign: "center",
+    justifySelf: "center",
     opacity: 0.9
   },
   comercioImporte: {
-    textAlign: "left",
+    textAlign: "right",
+    justifySelf: "end",
     fontWeight: 700,
     whiteSpace: "nowrap"
   },
@@ -2922,12 +2926,14 @@ const styles = {
 
   gastoIndividualRow: {
     display: "grid",
-    gridTemplateColumns: "28px minmax(0, 1fr) 20px auto",
+    gridTemplateColumns: "28px minmax(0, 1fr) 28px minmax(92px, auto)",
     alignItems: "center",
-    columnGap: "8px",
+    columnGap: "10px",
     justifyContent: "stretch",
     width: "100%",
-    maxWidth: "320px"
+    maxWidth: "100%",
+    padding: "0 6px",
+    boxSizing: "border-box"
   },
 
   gastoIndividualNombre: {
@@ -2941,11 +2947,13 @@ const styles = {
 
   gastoIndividualArrow: {
     textAlign: "center",
+    justifySelf: "center",
     fontWeight: "700"
   },
 
   gastoIndividualImporte: {
     textAlign: "right",
+    justifySelf: "end",
     fontWeight: "700",
     whiteSpace: "nowrap",
     minWidth: "92px"
