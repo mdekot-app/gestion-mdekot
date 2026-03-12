@@ -1913,7 +1913,13 @@ function App() {
 
             <div style={styles.card}>
               <h3 style={styles.kpiCloudTitle}>Total por comercio</h3>
-              {Object.entries(resumenComercio).map(([nombre, total]) => (<p key={nombre}>{nombre} → {total.toFixed(2)} €</p>))}
+              {Object.entries(resumenComercio).map(([nombre, total]) => (
+                <div key={nombre} style={styles.comercioRow}>
+                  <span style={styles.comercioNombre}>{nombre}</span>
+                  <span style={styles.comercioArrow}>→</span>
+                  <span style={styles.comercioImporte}>{total.toFixed(2)} €</span>
+                </div>
+              ))}
             </div>
 
             <div style={styles.card}>
@@ -2194,12 +2200,12 @@ function App() {
                     <div key={s.key} style={{ ...styles.card, padding: "16px 12px", margin: "0 auto" }}>
                       <div style={styles.cardHeaderRow}>
                         <h3 style={styles.cardTitle}>· {nombreVisible} ·</h3>
-                        <button onClick={() => abrirEditarSuper(s.key)} style={styles.buttonSuperEdit} title="Renombrar supermercado">✎</button>
+                        <button onClick={() => abrirEditarSuper(s.key)} style={{ ...styles.buttonSuperEdit, ...styles.buttonSuperEditMobile }} title="Renombrar supermercado">✎</button>
                       </div>
 
                       <div style={styles.superFormRow}>
                         <input type="text" placeholder="Añadir producto..." value={inputsSuper[s.key] || ""} onChange={(e) => setInputSuper(s.key, e.target.value)} style={{ ...styles.inputSuper, width: "100%", maxWidth: "none", minWidth: 0 }} />
-                        <button onClick={() => agregarProducto(s.key)} style={styles.buttonAddInline}>Añadir</button>
+                        <button onClick={() => agregarProducto(s.key)} style={{ ...styles.buttonAddInline, ...styles.buttonAddInlineMobile }}>Añadir</button>
                       </div>
 
                       {lista.length === 0 && <p>No hay productos</p>}
@@ -2215,8 +2221,8 @@ function App() {
 
                           <div style={styles.gastoRight}>
                             <div style={styles.mobileIconButtonsWrap}>
-                              <button onClick={() => { setProductoEditando(p); setEditProductoNombre(p.nombre); }} style={styles.buttonEditMini}>✏</button>
-                              <button onClick={() => setProductoAEliminar(p)} style={styles.buttonDeleteMini}>🗑</button>
+                              <button onClick={() => { setProductoEditando(p); setEditProductoNombre(p.nombre); }} style={{ ...styles.buttonEditMini, ...styles.buttonMiniMobile }}>✏</button>
+                              <button onClick={() => setProductoAEliminar(p)} style={{ ...styles.buttonDeleteMini, ...styles.buttonMiniMobile }}>🗑</button>
                             </div>
                           </div>
                         </div>
@@ -2821,6 +2827,30 @@ const styles = {
     fontWeight: 900,
     boxShadow: "inset 0 1px 0 rgba(255,255,255,0.16), 0 12px 24px rgba(8,145,178,0.24)"
   },
+  comercioRow: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) 20px auto",
+    alignItems: "center",
+    gap: "8px",
+    width: "100%",
+    maxWidth: "290px",
+    margin: "0 auto 8px auto"
+  },
+  comercioNombre: {
+    textAlign: "right",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis"
+  },
+  comercioArrow: {
+    textAlign: "center",
+    opacity: 0.9
+  },
+  comercioImporte: {
+    textAlign: "left",
+    fontWeight: 700,
+    whiteSpace: "nowrap"
+  },
   gastoItem: { display: "flex", justifyContent: "space-between", marginBottom: "10px", gap: "10px" },
   input: {
     display: "block",
@@ -2954,6 +2984,13 @@ const styles = {
     alignItems: "center",
     justifyContent: "center"
   },
+  buttonAddInlineMobile: {
+    minWidth: "96px",
+    padding: "10px 12px",
+    fontSize: "11px",
+    borderRadius: "12px",
+    letterSpacing: "0.02em"
+  },
   listItemRowDesktop: {
     display: "grid",
     gridTemplateColumns: "minmax(0, 1fr) 112px",
@@ -3044,6 +3081,13 @@ const styles = {
     lineHeight: 1,
     boxShadow: "0 10px 20px rgba(244,63,94,0.3)"
   },
+  buttonMiniMobile: {
+    minWidth: "30px",
+    height: "30px",
+    padding: "2px 6px",
+    borderRadius: "10px",
+    fontSize: "11px"
+  },
 
   buttonCenter: { display: "flex", justifyContent: "center" },
 
@@ -3086,6 +3130,7 @@ const styles = {
   },
 
   buttonSuperEdit: { background: "linear-gradient(135deg, #14b8a6 0%, #22d3ee 100%)", color: "#02222c", border: "none", borderRadius: "999px", width: "36px", height: "36px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, boxShadow: "0 10px 20px rgba(45,212,191,0.36)" },
+  buttonSuperEditMobile: { width: "32px", height: "32px", fontSize: "13px" },
 
   payIcon: { width: "28px", height: "28px", borderRadius: "999px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "16px", flexShrink: 0 },
   payMirko: { background: "var(--success)", color: "white" },
