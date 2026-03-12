@@ -27,6 +27,18 @@ import {
 
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 
+const SUPERS = [
+  { key: "MERCADONA", defaultName: "MERCADONA" },
+  { key: "LIDL", defaultName: "LIDL" },
+  { key: "ALCAMPO", defaultName: "ALCAMPO" },
+  { key: "CARREFOUR", defaultName: "CARREFOUR" }
+];
+
+const MESES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+];
+
 function App() {
   const [usuarioAuth, setUsuarioAuth] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -72,13 +84,6 @@ function App() {
   );
   const [pushReady, setPushReady] = useState(false);
   const [menuAbierto, setMenuAbierto] = useState(false);
-
-  const SUPERS = [
-    { key: "MERCADONA", defaultName: "MERCADONA" },
-    { key: "LIDL", defaultName: "LIDL" },
-    { key: "ALCAMPO", defaultName: "ALCAMPO" },
-    { key: "CARREFOUR", defaultName: "CARREFOUR" }
-  ];
 
   const [productos, setProductos] = useState([]);
 
@@ -754,11 +759,6 @@ function App() {
     if (usuarioAuth?.uid && userProfile) syncPushTokenConUsuarioYGrupo();
   }, [usuarioAuth, userProfile, grupoId, groupProfile]);
 
-  const meses = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-  ];
-
   const opcionesMesAnio = useMemo(() => {
     const base = [];
     const yearStart = new Date().getFullYear() - 2;
@@ -768,7 +768,7 @@ function App() {
       for (let mes = 1; mes <= 12; mes++) {
         base.push({
           value: `${anio}-${String(mes).padStart(2, "0")}`,
-          label: `${meses[mes - 1]} ${anio}`,
+          label: `${MESES[mes - 1]} ${anio}`,
           anio,
           mes
         });
