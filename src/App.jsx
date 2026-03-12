@@ -1509,6 +1509,8 @@ function App() {
   const topTabsContainerStyle = isMobile
     ? styles.topTabsContainerMobile
     : styles.topTabsContainer;
+  const topTabStyle = isMobile ? styles.topTabMobile : styles.topTab;
+  const topTabActiveStyle = isMobile ? styles.topTabActiveMobile : styles.topTabActive;
 
   if (authLoading) {
     return (
@@ -1817,10 +1819,10 @@ function App() {
       </div>
 
       <div style={topTabsContainerStyle}>
-        <button onClick={() => setVista("dashboard")} style={vista === "dashboard" ? styles.topTabActive : styles.topTab}>Gastos</button>
-        <button onClick={() => setVista("grafico")} style={vista === "grafico" ? styles.topTabActive : styles.topTab}>Gráfico</button>
-        <button onClick={() => setVista("lista")} style={vista === "lista" ? styles.topTabActive : styles.topTab}>Listas</button>
-        <button onClick={() => setVista("calendario")} style={vista === "calendario" ? styles.topTabActive : styles.topTab}>Calendario</button>
+        <button onClick={() => setVista("dashboard")} style={vista === "dashboard" ? topTabActiveStyle : topTabStyle}>Gastos</button>
+        <button onClick={() => setVista("grafico")} style={vista === "grafico" ? topTabActiveStyle : topTabStyle}>Gráfico</button>
+        <button onClick={() => setVista("lista")} style={vista === "lista" ? topTabActiveStyle : topTabStyle}>Listas</button>
+        <button onClick={() => setVista("calendario")} style={vista === "calendario" ? topTabActiveStyle : topTabStyle}>Calendario</button>
       </div>
 
       {vista === "dashboard" && (
@@ -1863,7 +1865,7 @@ function App() {
 
           <div style={styles.grid}>
             <div style={styles.card}>
-              <h3>· GASTOS DEL MES ·</h3>
+              <h3 style={styles.kpiCloudTitle}>Gastos del mes</h3>
               {gastos.map((g) => {
                 const nombrePagador = getNombreUsuarioPorEmail(g.pagadoPor);
                 const sexoPagador = getGeneroPorEmail(g.pagadoPor);
@@ -1896,12 +1898,12 @@ function App() {
             </div>
 
             <div style={styles.card}>
-              <h3>· TOTAL POR COMERCIO ·</h3>
+              <h3 style={styles.kpiCloudTitle}>Total por comercio</h3>
               {Object.entries(resumenComercio).map(([nombre, total]) => (<p key={nombre}>{nombre} → {total.toFixed(2)} €</p>))}
             </div>
 
             <div style={styles.card}>
-              <h3>· GASTO INDIVIDUAL ·</h3>
+              <h3 style={styles.kpiCloudTitle}>Gasto individual</h3>
               <div style={styles.gastoIndividualWrap}>
                 {participanteA ? (
                   <div style={styles.gastoIndividualRow}>
@@ -1928,7 +1930,7 @@ function App() {
             </div>
 
             <div style={styles.card}>
-              <h3>· TOTAL GASTOS ·</h3>
+              <h3 style={styles.kpiCloudTitle}>Total gastos</h3>
               <h2>{totalMes.toFixed(2)} €</h2>
             </div>
           </div>
@@ -2384,47 +2386,56 @@ function App() {
 
 const styles = {
   container: {
-    background: "radial-gradient(1200px 700px at 8% -12%, rgba(20,184,166,0.24), transparent 58%), radial-gradient(1000px 700px at 110% 10%, rgba(14,165,168,0.17), transparent 62%), linear-gradient(165deg, #081220 0%, #0d1b2f 100%)",
+    background: "radial-gradient(1200px 700px at -2% -14%, rgba(56,189,248,0.2), transparent 58%), radial-gradient(900px 640px at 102% -10%, rgba(34,211,238,0.17), transparent 60%), radial-gradient(900px 700px at 50% 120%, rgba(14,165,168,0.13), transparent 62%), linear-gradient(156deg, #050d19 0%, #0a1730 52%, #09162b 100%)",
     minHeight: "100vh",
     width: "100%",
     padding: "40px",
     color: "var(--text-main)",
     boxSizing: "border-box"
   },
-  title: { fontSize: "34px", marginBottom: "22px", textAlign: "center", letterSpacing: "0.01em", fontWeight: 800 },
+  title: {
+    fontSize: "clamp(34px, 5.2vw, 48px)",
+    marginBottom: "22px",
+    textAlign: "center",
+    letterSpacing: "0.02em",
+    fontWeight: 900,
+    textTransform: "uppercase",
+    textShadow: "0 16px 40px rgba(8,145,178,0.25)"
+  },
 
   selectorRow: {
     display: "flex",
-    gap: "10px",
-    marginBottom: "20px",
+    gap: "12px",
+    marginBottom: "22px",
     flexWrap: "wrap",
     justifyContent: "center"
   },
 
   select: {
-    padding: "10px 14px",
-    borderRadius: "12px",
-    border: "1px solid rgba(184,200,221,0.25)",
-    minHeight: "44px",
-    background: "rgba(18,36,61,0.9)",
+    padding: "11px 16px",
+    borderRadius: "16px",
+    border: "1px solid rgba(148,163,184,0.3)",
+    minHeight: "48px",
+    background: "linear-gradient(180deg, rgba(14,30,56,0.95) 0%, rgba(9,21,41,0.94) 100%)",
     color: "var(--text-main)",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)"
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 14px 30px rgba(3,8,19,0.45)"
   },
 
   monthYearSelect: {
     width: "100%",
-    maxWidth: "200px",
-    padding: "10px 14px",
-    borderRadius: "12px",
-    border: "1px solid rgba(184,200,221,0.28)",
-    minHeight: "46px",
-    background: "rgba(18,36,61,0.92)",
+    maxWidth: "240px",
+    padding: "11px 16px",
+    borderRadius: "16px",
+    border: "1px solid rgba(148,163,184,0.3)",
+    minHeight: "50px",
+    background: "linear-gradient(180deg, rgba(14,30,56,0.95) 0%, rgba(9,21,41,0.94) 100%)",
     color: "var(--text-main)",
     outline: "none",
     display: "block",
     margin: "0 auto",
     textAlign: "center",
-    textAlignLast: "center"
+    textAlignLast: "center",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 14px 30px rgba(3,8,19,0.45)"
   },
 
   authScreen: {
@@ -2647,79 +2658,121 @@ const styles = {
   topTabsContainer: {
     display: "grid",
     gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-    gap: "10px",
-    maxWidth: "920px",
-    margin: "0 auto 22px auto",
-    background: "rgba(10,24,42,0.45)",
-    padding: "8px",
-    borderRadius: "18px",
-    backdropFilter: "blur(8px)"
+    gap: "12px",
+    maxWidth: "980px",
+    margin: "2px auto 24px auto",
+    background: "linear-gradient(140deg, rgba(6,18,36,0.86) 0%, rgba(7,19,39,0.62) 100%)",
+    padding: "12px",
+    borderRadius: "24px",
+    border: "1px solid rgba(148,163,184,0.2)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1), 0 26px 54px rgba(2,7,17,0.45)",
+    backdropFilter: "blur(12px)"
   },
 
   topTabsContainerMobile: {
     display: "grid",
     gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-    gap: "8px",
+    gap: "6px",
     width: "100%",
     maxWidth: "100%",
     margin: "0 auto 18px auto",
-    background: "rgba(10,24,42,0.5)",
-    padding: "8px",
-    borderRadius: "18px",
+    background: "linear-gradient(140deg, rgba(6,18,36,0.86) 0%, rgba(7,19,39,0.62) 100%)",
+    padding: "7px",
+    borderRadius: "20px",
+    border: "1px solid rgba(148,163,184,0.2)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 16px 36px rgba(2,7,17,0.4)",
     boxSizing: "border-box",
-    backdropFilter: "blur(10px)"
+    backdropFilter: "blur(12px)"
   },
 
   topTab: {
-    background: "linear-gradient(180deg, rgba(10,24,42,0.9) 0%, rgba(8,18,32,0.95) 100%)",
-    color: "var(--text-soft)",
-    padding: "12px 10px",
-    border: "1px solid rgba(184,200,221,0.2)",
-    borderRadius: "999px",
+    background: "linear-gradient(180deg, rgba(9,24,46,0.98) 0%, rgba(6,14,30,0.98) 100%)",
+    color: "#d7e8ff",
+    padding: "13px 12px",
+    border: "1px solid rgba(148,163,184,0.25)",
+    borderRadius: "14px",
     cursor: "pointer",
-    fontWeight: 700,
-    fontSize: "13px",
-    minHeight: "50px",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 20px rgba(2,8,16,0.45)",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis"
+    fontWeight: 800,
+    fontSize: "14px",
+    minHeight: "54px",
+    letterSpacing: "0.015em",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -12px 26px rgba(2,6,14,0.4), 0 14px 28px rgba(2,8,16,0.38)"
   },
 
   topTabActive: {
-    background: "linear-gradient(135deg, #14b8a6 0%, #2dd4bf 45%, #22d3ee 100%)",
-    color: "#02222c",
-    padding: "12px 10px",
-    border: "none",
-    borderRadius: "999px",
+    background: "linear-gradient(135deg, #22d3ee 0%, #38bdf8 45%, #60a5fa 100%)",
+    color: "#021423",
+    padding: "13px 12px",
+    border: "1px solid rgba(224,242,254,0.88)",
+    borderRadius: "14px",
     cursor: "pointer",
     fontWeight: 900,
-    fontSize: "13px",
-    minHeight: "50px",
-    boxShadow: "0 0 0 1px rgba(255,255,255,0.24) inset, 0 14px 32px rgba(45,212,191,0.45)",
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis"
+    fontSize: "14px",
+    minHeight: "54px",
+    letterSpacing: "0.015em",
+    boxShadow: "0 0 0 1px rgba(255,255,255,0.28) inset, 0 18px 36px rgba(56,189,248,0.55), 0 4px 14px rgba(125,211,252,0.35)"
+  },
+
+  topTabMobile: {
+    background: "linear-gradient(180deg, rgba(9,24,46,0.98) 0%, rgba(6,14,30,0.98) 100%)",
+    color: "#d7e8ff",
+    padding: "10px 6px",
+    border: "1px solid rgba(148,163,184,0.24)",
+    borderRadius: "13px",
+    cursor: "pointer",
+    fontWeight: 800,
+    fontSize: "11.5px",
+    minHeight: "48px",
+    letterSpacing: "0.01em",
+    lineHeight: 1.05,
+    textAlign: "center",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -10px 18px rgba(2,6,14,0.4), 0 12px 24px rgba(2,8,16,0.35)"
+  },
+
+  topTabActiveMobile: {
+    background: "linear-gradient(135deg, #22d3ee 0%, #38bdf8 45%, #60a5fa 100%)",
+    color: "#021423",
+    padding: "10px 6px",
+    border: "1px solid rgba(224,242,254,0.88)",
+    borderRadius: "13px",
+    cursor: "pointer",
+    fontWeight: 900,
+    fontSize: "11.5px",
+    minHeight: "48px",
+    letterSpacing: "0.01em",
+    lineHeight: 1.05,
+    textAlign: "center",
+    boxShadow: "0 0 0 1px rgba(255,255,255,0.24) inset, 0 14px 28px rgba(56,189,248,0.5), 0 4px 10px rgba(125,211,252,0.32)"
   },
 
   balanceCard: {
-    background: "linear-gradient(165deg, rgba(18,36,61,0.95) 0%, rgba(13,27,47,0.95) 100%)",
-    padding: "14px 18px",
-    borderRadius: "10px",
+    background: "linear-gradient(150deg, rgba(14,30,56,0.98) 0%, rgba(8,19,40,0.98) 100%)",
+    padding: "16px 20px",
+    borderRadius: "20px",
     textAlign: "center",
-    maxWidth: "520px",
-    minHeight: "68px",
+    maxWidth: "560px",
+    minHeight: "76px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    margin: "0 auto 24px auto"
+    margin: "0 auto 28px auto",
+    border: "1px solid rgba(148,163,184,0.26)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 22px 42px rgba(3,8,19,0.44)"
   },
   balanceCardPaid: { background: "var(--success)" },
   balanceCardUnpaid: { background: "var(--danger)" },
   balanceCardBigText: { color: "var(--ink)", textTransform: "uppercase", fontWeight: 900, margin: 0 },
   balanceNeutralText: { margin: 0, fontSize: "18px", fontWeight: 800 },
 
-  cardFull: { background: "linear-gradient(165deg, rgba(18,36,61,0.95) 0%, rgba(13,27,47,0.95) 100%)", padding: "22px", borderRadius: "16px", marginBottom: "30px", textAlign: "center", border: "1px solid rgba(184,200,221,0.16)", boxShadow: "0 16px 34px rgba(4,12,24,0.26)" },
+  cardFull: {
+    background: "linear-gradient(156deg, rgba(12,27,51,0.97) 0%, rgba(10,21,40,0.97) 100%)",
+    padding: "26px",
+    borderRadius: "24px",
+    marginBottom: "34px",
+    textAlign: "center",
+    border: "1px solid rgba(148,163,184,0.26)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 28px 58px rgba(2,8,19,0.48)"
+  },
   formContainer: {
     width: "100%",
     maxWidth: "280px",
@@ -2728,21 +2781,56 @@ const styles = {
     flexDirection: "column",
     alignItems: "center"
   },
-  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px", marginBottom: "30px" },
-  card: { background: "linear-gradient(165deg, rgba(18,36,61,0.95) 0%, rgba(13,27,47,0.95) 100%)", padding: "22px", borderRadius: "16px", textAlign: "center", boxSizing: "border-box", width: "100%", border: "1px solid rgba(184,200,221,0.16)", boxShadow: "0 16px 34px rgba(4,12,24,0.26)" },
+  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "22px", marginBottom: "34px" },
+  card: {
+    background: "linear-gradient(156deg, rgba(11,25,49,0.98) 0%, rgba(9,20,39,0.98) 100%)",
+    padding: "22px 20px 20px 20px",
+    borderRadius: "22px",
+    textAlign: "center",
+    boxSizing: "border-box",
+    width: "100%",
+    border: "1px solid rgba(148,163,184,0.22)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 24px 48px rgba(2,8,19,0.42)"
+  },
+  kpiCloudTitle: {
+    margin: "0 auto 16px auto",
+    width: "fit-content",
+    maxWidth: "100%",
+    padding: "9px 14px",
+    borderRadius: "999px",
+    border: "1px solid rgba(186,230,253,0.42)",
+    background: "linear-gradient(135deg, rgba(14,165,233,0.24) 0%, rgba(45,212,191,0.2) 100%)",
+    color: "#e6f5ff",
+    fontSize: "13px",
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    fontWeight: 900,
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.16), 0 12px 24px rgba(8,145,178,0.24)"
+  },
   gastoItem: { display: "flex", justifyContent: "space-between", marginBottom: "10px", gap: "10px" },
-  input: { display: "block", width: "100%", marginBottom: "10px", padding: "12px 14px", borderRadius: "12px", border: "1px solid rgba(184,200,221,0.3)", background: "rgba(255,255,255,0.94)", color: "var(--ink)", boxShadow: "0 6px 14px rgba(2,8,16,0.12)" },
+  input: {
+    display: "block",
+    width: "100%",
+    marginBottom: "10px",
+    padding: "13px 16px",
+    borderRadius: "14px",
+    border: "1px solid rgba(148,163,184,0.34)",
+    background: "linear-gradient(180deg, rgba(248,250,252,0.96) 0%, rgba(241,245,249,0.95) 100%)",
+    color: "var(--ink)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.9), 0 10px 18px rgba(2,8,16,0.2)"
+  },
   inputCompact: {
     display: "block",
     width: "100%",
     marginBottom: "10px",
-    padding: "12px 14px",
-    borderRadius: "12px",
-    border: "1px solid rgba(184,200,221,0.3)",
-    background: "rgba(255,255,255,0.92)",
+    padding: "13px 16px",
+    borderRadius: "14px",
+    border: "1px solid rgba(148,163,184,0.34)",
+    background: "linear-gradient(180deg, rgba(248,250,252,0.96) 0%, rgba(241,245,249,0.95) 100%)",
     color: "var(--ink)",
     boxSizing: "border-box",
-    textAlign: "left"
+    textAlign: "left",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.9), 0 10px 18px rgba(2,8,16,0.2)"
   },
 
   gastoLeft: {
@@ -2817,23 +2905,55 @@ const styles = {
   cardTitle: { position: "absolute", left: "50%", transform: "translateX(-50%)", margin: 0, width: "100%", textAlign: "center", pointerEvents: "none" },
 
   superFormRow: { display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", marginBottom: "10px", width: "100%", boxSizing: "border-box" },
-  inputSuper: { display: "block", width: "70%", maxWidth: "260px", padding: "12px 14px", borderRadius: "12px", border: "1px solid rgba(184,200,221,0.3)", background: "rgba(255,255,255,0.94)", color: "var(--ink)", boxShadow: "0 6px 14px rgba(2,8,16,0.12)" },
+  inputSuper: {
+    display: "block",
+    width: "70%",
+    maxWidth: "260px",
+    padding: "13px 16px",
+    borderRadius: "14px",
+    border: "1px solid rgba(148,163,184,0.34)",
+    background: "linear-gradient(180deg, rgba(248,250,252,0.96) 0%, rgba(241,245,249,0.95) 100%)",
+    color: "var(--ink)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.9), 0 10px 18px rgba(2,8,16,0.2)"
+  },
 
   buttonAddInline: {
-    background: "linear-gradient(135deg, #14b8a6 0%, #2dd4bf 45%, #22d3ee 100%)",
-    color: "#02222c",
-    padding: "11px 18px",
-    border: "none",
-    borderRadius: "999px",
+    background: "linear-gradient(135deg, #22d3ee 0%, #38bdf8 45%, #60a5fa 100%)",
+    color: "#031524",
+    padding: "12px 20px",
+    border: "1px solid rgba(224,242,254,0.85)",
+    borderRadius: "14px",
     cursor: "pointer",
     whiteSpace: "nowrap",
     fontWeight: 900,
-    letterSpacing: "0.01em",
-    boxShadow: "0 0 0 1px rgba(255,255,255,0.25) inset, 0 14px 28px rgba(45,212,191,0.45)"
+    letterSpacing: "0.03em",
+    textTransform: "uppercase",
+    boxShadow: "0 0 0 1px rgba(255,255,255,0.22) inset, 0 16px 34px rgba(56,189,248,0.48)"
   },
 
-  button: { background: "linear-gradient(135deg, #14b8a6 0%, #2dd4bf 45%, #22d3ee 100%)", color: "#02222c", padding: "11px 16px", border: "none", borderRadius: "999px", cursor: "pointer", fontWeight: 800, boxShadow: "0 0 0 1px rgba(255,255,255,0.25) inset, 0 12px 24px rgba(45,212,191,0.4)" },
-  buttonDanger: { background: "linear-gradient(135deg, #ef4444 0%, #f97316 100%)", color: "white", padding: "10px 16px", border: "none", borderRadius: "999px", cursor: "pointer", boxShadow: "0 0 0 1px rgba(255,255,255,0.18) inset, 0 10px 22px rgba(239,68,68,0.34)" },
+  button: {
+    background: "linear-gradient(135deg, #22d3ee 0%, #38bdf8 45%, #60a5fa 100%)",
+    color: "#031524",
+    padding: "12px 18px",
+    border: "1px solid rgba(224,242,254,0.85)",
+    borderRadius: "14px",
+    cursor: "pointer",
+    fontWeight: 800,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    boxShadow: "0 0 0 1px rgba(255,255,255,0.22) inset, 0 16px 30px rgba(56,189,248,0.45)"
+  },
+  buttonDanger: {
+    background: "linear-gradient(135deg, #f97316 0%, #ef4444 55%, #e11d48 100%)",
+    color: "white",
+    padding: "11px 18px",
+    border: "1px solid rgba(254,205,211,0.6)",
+    borderRadius: "14px",
+    cursor: "pointer",
+    fontWeight: 800,
+    letterSpacing: "0.02em",
+    boxShadow: "0 0 0 1px rgba(255,255,255,0.16) inset, 0 14px 28px rgba(244,63,94,0.36)"
+  },
   buttonDangerSmall: {
     background: "var(--danger)",
     color: "white",
@@ -2844,7 +2964,17 @@ const styles = {
     fontSize: "13px",
     fontWeight: 700
   },
-  buttonPaid: { background: "linear-gradient(135deg, #22c55e 0%, #34d399 100%)", color: "#032214", padding: "10px 16px", border: "none", borderRadius: "999px", cursor: "pointer", fontWeight: 900, boxShadow: "0 0 0 1px rgba(255,255,255,0.2) inset, 0 10px 22px rgba(34,197,94,0.34)" },
+  buttonPaid: {
+    background: "linear-gradient(135deg, #22c55e 0%, #34d399 100%)",
+    color: "#032214",
+    padding: "11px 18px",
+    border: "1px solid rgba(220,252,231,0.75)",
+    borderRadius: "14px",
+    cursor: "pointer",
+    fontWeight: 900,
+    letterSpacing: "0.02em",
+    boxShadow: "0 0 0 1px rgba(255,255,255,0.2) inset, 0 12px 24px rgba(34,197,94,0.34)"
+  },
   buttonNotifOn: { background: "linear-gradient(135deg, #22c55e 0%, #34d399 100%)", color: "#032214", padding: "12px 18px", border: "none", borderRadius: "999px", cursor: "pointer", fontWeight: 900 },
   buttonNotifOff: { background: "linear-gradient(135deg, #64748b 0%, #475569 100%)", color: "white", padding: "12px 18px", border: "none", borderRadius: "999px", cursor: "pointer", fontWeight: 800 },
 
@@ -2852,27 +2982,29 @@ const styles = {
   buttonDelete: { background: "linear-gradient(135deg, #ef4444 0%, #f43f5e 100%)", border: "none", borderRadius: "999px", padding: "5px 11px", cursor: "pointer", color: "white", fontWeight: 800 },
 
   buttonEditMini: {
-    background: "#f59e0b",
+    background: "linear-gradient(135deg, #fbbf24 0%, #f97316 100%)",
     border: "none",
-    borderRadius: "999px",
-    padding: "3px 6px",
-    minWidth: "30px",
-    height: "30px",
+    borderRadius: "12px",
+    padding: "4px 8px",
+    minWidth: "34px",
+    height: "34px",
     cursor: "pointer",
     fontSize: "12px",
-    lineHeight: 1
+    lineHeight: 1,
+    boxShadow: "0 10px 20px rgba(249,115,22,0.34)"
   },
 
   buttonDeleteMini: {
-    background: "var(--danger)",
+    background: "linear-gradient(135deg, #ef4444 0%, #f43f5e 100%)",
     border: "none",
-    borderRadius: "999px",
-    padding: "3px 6px",
-    minWidth: "30px",
-    height: "30px",
+    borderRadius: "12px",
+    padding: "4px 8px",
+    minWidth: "34px",
+    height: "34px",
     cursor: "pointer",
     fontSize: "12px",
-    lineHeight: 1
+    lineHeight: 1,
+    boxShadow: "0 10px 20px rgba(244,63,94,0.3)"
   },
 
   buttonCenter: { display: "flex", justifyContent: "center" },
@@ -2905,7 +3037,15 @@ const styles = {
   },
 
   modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999 },
-  modal: { background: "linear-gradient(165deg, rgba(18,36,61,0.98) 0%, rgba(13,27,47,0.98) 100%)", padding: "25px", borderRadius: "16px", width: "90%", maxWidth: "340px", border: "1px solid rgba(184,200,221,0.18)", boxShadow: "0 20px 44px rgba(0,0,0,0.42)" },
+  modal: {
+    background: "linear-gradient(156deg, rgba(12,27,51,0.99) 0%, rgba(10,21,40,0.99) 100%)",
+    padding: "25px",
+    borderRadius: "20px",
+    width: "90%",
+    maxWidth: "340px",
+    border: "1px solid rgba(148,163,184,0.28)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 26px 56px rgba(0,0,0,0.5)"
+  },
 
   buttonSuperEdit: { background: "linear-gradient(135deg, #14b8a6 0%, #22d3ee 100%)", color: "#02222c", border: "none", borderRadius: "999px", width: "36px", height: "36px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, boxShadow: "0 10px 20px rgba(45,212,191,0.36)" },
 
@@ -2918,21 +3058,69 @@ const styles = {
   legendDot: { width: "14px", height: "14px", borderRadius: "999px", display: "inline-block" },
 
   calHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" },
-  buttonAddCalendar: { background: "linear-gradient(135deg, #14b8a6 0%, #22d3ee 100%)", color: "#02222c", padding: "10px 16px", border: "none", borderRadius: "999px", cursor: "pointer", fontWeight: 900, boxShadow: "0 10px 22px rgba(45,212,191,0.36)" },
+  buttonAddCalendar: {
+    background: "linear-gradient(135deg, #22d3ee 0%, #38bdf8 45%, #60a5fa 100%)",
+    color: "#021423",
+    padding: "12px 18px",
+    border: "1px solid rgba(224,242,254,0.85)",
+    borderRadius: "14px",
+    cursor: "pointer",
+    fontWeight: 900,
+    letterSpacing: "0.03em",
+    textTransform: "uppercase",
+    boxShadow: "0 16px 30px rgba(56,189,248,0.45)"
+  },
 
   calendarPageWrap: { width: "100%", maxWidth: "1100px", margin: "0 auto" },
   calendarPageWrapMobile: { width: "100vw", marginLeft: "calc(50% - 50vw)", marginRight: "calc(50% - 50vw)" },
 
-  calendarCard: { background: "linear-gradient(165deg, rgba(18,36,61,0.95) 0%, rgba(13,27,47,0.95) 100%)", padding: "18px", borderRadius: "16px", boxSizing: "border-box", width: "100%", overflowX: "hidden", border: "1px solid rgba(184,200,221,0.16)" },
-  calendarCardMobile: { padding: "14px 10px", borderRadius: "10px", width: "100vw" },
+  calendarCard: {
+    background: "linear-gradient(156deg, rgba(11,25,49,0.98) 0%, rgba(9,20,39,0.98) 100%)",
+    padding: "18px",
+    borderRadius: "22px",
+    boxSizing: "border-box",
+    width: "100%",
+    overflowX: "hidden",
+    border: "1px solid rgba(148,163,184,0.24)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 24px 46px rgba(3,8,19,0.42)"
+  },
+  calendarCardMobile: { padding: "14px 10px", borderRadius: "16px", width: "100vw" },
 
   calWeekHeaderUnified: { display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "6px", marginBottom: "8px" },
-  calWeekHeaderCellUnified: { background: "rgba(255,255,255,0.08)", borderRadius: "10px", padding: "8px 0", fontWeight: 900, fontSize: "12px", textAlign: "center" },
+  calWeekHeaderCellUnified: {
+    background: "linear-gradient(180deg, rgba(35,52,81,0.95) 0%, rgba(23,39,66,0.95) 100%)",
+    borderRadius: "12px",
+    padding: "8px 0",
+    fontWeight: 900,
+    fontSize: "12px",
+    textAlign: "center",
+    border: "1px solid rgba(148,163,184,0.18)"
+  },
 
   calGridUnified: { display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: "6px" },
 
-  calCellPcDot: { background: "rgba(255,255,255,0.09)", borderRadius: "12px", padding: "10px", minHeight: "110px", boxSizing: "border-box", display: "flex", flexDirection: "column", cursor: "pointer" },
-  calCellMobileDot: { background: "rgba(255,255,255,0.09)", borderRadius: "12px", padding: "7px", minHeight: "72px", boxSizing: "border-box", display: "flex", flexDirection: "column", cursor: "pointer" },
+  calCellPcDot: {
+    background: "linear-gradient(170deg, rgba(39,57,87,0.96) 0%, rgba(31,47,74,0.96) 100%)",
+    borderRadius: "14px",
+    padding: "10px",
+    minHeight: "110px",
+    boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "column",
+    cursor: "pointer",
+    border: "1px solid rgba(148,163,184,0.16)"
+  },
+  calCellMobileDot: {
+    background: "linear-gradient(170deg, rgba(39,57,87,0.96) 0%, rgba(31,47,74,0.96) 100%)",
+    borderRadius: "12px",
+    padding: "7px",
+    minHeight: "72px",
+    boxSizing: "border-box",
+    display: "flex",
+    flexDirection: "column",
+    cursor: "pointer",
+    border: "1px solid rgba(148,163,184,0.16)"
+  },
 
   calCellEmpty: { background: "rgba(255,255,255,0.03)" },
   calCellToday: { outline: "2px solid rgba(34,197,94,0.9)" },
@@ -2953,9 +3141,9 @@ const styles = {
     left: "8px",
     width: "35px",
     height: "35px",
-    borderRadius: "10px",
-    border: "none",
-    background: "var(--surface-1)",
+    borderRadius: "12px",
+    border: "1px solid rgba(148,163,184,0.24)",
+    background: "linear-gradient(180deg, rgba(13,29,56,0.98) 0%, rgba(8,18,36,0.98) 100%)",
     color: "white",
     fontSize: "20px",
     lineHeight: 1,
@@ -2964,7 +3152,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 10px 24px rgba(0,0,0,0.34)"
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 14px 28px rgba(0,0,0,0.45)"
   },
 
   menuOverlay: {
@@ -2980,14 +3168,16 @@ const styles = {
     left: 0,
     width: "min(340px, 86vw)",
     height: "100vh",
-    background: "linear-gradient(165deg, rgba(18,36,61,0.98) 0%, rgba(13,27,47,0.98) 100%)",
+    background: "linear-gradient(160deg, rgba(10,24,46,0.99) 0%, rgba(7,16,32,0.99) 100%)",
     zIndex: 10002,
     padding: "22px 18px",
     boxSizing: "border-box",
     display: "flex",
     flexDirection: "column",
     gap: "16px",
-    transition: "transform 0.25s ease"
+    transition: "transform 0.25s ease",
+    borderRight: "1px solid rgba(148,163,184,0.24)",
+    boxShadow: "0 30px 64px rgba(0,0,0,0.48)"
   },
 
   sideMenuHeader: {
@@ -3002,7 +3192,7 @@ const styles = {
     width: "54px",
     height: "54px",
     borderRadius: "999px",
-    background: "var(--accent)",
+    background: "linear-gradient(135deg, #22d3ee 0%, #3b82f6 100%)",
     color: "white",
     display: "flex",
     alignItems: "center",
@@ -3040,9 +3230,10 @@ const styles = {
     flexDirection: "column",
     gap: "4px",
     textAlign: "left",
-    background: "rgba(255,255,255,0.04)",
-    borderRadius: "14px",
-    padding: "12px"
+    background: "linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 100%)",
+    borderRadius: "16px",
+    padding: "13px",
+    border: "1px solid rgba(148,163,184,0.2)"
   },
 
   sideMenuLabel: {
@@ -3064,25 +3255,25 @@ const styles = {
   },
 
   sideMenuNotifOn: {
-    background: "linear-gradient(135deg, var(--success) 0%, #16a34a 100%)",
+    background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
     color: "var(--ink)",
     padding: "12px 14px",
-    border: "none",
-    borderRadius: "10px",
+    borderRadius: "12px",
     cursor: "pointer",
     fontWeight: 800,
-    width: "100%"
+    width: "100%",
+    border: "1px solid rgba(220,252,231,0.75)"
   },
 
   sideMenuNotifOff: {
-    background: "linear-gradient(135deg, #64748b 0%, #475569 100%)",
+    background: "linear-gradient(135deg, #475569 0%, #334155 100%)",
     color: "white",
     padding: "12px 14px",
-    border: "none",
-    borderRadius: "10px",
+    borderRadius: "12px",
     cursor: "pointer",
     fontWeight: 800,
-    width: "100%"
+    width: "100%",
+    border: "1px solid rgba(148,163,184,0.28)"
   }
 };
 
