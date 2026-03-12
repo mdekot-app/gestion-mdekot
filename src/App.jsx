@@ -57,7 +57,10 @@ const THEME_PALETTES = {
     "--accent": "#22d3ee",
     "--accent-2": "#38bdf8",
     "--success": "#22c55e",
-    "--danger": "#ef4444"
+    "--danger": "#ef4444",
+    "--theme-glow-1": "rgba(56,189,248,0.2)",
+    "--theme-glow-2": "rgba(34,211,238,0.17)",
+    "--theme-glow-3": "rgba(14,165,168,0.13)"
   },
   verde: {
     "--bg-0": "#07190f",
@@ -67,7 +70,10 @@ const THEME_PALETTES = {
     "--accent": "#34d399",
     "--accent-2": "#22c55e",
     "--success": "#22c55e",
-    "--danger": "#ef4444"
+    "--danger": "#ef4444",
+    "--theme-glow-1": "rgba(52,211,153,0.2)",
+    "--theme-glow-2": "rgba(34,197,94,0.17)",
+    "--theme-glow-3": "rgba(16,185,129,0.13)"
   },
   naranja: {
     "--bg-0": "#1a1208",
@@ -77,7 +83,10 @@ const THEME_PALETTES = {
     "--accent": "#fb923c",
     "--accent-2": "#f59e0b",
     "--success": "#22c55e",
-    "--danger": "#ef4444"
+    "--danger": "#ef4444",
+    "--theme-glow-1": "rgba(251,146,60,0.2)",
+    "--theme-glow-2": "rgba(245,158,11,0.17)",
+    "--theme-glow-3": "rgba(249,115,22,0.13)"
   },
   rojo: {
     "--bg-0": "#1a0a10",
@@ -87,7 +96,10 @@ const THEME_PALETTES = {
     "--accent": "#fb7185",
     "--accent-2": "#ef4444",
     "--success": "#22c55e",
-    "--danger": "#ef4444"
+    "--danger": "#ef4444",
+    "--theme-glow-1": "rgba(251,113,133,0.2)",
+    "--theme-glow-2": "rgba(239,68,68,0.17)",
+    "--theme-glow-3": "rgba(244,63,94,0.13)"
   },
   dorado: {
     "--bg-0": "#1b1606",
@@ -97,7 +109,10 @@ const THEME_PALETTES = {
     "--accent": "#facc15",
     "--accent-2": "#f59e0b",
     "--success": "#22c55e",
-    "--danger": "#ef4444"
+    "--danger": "#ef4444",
+    "--theme-glow-1": "rgba(250,204,21,0.2)",
+    "--theme-glow-2": "rgba(245,158,11,0.17)",
+    "--theme-glow-3": "rgba(234,179,8,0.13)"
   },
   oscuro: {
     "--bg-0": "#0b0f14",
@@ -107,7 +122,10 @@ const THEME_PALETTES = {
     "--accent": "#94a3b8",
     "--accent-2": "#cbd5e1",
     "--success": "#22c55e",
-    "--danger": "#ef4444"
+    "--danger": "#ef4444",
+    "--theme-glow-1": "rgba(71,85,105,0.2)",
+    "--theme-glow-2": "rgba(100,116,139,0.16)",
+    "--theme-glow-3": "rgba(51,65,85,0.12)"
   }
 };
 
@@ -531,6 +549,7 @@ function App() {
   const abrirGestionGrupo = () => {
     setGroupSettingsError("");
     setGroupNameDraft(groupProfile?.nombre || "");
+    setMenuAbierto(false);
     setGroupSettingsOpen(true);
   };
 
@@ -2700,7 +2719,7 @@ function App() {
 
 const styles = {
   container: {
-    background: "radial-gradient(1200px 700px at -2% -14%, rgba(56,189,248,0.2), transparent 58%), radial-gradient(900px 640px at 102% -10%, rgba(34,211,238,0.17), transparent 60%), radial-gradient(900px 700px at 50% 120%, rgba(14,165,168,0.13), transparent 62%), linear-gradient(156deg, #050d19 0%, #0a1730 52%, #09162b 100%)",
+    background: "radial-gradient(1200px 700px at -2% -14%, var(--theme-glow-1), transparent 58%), radial-gradient(900px 640px at 102% -10%, var(--theme-glow-2), transparent 60%), radial-gradient(900px 700px at 50% 120%, var(--theme-glow-3), transparent 62%), linear-gradient(156deg, var(--bg-0) 0%, var(--bg-1) 52%, var(--bg-1) 100%)",
     minHeight: "100vh",
     width: "100%",
     padding: "40px",
@@ -3014,7 +3033,7 @@ const styles = {
   },
 
   topTabActive: {
-    background: "linear-gradient(135deg, #22d3ee 0%, #38bdf8 45%, #60a5fa 100%)",
+    background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 55%, #e2e8f0 100%)",
     color: "#021423",
     padding: "13px 12px",
     border: "1px solid rgba(224,242,254,0.88)",
@@ -3044,7 +3063,7 @@ const styles = {
   },
 
   topTabActiveMobile: {
-    background: "linear-gradient(135deg, #22d3ee 0%, #38bdf8 45%, #60a5fa 100%)",
+    background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 55%, #e2e8f0 100%)",
     color: "#021423",
     padding: "10px 6px",
     border: "1px solid rgba(224,242,254,0.88)",
@@ -3278,7 +3297,7 @@ const styles = {
   },
 
   buttonAddInline: {
-    background: "linear-gradient(135deg, #22d3ee 0%, #38bdf8 45%, #60a5fa 100%)",
+    background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 55%, #e2e8f0 100%)",
     color: "#031524",
     padding: "12px 20px",
     border: "1px solid rgba(224,242,254,0.85)",
@@ -3317,7 +3336,7 @@ const styles = {
   },
 
   button: {
-    background: "linear-gradient(135deg, #22d3ee 0%, #38bdf8 45%, #60a5fa 100%)",
+    background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 55%, #e2e8f0 100%)",
     color: "#031524",
     padding: "12px 18px",
     border: "1px solid rgba(224,242,254,0.85)",
@@ -3463,7 +3482,7 @@ const styles = {
     boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 26px 56px rgba(0,0,0,0.5)"
   },
 
-  buttonSuperEdit: { background: "linear-gradient(135deg, #14b8a6 0%, #22d3ee 100%)", color: "#02222c", border: "none", borderRadius: "999px", width: "36px", height: "36px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, boxShadow: "0 10px 20px rgba(45,212,191,0.36)" },
+  buttonSuperEdit: { background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%)", color: "#02222c", border: "none", borderRadius: "999px", width: "36px", height: "36px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, boxShadow: "0 10px 20px rgba(45,212,191,0.36)" },
   buttonSuperEditMobile: { width: "32px", height: "32px", fontSize: "13px" },
 
   payIcon: { width: "28px", height: "28px", borderRadius: "999px", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "16px", flexShrink: 0 },
@@ -3476,7 +3495,7 @@ const styles = {
 
   calHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" },
   buttonAddCalendar: {
-    background: "linear-gradient(135deg, #22d3ee 0%, #38bdf8 45%, #60a5fa 100%)",
+    background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 55%, #e2e8f0 100%)",
     color: "#021423",
     padding: "12px 18px",
     border: "1px solid rgba(224,242,254,0.85)",
@@ -3670,7 +3689,7 @@ const styles = {
     letterSpacing: "0.03em"
   },
   copyCodeButton: {
-    background: "linear-gradient(135deg, #22d3ee 0%, #60a5fa 100%)",
+    background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%)",
     color: "#031524",
     border: "1px solid rgba(224,242,254,0.9)",
     borderRadius: "10px",
@@ -3685,7 +3704,7 @@ const styles = {
   },
   sideMenuActionButton: {
     width: "100%",
-    background: "linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)",
+    background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%)",
     color: "white",
     border: "1px solid rgba(191,219,254,0.7)",
     borderRadius: "12px",
