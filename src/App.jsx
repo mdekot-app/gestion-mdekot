@@ -807,18 +807,32 @@ function App() {
 
   const opcionesMesAnio = useMemo(() => {
     const base = [];
-    const yearStart = new Date().getFullYear() - 2;
-    const yearEnd = new Date().getFullYear() + 3;
+    const now = new Date();
+    const inicio = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    for (let anio = yearStart; anio <= yearEnd; anio++) {
-      for (let mes = 1; mes <= 12; mes++) {
-        base.push({
-          value: `${anio}-${String(mes).padStart(2, "0")}`,
-          label: `${MESES[mes - 1]} ${anio}`,
-          anio,
-          mes
-        });
-      }
+    // Lista centrada en el mes actual para que el selector abra empezando por "ahora".
+    for (let offset = 0; offset <= 36; offset++) {
+      const d = new Date(inicio.getFullYear(), inicio.getMonth() + offset, 1);
+      const anio = d.getFullYear();
+      const mes = d.getMonth() + 1;
+      base.push({
+        value: `${anio}-${String(mes).padStart(2, "0")}`,
+        label: `${MESES[mes - 1]} ${anio}`,
+        anio,
+        mes
+      });
+    }
+
+    for (let offset = 1; offset <= 24; offset++) {
+      const d = new Date(inicio.getFullYear(), inicio.getMonth() - offset, 1);
+      const anio = d.getFullYear();
+      const mes = d.getMonth() + 1;
+      base.push({
+        value: `${anio}-${String(mes).padStart(2, "0")}`,
+        label: `${MESES[mes - 1]} ${anio}`,
+        anio,
+        mes
+      });
     }
 
     return base;
@@ -1910,7 +1924,7 @@ function App() {
                     <span title={`Pagó ${participanteA.nombre}`} style={{ ...styles.payIcon, ...getBadgeStyleByGender(participanteA.sexo) }}>
                       {getBadgeIconByGender(participanteA.sexo)}
                     </span>
-                    <span style={styles.gastoIndividualNombre}>{participanteA.nombre}</span>
+                    <span title={participanteA.nombre} style={styles.gastoIndividualNombre}>{participanteA.nombre}</span>
                     <span style={styles.gastoIndividualArrow}>→</span>
                     <span style={styles.gastoIndividualImporte}>{totalParticipanteA.toFixed(2)} €</span>
                   </div>
@@ -1921,7 +1935,7 @@ function App() {
                     <span title={`Pagó ${participanteB.nombre}`} style={{ ...styles.payIcon, ...getBadgeStyleByGender(participanteB.sexo) }}>
                       {getBadgeIconByGender(participanteB.sexo)}
                     </span>
-                    <span style={styles.gastoIndividualNombre}>{participanteB.nombre}</span>
+                    <span title={participanteB.nombre} style={styles.gastoIndividualNombre}>{participanteB.nombre}</span>
                     <span style={styles.gastoIndividualArrow}>→</span>
                     <span style={styles.gastoIndividualImporte}>{totalParticipanteB.toFixed(2)} €</span>
                   </div>
@@ -2251,13 +2265,13 @@ function App() {
                     {lista.length === 0 && <p>No hay productos</p>}
 
                     {lista.map((p) => (
-                      <div key={p.id} style={styles.gastoItem}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px", opacity: p.comprado ? 0.55 : 1 }}>
-                          <input type="checkbox" checked={p.comprado} onChange={() => toggleComprado(p)} style={{ accentColor: "#22c55e" }} />
-                          <span style={{ textDecoration: p.comprado ? "line-through" : "none" }}>{p.nombre}</span>
+                      <div key={p.id} style={styles.listItemRowDesktop}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px", opacity: p.comprado ? 0.55 : 1, minWidth: 0 }}>
+                          <input type="checkbox" checked={p.comprado} onChange={() => toggleComprado(p)} style={{ accentColor: "#22c55e", flexShrink: 0 }} />
+                          <span title={p.nombre} style={{ textDecoration: p.comprado ? "line-through" : "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.nombre}</span>
                         </div>
 
-                        <div style={{ display: "flex", gap: "8px" }}>
+                        <div style={styles.listItemActionsDesktop}>
                           <button onClick={() => { setProductoEditando(p); setEditProductoNombre(p.nombre); }} style={styles.buttonEditMini}>✏</button>
                           <button onClick={() => setProductoAEliminar(p)} style={styles.buttonDeleteMini}>🗑</button>
                         </div>
@@ -2394,7 +2408,7 @@ const styles = {
     boxSizing: "border-box"
   },
   title: {
-    fontSize: "clamp(34px, 5.2vw, 48px)",
+    fontSize: "clamp(30px, 4.4vw, 42px)",
     marginBottom: "22px",
     textAlign: "center",
     letterSpacing: "0.02em",
@@ -2415,7 +2429,7 @@ const styles = {
     padding: "11px 16px",
     borderRadius: "16px",
     border: "1px solid rgba(148,163,184,0.3)",
-    minHeight: "48px",
+    minHeight: "46px",
     background: "linear-gradient(180deg, rgba(14,30,56,0.95) 0%, rgba(9,21,41,0.94) 100%)",
     color: "var(--text-main)",
     boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 14px 30px rgba(3,8,19,0.45)"
@@ -2423,11 +2437,11 @@ const styles = {
 
   monthYearSelect: {
     width: "100%",
-    maxWidth: "240px",
+    maxWidth: "260px",
     padding: "11px 16px",
     borderRadius: "16px",
     border: "1px solid rgba(148,163,184,0.3)",
-    minHeight: "50px",
+    minHeight: "46px",
     background: "linear-gradient(180deg, rgba(14,30,56,0.95) 0%, rgba(9,21,41,0.94) 100%)",
     color: "var(--text-main)",
     outline: "none",
@@ -2693,8 +2707,8 @@ const styles = {
     borderRadius: "14px",
     cursor: "pointer",
     fontWeight: 800,
-    fontSize: "14px",
-    minHeight: "54px",
+    fontSize: "13px",
+    minHeight: "50px",
     letterSpacing: "0.015em",
     boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -12px 26px rgba(2,6,14,0.4), 0 14px 28px rgba(2,8,16,0.38)"
   },
@@ -2707,8 +2721,8 @@ const styles = {
     borderRadius: "14px",
     cursor: "pointer",
     fontWeight: 900,
-    fontSize: "14px",
-    minHeight: "54px",
+    fontSize: "13px",
+    minHeight: "50px",
     letterSpacing: "0.015em",
     boxShadow: "0 0 0 1px rgba(255,255,255,0.28) inset, 0 18px 36px rgba(56,189,248,0.55), 0 4px 14px rgba(125,211,252,0.35)"
   },
@@ -2721,7 +2735,7 @@ const styles = {
     borderRadius: "13px",
     cursor: "pointer",
     fontWeight: 800,
-    fontSize: "11.5px",
+    fontSize: "11px",
     minHeight: "48px",
     letterSpacing: "0.01em",
     lineHeight: 1.05,
@@ -2737,7 +2751,7 @@ const styles = {
     borderRadius: "13px",
     cursor: "pointer",
     fontWeight: 900,
-    fontSize: "11.5px",
+    fontSize: "11px",
     minHeight: "48px",
     letterSpacing: "0.01em",
     lineHeight: 1.05,
@@ -2801,7 +2815,7 @@ const styles = {
     border: "1px solid rgba(186,230,253,0.42)",
     background: "linear-gradient(135deg, rgba(14,165,233,0.24) 0%, rgba(45,212,191,0.2) 100%)",
     color: "#e6f5ff",
-    fontSize: "13px",
+    fontSize: "12px",
     textTransform: "uppercase",
     letterSpacing: "0.08em",
     fontWeight: 900,
@@ -2878,16 +2892,21 @@ const styles = {
 
   gastoIndividualRow: {
     display: "grid",
-    gridTemplateColumns: "28px 90px 24px 80px",
+    gridTemplateColumns: "28px minmax(0, 1fr) 20px auto",
     alignItems: "center",
-    columnGap: "10px",
-    justifyContent: "center"
+    columnGap: "8px",
+    justifyContent: "stretch",
+    width: "100%",
+    maxWidth: "320px"
   },
 
   gastoIndividualNombre: {
     textAlign: "left",
     fontWeight: "600",
-    whiteSpace: "nowrap"
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    minWidth: 0
   },
 
   gastoIndividualArrow: {
@@ -2896,9 +2915,10 @@ const styles = {
   },
 
   gastoIndividualImporte: {
-    textAlign: "left",
+    textAlign: "right",
     fontWeight: "700",
-    whiteSpace: "nowrap"
+    whiteSpace: "nowrap",
+    minWidth: "92px"
   },
 
   cardHeaderRow: { position: "relative", display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: "10px", minHeight: "34px" },
@@ -2928,7 +2948,25 @@ const styles = {
     fontWeight: 900,
     letterSpacing: "0.03em",
     textTransform: "uppercase",
-    boxShadow: "0 0 0 1px rgba(255,255,255,0.22) inset, 0 16px 34px rgba(56,189,248,0.48)"
+    boxShadow: "0 0 0 1px rgba(255,255,255,0.22) inset, 0 16px 34px rgba(56,189,248,0.48)",
+    minWidth: "112px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  listItemRowDesktop: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) 112px",
+    alignItems: "center",
+    gap: "8px",
+    marginBottom: "10px"
+  },
+  listItemActionsDesktop: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: "8px",
+    width: "112px"
   },
 
   button: {
