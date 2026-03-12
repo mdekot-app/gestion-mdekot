@@ -429,6 +429,25 @@ function App() {
     );
   };
 
+  const mostrarAyudaNotificaciones = (motivo) => {
+    if (motivo === "denied") {
+      alert("Notificaciones bloqueadas en el navegador. En Chrome Android: candado > Permisos del sitio > Notificaciones > Permitir, luego recarga la app.");
+      return;
+    }
+
+    if (motivo === "unsupported") {
+      alert("Este navegador no soporta Web Push para esta app. Abrela en Chrome Android actualizado.");
+      return;
+    }
+
+    if (motivo === "token") {
+      alert("No se pudo registrar el token push. Recarga la app, inicia sesion otra vez y vuelve a activar notificaciones.");
+      return;
+    }
+
+    alert("No se pudieron activar las notificaciones ahora mismo. Recarga la app e intentalo de nuevo.");
+  };
+
   const registrarPushSilencioso = async () => {
     try {
       if (!("Notification" in window)) return false;
@@ -438,9 +457,11 @@ function App() {
       if (!vapid) return false;
       if (!("serviceWorker" in navigator)) return false;
 
-      const swReg =
-        (await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js")) ||
-        (await navigator.serviceWorker.ready);
+      let swReg = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
+      if (!swReg) {
+        swReg = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
+      }
+      await navigator.serviceWorker.ready;
 
       const messaging = await getFirebaseMessaging();
       if (!messaging) return false;
@@ -470,17 +491,34 @@ function App() {
 
   const activarNotificacionesSilencioso = async () => {
     try {
-      if (!("Notification" in window)) return false;
+      if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+        mostrarAyudaNotificaciones("unsupported");
+        return false;
+      }
+
+      if (Notification.permission === "denied") {
+        mostrarAyudaNotificaciones("denied");
+        return false;
+      }
 
       if (Notification.permission === "default") {
         const perm = await Notification.requestPermission();
-        if (perm !== "granted") return false;
+        if (perm !== "granted") {
+          mostrarAyudaNotificaciones(perm === "denied" ? "denied" : "generic");
+          return false;
+        }
       }
 
-      if (Notification.permission !== "granted") return false;
+      if (Notification.permission !== "granted") {
+        mostrarAyudaNotificaciones("denied");
+        return false;
+      }
 
       const ok = await registrarPushSilencioso();
-      if (!ok) return false;
+      if (!ok) {
+        mostrarAyudaNotificaciones("token");
+        return false;
+      }
 
       localStorage.setItem("notificationsEnabled", "true");
       setNotificacionesActivas(true);
