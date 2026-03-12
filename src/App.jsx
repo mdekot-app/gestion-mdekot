@@ -530,10 +530,15 @@ function App() {
   const enviarPushAGrupoActual = async ({ title, body, link }) => {
     try {
       if (!grupoId) return { ok: false, error: "Sin grupoId" };
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) return { ok: false, error: "Sesion no valida" };
 
       const res = await fetch("/api/push", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`
+        },
         body: JSON.stringify({ title, body, link, grupoId })
       });
 

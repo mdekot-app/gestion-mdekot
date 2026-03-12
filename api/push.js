@@ -17,6 +17,23 @@ if (!admin.apps.length) {
 }
 
 const db = admin.firestore();
+const DEFAULT_LINK = "https://gestion-mdekot.vercel.app";
+
+function getBearerToken(authHeader = "") {
+  const value = String(authHeader || "").trim();
+  if (!value.toLowerCase().startsWith("bearer ")) return "";
+  return value.slice(7).trim();
+}
+
+function normalizeLink(link) {
+  try {
+    const url = new URL(String(link || DEFAULT_LINK).trim() || DEFAULT_LINK);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return DEFAULT_LINK;
+    return url.toString();
+  } catch {
+    return DEFAULT_LINK;
+  }
+}
 
 export default async function handler(req, res) {
   try {
@@ -47,10 +64,11 @@ export default async function handler(req, res) {
     }
 
     const { title, body, link, grupoId } = payloadIn || {};
+    const token = getBearerToken(req.headers.authorization);
 
-    const t = String(title || "Gestión Mdekot");
-    const b = String(body || "Notificación");
-    const l = String(link || "https://gestion-mdekot.vercel.app");
+    const t = String(title || "Gestion Mdekot").trim().slice(0, 120);
+    const b = String(body || "Notificacion").trim().slice(0, 500);
+    const l = normalizeLink(link);
     const g = String(grupoId || "").trim();
     const ts = String(Date.now());
 
@@ -61,10 +79,50 @@ export default async function handler(req, res) {
       });
     }
 
-    const snap = await db
-      .collection("pushTokens")
-      .where("grupoId", "==", g)
-      .get();
+    if (!token) {
+      return res.status(401).json({
+        ok: false,
+        error: "Falta token de autenticacion",
+      });
+    }
+
+    let decoded = null;
+    try {
+      decoded = await admin.auth().verifyIdToken(token);
+    } catch {
+      return res.status(401).json({
+        ok: false,
+        error: "Token invalido",
+      });
+    }
+
+    const uid = String(decoded?.uid || "").trim();
+    if (!uid) {
+      return res.status(401).json({
+        ok: false,
+        error: "Token invalido",
+      });
+    }
+
+    const userSnap = await db.collection("usuarios").doc(uid).get();
+    if (!userSnap.exists) {
+      return res.status(403).json({
+        ok: false,
+        error: "Usuario sin perfil",
+      });
+    }
+
+    const userData = userSnap.data() || {};
+    const userGroupId = String(userData.grupoId || "").trim();
+
+    if (!userGroupId || userGroupId !== g) {
+      return res.status(403).json({
+        ok: false,
+        error: "No autorizado para este grupo",
+      });
+    }
+
+    const snap = await db.collection("pushTokens").where("grupoId", "==", g).get();
 
     const tokens = [];
     const tokenDocs = [];
@@ -137,9 +195,7 @@ export default async function handler(req, res) {
         .filter((d) => invalid.includes(d.token))
         .map((d) => d.id);
 
-      await Promise.all(
-        toDelete.map((id) => db.collection("pushTokens").doc(id).delete())
-      );
+      await Promise.all(toDelete.map((id) => db.collection("pushTokens").doc(id).delete()));
     }
 
     return res.status(200).json({
@@ -149,8 +205,7 @@ export default async function handler(req, res) {
       success: result.successCount,
       failure: result.failureCount,
       invalidRemoved: invalid.length,
-      responses: result.responses.map((r, i) => ({
-        token: uniqTokens[i],
+      responses: result.responses.map((r) => ({
         success: r.success,
         error: r.error?.message || null,
         code: r.error?.code || null,
