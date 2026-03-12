@@ -16,17 +16,22 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  const title = payload?.data?.title || payload?.notification?.title || "Gestión Mdekot";
-  const body = payload?.data?.body || payload?.notification?.body || "";
+  console.log("📩 Push recibido en background SW:", payload);
+
+  const title = payload?.data?.title || "Gestión Mdekot";
+  const body = payload?.data?.body || "";
   const link = payload?.data?.link || "https://gestion-mdekot.vercel.app";
   const grupoId = payload?.data?.grupoId || "";
+  const ts = payload?.data?.ts || String(Date.now());
 
-  self.registration.showNotification(title, {
+  return self.registration.showNotification(title, {
     body,
     icon: "/vite.svg",
     badge: "/vite.svg",
-    data: { link, grupoId },
-    tag: grupoId ? `grupo-${grupoId}` : `push-${Date.now()}`
+    data: { link, grupoId, ts },
+    tag: `gasto-${grupoId}-${ts}`,
+    renotify: false,
+    requireInteraction: false
   });
 });
 
@@ -38,13 +43,29 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url.includes("gestion-mdekot") && "focus" in client) {
-          client.focus();
-          if ("navigate" in client) client.navigate(link);
-          return;
+        const urlOk =
+          client.url.includes("gestion-mdekot.vercel.app") ||
+          client.url.includes("localhost");
+
+        if (urlOk && "focus" in client) {
+          if ("navigate" in client) {
+            client.navigate(link);
+          }
+          return client.focus();
         }
       }
-      if (clients.openWindow) return clients.openWindow(link);
+
+      if (clients.openWindow) {
+        return clients.openWindow(link);
+      }
     })
   );
+});
+
+self.addEventListener("install", () => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
 });

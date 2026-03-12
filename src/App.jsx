@@ -132,7 +132,13 @@ function App() {
 
   const grupoId = userProfile?.grupoId || null;
 
-  const getPlatform = () => (typeof window !== "undefined" && window.innerWidth < 768 ? "mobile" : "pc");
+  const esDispositivoMovilReal = () => {
+    if (typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent || "";
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+  };
+
+  const getPlatform = () => (esDispositivoMovilReal() ? "mobile" : "pc");
 
   const normalizarCodigoInvitacion = (value) =>
     String(value || "")
@@ -427,7 +433,10 @@ function App() {
       if (!vapid) return false;
       if (!("serviceWorker" in navigator)) return false;
 
-      const swReg = await navigator.serviceWorker.ready;
+      const swReg =
+        (await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js")) ||
+        (await navigator.serviceWorker.ready);
+
       const messaging = await getFirebaseMessaging();
       if (!messaging) return false;
 
@@ -643,7 +652,7 @@ function App() {
       if (!("serviceWorker" in navigator)) return;
 
       try {
-        await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+        await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
         await navigator.serviceWorker.ready;
       } catch (e) {
         console.error("❌ SW register error:", e);
@@ -659,29 +668,61 @@ function App() {
   }, []);
 
   useEffect(() => {
-  let unsubscribe = null;
+    let unsubscribe = null;
 
-  const initForegroundListener = async () => {
-    try {
-      const messaging = await getFirebaseMessaging();
-      if (!messaging) return;
+    const initForegroundListener = async () => {
+      try {
+        const messaging = await getFirebaseMessaging();
+        if (!messaging) return;
 
-      unsubscribe = onMessage(messaging, async () => {
-        // No mostramos notificación manual aquí.
-        // El service worker se encarga del background
-        // y así evitamos duplicadas en escritorio.
-      });
-    } catch (e) {
-      console.error(e);
-    }
-  };
+        unsubscribe = onMessage(messaging, async (payload) => {
+          try {
+            const activadas = localStorage.getItem("notificationsEnabled") !== "false";
+            if (!activadas) return;
+            if (Notification.permission !== "granted") return;
 
-  if ("Notification" in window && "serviceWorker" in navigator) initForegroundListener();
+            const title = payload?.data?.title || "Gestión Mdekot";
+            const body = payload?.data?.body || "";
+            const link = payload?.data?.link || window.location.origin;
+            const grupoIdPayload = payload?.data?.grupoId || "";
+            const ts = payload?.data?.ts || String(Date.now());
 
-  return () => {
-    if (typeof unsubscribe === "function") unsubscribe();
-  };
-}, []);
+            const reg =
+              (await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js")) ||
+              (await navigator.serviceWorker.ready);
+
+            if (!reg) return;
+
+            if (esDispositivoMovilReal()) {
+              console.log("📩 Push recibido en foreground móvil:", payload);
+
+              await reg.showNotification(title, {
+                body,
+                icon: "/vite.svg",
+                badge: "/vite.svg",
+                data: { link, grupoId: grupoIdPayload, ts },
+                tag: `gasto-${grupoIdPayload}-${ts}`,
+                renotify: false,
+                requireInteraction: false
+              });
+            } else {
+              console.log("📩 Push recibido en foreground escritorio:", payload);
+            }
+          } catch (e) {
+            console.error("onMessage error:", e);
+          }
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    if ("Notification" in window && "serviceWorker" in navigator) initForegroundListener();
+
+    return () => {
+      if (typeof unsubscribe === "function") unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     setMenuAbierto(false);

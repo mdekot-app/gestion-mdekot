@@ -38,6 +38,7 @@ export default async function handler(req, res) {
       const chunks = [];
       for await (const chunk of req) chunks.push(chunk);
       const raw = Buffer.concat(chunks).toString("utf8");
+
       try {
         payloadIn = raw ? JSON.parse(raw) : {};
       } catch {
@@ -47,10 +48,11 @@ export default async function handler(req, res) {
 
     const { title, body, link, grupoId } = payloadIn || {};
 
-    const t = title || "Gestión Mdekot";
-    const b = body || "Notificación";
-    const l = link || "https://gestion-mdekot.vercel.app";
+    const t = String(title || "Gestión Mdekot");
+    const b = String(body || "Notificación");
+    const l = String(link || "https://gestion-mdekot.vercel.app");
     const g = String(grupoId || "").trim();
+    const ts = String(Date.now());
 
     if (!g) {
       return res.status(400).json({
@@ -59,7 +61,10 @@ export default async function handler(req, res) {
       });
     }
 
-    const snap = await db.collection("pushTokens").where("grupoId", "==", g).get();
+    const snap = await db
+      .collection("pushTokens")
+      .where("grupoId", "==", g)
+      .get();
 
     const tokens = [];
     const tokenDocs = [];
@@ -67,14 +72,13 @@ export default async function handler(req, res) {
     snap.forEach((docu) => {
       const data = docu.data() || {};
       const enabled = data.notificationsEnabled !== false;
+      const tok = data.token || docu.id;
 
       if (!enabled) return;
+      if (!tok || typeof tok !== "string") return;
 
-      const tok = data.token || docu.id;
-      if (tok && typeof tok === "string") {
-        tokens.push(tok);
-        tokenDocs.push({ id: docu.id, token: tok });
-      }
+      tokens.push(tok);
+      tokenDocs.push({ id: docu.id, token: tok });
     });
 
     const uniqTokens = [...new Set(tokens)];
@@ -88,32 +92,34 @@ export default async function handler(req, res) {
       });
     }
 
-    const payload = {
+    const multicastMessage = {
+      tokens: uniqTokens,
       data: {
-        title: String(t),
-        body: String(b),
-        link: String(l),
-        grupoId: String(g),
+        title: t,
+        body: b,
+        link: l,
+        grupoId: g,
+        ts,
+      },
+      android: {
+        priority: "high",
+        ttl: 60 * 1000,
       },
       webpush: {
         headers: {
           Urgency: "high",
+          TTL: "60",
         },
         fcmOptions: {
-          link: String(l),
+          link: l,
         },
-      },
-      android: {
-        priority: "high",
       },
     };
 
-    const result = await admin.messaging().sendEachForMulticast({
-      tokens: uniqTokens,
-      ...payload,
-    });
+    const result = await admin.messaging().sendEachForMulticast(multicastMessage);
 
     const invalid = [];
+
     result.responses.forEach((r, idx) => {
       if (!r.success) {
         const code = r.error?.code || "";
@@ -151,6 +157,10 @@ export default async function handler(req, res) {
       })),
     });
   } catch (e) {
-    return res.status(500).json({ ok: false, error: e?.message || String(e) });
+    console.error("PUSH API ERROR:", e);
+    return res.status(500).json({
+      ok: false,
+      error: e?.message || String(e),
+    });
   }
 }
