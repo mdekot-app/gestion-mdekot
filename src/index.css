@@ -1,6 +1,54 @@
-html, body, #root {
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Manrope:wght@500;700;800&display=swap");
+
+:root {
+  --bg-0: #081220;
+  --bg-1: #0d1b2f;
+  --surface-1: #12243d;
+  --surface-2: #183052;
+  --accent: #0ea5a8;
+  --accent-2: #14b8a6;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --muted: #64748b;
+  --text-main: #ecf3ff;
+  --text-soft: #b8c8dd;
+  --ink: #071424;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
+}
+
+body {
+  font-family: "Space Grotesk", "Manrope", sans-serif;
+  color: var(--text-main);
+  background:
+    radial-gradient(1200px 700px at 8% -10%, rgba(20, 184, 166, 0.22), transparent 60%),
+    radial-gradient(1000px 700px at 105% 10%, rgba(14, 165, 168, 0.16), transparent 62%),
+    linear-gradient(165deg, var(--bg-0) 0%, var(--bg-1) 100%);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
 }
