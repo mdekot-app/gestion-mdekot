@@ -17,6 +17,7 @@ if (!admin.apps.length) {
 }
 
 const db = admin.firestore();
+const APP_LINK = "https://gestion-mdekot.vercel.app";
 
 function ymdMadrid(date = new Date()) {
   const partes = new Intl.DateTimeFormat("en-CA", {
@@ -45,8 +46,8 @@ function construirTextoEventos(titulos) {
   return `Hoy tienes: ${limpios.slice(0, -1).join(", ")} y ${limpios[limpios.length - 1]}`;
 }
 
-async function enviarPushATokens({ title, body, link }) {
-  const snap = await db.collection("pushTokens").get();
+async function enviarPushAGrupo({ grupoId, title, body, link }) {
+  const snap = await db.collection("pushTokens").where("grupoId", "==", grupoId).get();
   const tokens = [];
   const tokenDocs = [];
 
@@ -54,15 +55,14 @@ async function enviarPushATokens({ title, body, link }) {
     const data = docu.data() || {};
     const platform = String(data.platform || "").toLowerCase();
     const enabled = data.notificationsEnabled !== false;
+    const tok = data.token || docu.id;
 
     if (platform !== "mobile") return;
     if (!enabled) return;
+    if (!tok || typeof tok !== "string") return;
 
-    const tok = data.token || docu.id;
-    if (tok && typeof tok === "string") {
-      tokens.push(tok);
-      tokenDocs.push({ id: docu.id, token: tok });
-    }
+    tokens.push(tok);
+    tokenDocs.push({ id: docu.id, token: tok });
   });
 
   const uniqTokens = [...new Set(tokens)];
@@ -74,24 +74,24 @@ async function enviarPushATokens({ title, body, link }) {
       success: 0,
       failure: 0,
       invalidRemoved: 0,
-      msg: "No hay tokens MOBILE activos con notificationsEnabled=true",
+      msg: "No hay tokens mobile activos para este grupo",
     };
   }
 
+  const ts = String(Date.now());
   const result = await admin.messaging().sendEachForMulticast({
     tokens: uniqTokens,
     data: {
-      title: String(title || "Gestión Mdekot"),
-      body: String(body || "Notificación"),
-      link: String(link || "https://gestion-mdekot.vercel.app"),
+      title: String(title || "Gestion Mdekot"),
+      body: String(body || "Notificacion"),
+      link: String(link || APP_LINK),
+      grupoId: String(grupoId || ""),
+      ts,
     },
-    android: {
-      priority: "high",
-    },
+    android: { priority: "high" },
     webpush: {
-      headers: {
-        Urgency: "high",
-      },
+      headers: { Urgency: "high" },
+      fcmOptions: { link: String(link || APP_LINK) },
     },
   });
 
@@ -99,10 +99,7 @@ async function enviarPushATokens({ title, body, link }) {
   result.responses.forEach((r, idx) => {
     if (!r.success) {
       const code = r.error?.code || "";
-      if (
-        code.includes("registration-token-not-registered") ||
-        code.includes("invalid-argument")
-      ) {
+      if (code.includes("registration-token-not-registered") || code.includes("invalid-argument")) {
         invalid.push(uniqTokens[idx]);
       }
     }
@@ -113,9 +110,7 @@ async function enviarPushATokens({ title, body, link }) {
       .filter((d) => invalid.includes(d.token))
       .map((d) => d.id);
 
-    await Promise.all(
-      toDelete.map((id) => db.collection("pushTokens").doc(id).delete())
-    );
+    await Promise.all(toDelete.map((id) => db.collection("pushTokens").doc(id).delete()));
   }
 
   return {
@@ -146,7 +141,7 @@ export default async function handler(req, res) {
     const hoy = ymdMadrid();
 
     const snap = await db
-      .collection("eventos")
+      .collectionGroup("eventos")
       .where("fecha", "==", hoy)
       .where("notificado", "==", false)
       .get();
@@ -156,54 +151,102 @@ export default async function handler(req, res) {
         ok: true,
         hoy,
         eventos: 0,
+        grupos: 0,
         msg: "No hay eventos pendientes para hoy",
       });
     }
 
-    const eventos = [];
-    const titulos = [];
+    const eventosPorGrupo = new Map();
 
     snap.forEach((docu) => {
       const data = docu.data() || {};
-      eventos.push({ id: docu.id, ...data });
-      if (data.titulo) titulos.push(data.titulo);
+      const grupoId = docu.ref.parent?.parent?.id || String(data.grupoId || "").trim();
+      if (!grupoId) return;
+
+      if (!eventosPorGrupo.has(grupoId)) eventosPorGrupo.set(grupoId, []);
+      eventosPorGrupo.get(grupoId).push({
+        ref: docu.ref,
+        titulo: String(data.titulo || "").trim(),
+      });
     });
 
-    const body = construirTextoEventos(titulos);
-
-    if (!body) {
+    if (eventosPorGrupo.size === 0) {
       return res.status(200).json({
         ok: true,
         hoy,
         eventos: 0,
-        msg: "No hay títulos válidos para notificar",
+        grupos: 0,
+        msg: "No se pudo resolver grupoId en eventos pendientes",
       });
     }
 
-    const title = titulos.length === 1 ? "📅 Evento de hoy" : "📅 Eventos de hoy";
+    const resultados = [];
+    let totalEventos = 0;
+    let totalMarcados = 0;
 
-    const pushResult = await enviarPushATokens({
-      title,
-      body,
-      link: "https://gestion-mdekot.vercel.app",
-    });
+    for (const [grupoId, eventosGrupo] of eventosPorGrupo.entries()) {
+      totalEventos += eventosGrupo.length;
 
-    const batch = db.batch();
-    eventos.forEach((ev) => {
-      batch.update(db.collection("eventos").doc(ev.id), {
-        notificado: true,
-        notifiedAt: new Date(),
-      });
-    });
-    await batch.commit();
+      const titulos = eventosGrupo.map((e) => e.titulo).filter(Boolean);
+      const body = construirTextoEventos(titulos);
+
+      if (!body) {
+        resultados.push({
+          grupoId,
+          eventos: eventosGrupo.length,
+          markedNotificado: 0,
+          pushResult: { ok: false, error: "Sin titulos validos" },
+        });
+        continue;
+      }
+
+      const title = titulos.length === 1 ? "Evento de hoy" : "Eventos de hoy";
+
+      try {
+        const pushResult = await enviarPushAGrupo({
+          grupoId,
+          title,
+          body,
+          link: APP_LINK,
+        });
+
+        let markedNotificado = 0;
+        if (pushResult.success > 0) {
+          const batch = db.batch();
+          eventosGrupo.forEach((ev) => {
+            batch.update(ev.ref, {
+              notificado: true,
+              notifiedAt: new Date(),
+            });
+          });
+          await batch.commit();
+          markedNotificado = eventosGrupo.length;
+          totalMarcados += markedNotificado;
+        }
+
+        resultados.push({
+          grupoId,
+          eventos: eventosGrupo.length,
+          markedNotificado,
+          pushResult,
+        });
+      } catch (error) {
+        resultados.push({
+          grupoId,
+          eventos: eventosGrupo.length,
+          markedNotificado: 0,
+          pushResult: { ok: false, error: error?.message || String(error) },
+        });
+      }
+    }
 
     return res.status(200).json({
       ok: true,
       hoy,
-      eventos: eventos.length,
-      title,
-      body,
-      pushResult,
+      grupos: resultados.length,
+      eventos: totalEventos,
+      marcadosNotificado: totalMarcados,
+      resultados,
     });
   } catch (e) {
     return res.status(500).json({
