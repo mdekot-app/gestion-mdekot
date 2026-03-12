@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Manrope:wght@500;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Space+Grotesk:wght@400;500;700&family=Manrope:wght@500;700;800&display=swap");
 
 :root {
   --bg-0: #081220;
@@ -13,6 +13,7 @@
   --text-main: #ecf3ff;
   --text-soft: #b8c8dd;
   --ink: #071424;
+  --font-display: "Bricolage Grotesque", "Space Grotesk", sans-serif;
 }
 
 * {
@@ -35,6 +36,13 @@ body {
     radial-gradient(1200px 700px at 8% -10%, rgba(20, 184, 166, 0.22), transparent 60%),
     radial-gradient(1000px 700px at 105% 10%, rgba(14, 165, 168, 0.16), transparent 62%),
     linear-gradient(165deg, var(--bg-0) 0%, var(--bg-1) 100%);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: 0.01em;
 }
 
 button,
