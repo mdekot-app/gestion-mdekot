@@ -191,7 +191,7 @@ export default async function handler(req, res) {
       totalEventos += eventosGrupo.length;
 
       try {
-        const body = `Hoy tenemos ...\n\n${construirListaEventos(eventosGrupo)}`;
+        const body = `𝗛𝗼𝘆 𝘁𝗲𝗻𝗲𝗺𝗼𝘀 ...\n\n${construirListaEventos(eventosGrupo)}`;
         const pushResult = await enviarPushAGrupo({
           grupoId,
           title: "Buenos días 😊",
