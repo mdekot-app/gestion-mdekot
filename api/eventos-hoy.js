@@ -35,6 +35,16 @@ function normalizarHora(valor) {
   return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
 }
 
+function construirListaEventos(eventos) {
+  const ordenados = [...eventos].sort((a, b) => a.hora.localeCompare(b.hora));
+  const maxLineas = 6;
+  const visibles = ordenados.slice(0, maxLineas);
+  const lineas = visibles.map((ev) => `\u{1F7E2} ${ev.titulo || "Evento"} - ${ev.hora}`);
+  const restantes = ordenados.length - visibles.length;
+  if (restantes > 0) lineas.push(`\u{1F7E2} +${restantes} eventos más`);
+  return lineas.join("\n");
+}
+
 function esRequestCronVercel(req) {
   const ua = String(req.headers["user-agent"] || "").toLowerCase();
   const cronHeader = String(req.headers["x-vercel-cron"] || "").toLowerCase();
@@ -67,7 +77,7 @@ async function enviarPushAGrupo({ grupoId, title, body, link }) {
       success: 0,
       failure: 0,
       invalidRemoved: 0,
-      msg: "No hay tokens mobile activos para este grupo",
+      msg: "No hay tokens activos para este grupo",
     };
   }
 
@@ -168,7 +178,7 @@ export default async function handler(req, res) {
         hora: ahora.hm,
         eventos: 0,
         grupos: 0,
-        msg: "No se pudo resolver grupoId en eventos pendientes",
+        msg: "No hay eventos pendientes para hoy",
       });
     }
 
@@ -181,36 +191,34 @@ export default async function handler(req, res) {
       totalEventos += eventosGrupo.length;
 
       try {
+        const body = construirListaEventos(eventosGrupo);
+        const pushResult = await enviarPushAGrupo({
+          grupoId,
+          title: eventosGrupo.length === 1 ? "Recordatorio de evento" : "Recordatorio de eventos",
+          body,
+          link: APP_LINK,
+        });
+
         let markedNotificado = 0;
-        const detalles = [];
+        const detalles = eventosGrupo.map((ev) => ({
+          titulo: ev.titulo || "Evento",
+          hora: ev.hora,
+          marcado: false,
+        }));
 
-        for (const ev of eventosGrupo) {
-          const tituloEvento = ev.titulo || "Evento";
-          const pushResult = await enviarPushAGrupo({
-            grupoId,
-            title: "Recordatorio de evento",
-            body: `${ev.hora} · ${tituloEvento}`,
-            link: APP_LINK,
-          });
-
-          let marcado = false;
-          if (pushResult.success > 0) {
-            await ev.ref.update({
+        if (pushResult.success > 0) {
+          const batch = db.batch();
+          eventosGrupo.forEach((ev, idx) => {
+            batch.update(ev.ref, {
               notificado: true,
               notifiedAt: new Date(),
             });
-            marcado = true;
-            markedNotificado += 1;
-            totalMarcados += 1;
-            totalEnviados += 1;
-          }
-
-          detalles.push({
-            titulo: tituloEvento,
-            hora: ev.hora,
-            marcado,
-            pushResult,
+            detalles[idx].marcado = true;
           });
+          await batch.commit();
+          markedNotificado = eventosGrupo.length;
+          totalMarcados += markedNotificado;
+          totalEnviados += 1;
         }
 
         resultados.push({
@@ -218,6 +226,7 @@ export default async function handler(req, res) {
           eventosPendientesHoy: eventosGrupo.length,
           eventosVencidos: eventosGrupo.length,
           markedNotificado,
+          pushResult,
           detalles,
         });
       } catch (error) {
@@ -249,4 +258,3 @@ export default async function handler(req, res) {
     });
   }
 }
-
