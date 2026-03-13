@@ -136,6 +136,7 @@ function App() {
   const [authMode, setAuthMode] = useState("login");
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [registerName, setRegisterName] = useState("");
   const [registerGroupName, setRegisterGroupName] = useState("");
   const [registerGender, setRegisterGender] = useState("hombre");
@@ -271,6 +272,7 @@ function App() {
   const limpiarFormularioAuth = () => {
     setLoginEmail("");
     setLoginPassword("");
+    setShowPassword(false);
     setRegisterName("");
     setRegisterGroupName("");
     setRegisterGender("hombre");
@@ -1930,13 +1932,27 @@ function App() {
                 style={{ ...styles.authInput, padding: isMobile ? "14px 14px" : "15px 16px", fontSize: isMobile ? "14px" : "15px" }}
               />
 
-              <input
-                type="password"
-                placeholder="Contraseña"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                style={{ ...styles.authInput, padding: isMobile ? "14px 14px" : "15px 16px", fontSize: isMobile ? "14px" : "15px" }}
-              />
+              <div style={styles.authPasswordWrap}>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Contraseña"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  style={{
+                    ...styles.authInput,
+                    ...styles.authPasswordInput,
+                    padding: isMobile ? "14px 86px 14px 14px" : "15px 90px 15px 16px",
+                    fontSize: isMobile ? "14px" : "15px"
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  style={styles.authPasswordToggle}
+                >
+                  {showPassword ? "Ocultar" : "Mostrar"}
+                </button>
+              </div>
 
               {authMode === "register-join" && (
                 <input
@@ -2971,6 +2987,27 @@ const styles = {
     outline: "none",
     boxSizing: "border-box",
     fontSize: "15px"
+  },
+  authPasswordWrap: {
+    position: "relative",
+    width: "100%"
+  },
+  authPasswordInput: {
+    marginBottom: "12px"
+  },
+  authPasswordToggle: {
+    position: "absolute",
+    right: "10px",
+    top: "50%",
+    transform: "translateY(-50%)",
+    border: "none",
+    background: "transparent",
+    color: "#93c5fd",
+    fontWeight: 800,
+    fontSize: "12px",
+    cursor: "pointer",
+    padding: "4px 6px",
+    lineHeight: 1
   },
   authErrorBox: {
     background: "rgba(239,68,68,0.16)",
