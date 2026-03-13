@@ -246,9 +246,11 @@ export default async function handler(req, res) {
       resultados,
     });
   } catch (e) {
+    const detalle = e?.message || String(e);
+    console.error("EVENTOS_HOY_ERROR:", detalle, e?.stack || "");
     return res.status(500).json({
       ok: false,
-      error: e?.message || String(e),
+      error: detalle,
     });
   }
 }
