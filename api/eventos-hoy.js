@@ -35,6 +35,12 @@ function normalizarHora(valor) {
   return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
 }
 
+function esRequestCronVercel(req) {
+  const ua = String(req.headers["user-agent"] || "").toLowerCase();
+  const cronHeader = String(req.headers["x-vercel-cron"] || "").toLowerCase();
+  return ua.includes("vercel-cron") || cronHeader === "1" || cronHeader === "true";
+}
+
 async function enviarPushAGrupo({ grupoId, title, body, link }) {
   const snap = await db.collection("pushTokens").where("grupoId", "==", grupoId).get();
   const tokens = [];
@@ -42,11 +48,9 @@ async function enviarPushAGrupo({ grupoId, title, body, link }) {
 
   snap.forEach((docu) => {
     const data = docu.data() || {};
-    const platform = String(data.platform || "").toLowerCase();
     const enabled = data.notificationsEnabled !== false;
     const tok = data.token || docu.id;
 
-    if (platform !== "mobile") return;
     if (!enabled) return;
     if (!tok || typeof tok !== "string") return;
 
@@ -122,7 +126,8 @@ export default async function handler(req, res) {
 
     if (cronSecret) {
       const bearer = `Bearer ${cronSecret}`;
-      if (authHeader !== bearer) {
+      const autorizado = authHeader === bearer || esRequestCronVercel(req);
+      if (!autorizado) {
         return res.status(401).json({ ok: false, error: "Unauthorized" });
       }
     }
@@ -180,14 +185,11 @@ export default async function handler(req, res) {
     for (const [grupoId, eventosGrupo] of eventosPorGrupo.entries()) {
       totalEventos += eventosGrupo.length;
 
-      const eventosVencidos = eventosGrupo.filter((ev) => ev.hora <= ahora.hm);
-      if (eventosVencidos.length === 0) continue;
-
       try {
         let markedNotificado = 0;
         const detalles = [];
 
-        for (const ev of eventosVencidos) {
+        for (const ev of eventosGrupo) {
           const tituloEvento = ev.titulo || "Evento";
           const pushResult = await enviarPushAGrupo({
             grupoId,
@@ -219,7 +221,7 @@ export default async function handler(req, res) {
         resultados.push({
           grupoId,
           eventosPendientesHoy: eventosGrupo.length,
-          eventosVencidos: eventosVencidos.length,
+          eventosVencidos: eventosGrupo.length,
           markedNotificado,
           detalles,
         });

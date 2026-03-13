@@ -971,21 +971,18 @@ function App() {
 
             if (!reg) return;
 
-            if (esDispositivoMovilReal()) {
-              console.log("📩 Push recibido en foreground móvil:", payload);
+            const deviceLabel = esDispositivoMovilReal() ? "móvil" : "escritorio";
+            console.log(`📩 Push recibido en foreground ${deviceLabel}:`, payload);
 
-              await reg.showNotification(title, {
-                body,
-                icon: "/vite.svg",
-                badge: "/vite.svg",
-                data: { link, grupoId: grupoIdPayload, ts },
-                tag: `gasto-${grupoIdPayload}-${ts}`,
-                renotify: false,
-                requireInteraction: false
-              });
-            } else {
-              console.log("📩 Push recibido en foreground escritorio:", payload);
-            }
+            await reg.showNotification(title, {
+              body,
+              icon: "/vite.svg",
+              badge: "/vite.svg",
+              data: { link, grupoId: grupoIdPayload, ts },
+              tag: `gasto-${grupoIdPayload}-${ts}`,
+              renotify: false,
+              requireInteraction: false
+            });
           } catch (e) {
             console.error("onMessage error:", e);
           }
