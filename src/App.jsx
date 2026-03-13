@@ -976,8 +976,8 @@ function App() {
 
             await reg.showNotification(title, {
               body,
-              icon: "/vite.svg",
-              badge: "/vite.svg",
+              icon: "/icon-192.png",
+              badge: "/icon-192.png",
               data: { link, grupoId: grupoIdPayload, ts },
               tag: `gasto-${grupoIdPayload}-${ts}`,
               renotify: false,
