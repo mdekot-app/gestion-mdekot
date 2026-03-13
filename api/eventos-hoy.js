@@ -134,37 +134,32 @@ export default async function handler(req, res) {
 
     const ahora = partesMadrid();
 
-    const snap = await db
-      .collectionGroup("eventos")
-      .where("fecha", "==", ahora.ymd)
-      .get();
+    const eventosPorGrupo = new Map();
+    const gruposSnap = await db.collection("grupos").get();
 
-    if (snap.empty) {
-      return res.status(200).json({
-        ok: true,
-        hoy: ahora.ymd,
-        hora: ahora.hm,
-        eventos: 0,
-        grupos: 0,
-        msg: "No hay eventos pendientes para hoy",
+    for (const grupoDoc of gruposSnap.docs) {
+      const grupoId = String(grupoDoc.id || "").trim();
+      if (!grupoId) continue;
+
+      const evSnap = await grupoDoc.ref
+        .collection("eventos")
+        .where("fecha", "==", ahora.ymd)
+        .get();
+
+      if (evSnap.empty) continue;
+
+      evSnap.forEach((docu) => {
+        const data = docu.data() || {};
+        if (data.notificado === true) return;
+
+        if (!eventosPorGrupo.has(grupoId)) eventosPorGrupo.set(grupoId, []);
+        eventosPorGrupo.get(grupoId).push({
+          ref: docu.ref,
+          titulo: String(data.titulo || "").trim(),
+          hora: normalizarHora(data.hora),
+        });
       });
     }
-
-    const eventosPorGrupo = new Map();
-
-    snap.forEach((docu) => {
-      const data = docu.data() || {};
-      if (data.notificado === true) return;
-      const grupoId = docu.ref.parent?.parent?.id || String(data.grupoId || "").trim();
-      if (!grupoId) return;
-
-      if (!eventosPorGrupo.has(grupoId)) eventosPorGrupo.set(grupoId, []);
-      eventosPorGrupo.get(grupoId).push({
-        ref: docu.ref,
-        titulo: String(data.titulo || "").trim(),
-        hora: normalizarHora(data.hora),
-      });
-    });
 
     if (eventosPorGrupo.size === 0) {
       return res.status(200).json({
