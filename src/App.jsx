@@ -2766,7 +2766,7 @@ const styles = {
   select: {
     padding: "11px 16px",
     borderRadius: "16px",
-    border: "1px solid rgba(148,163,184,0.3)",
+    border: "2px solid rgba(186,230,253,0.5)",
     minHeight: "46px",
     background: "linear-gradient(180deg, rgba(14,30,56,0.95) 0%, rgba(9,21,41,0.94) 100%)",
     color: "var(--text-main)",
@@ -2778,7 +2778,7 @@ const styles = {
     maxWidth: "260px",
     padding: "11px 16px",
     borderRadius: "16px",
-    border: "1px solid rgba(148,163,184,0.3)",
+    border: "2px solid rgba(186,230,253,0.5)",
     minHeight: "46px",
     background: "linear-gradient(180deg, rgba(14,30,56,0.95) 0%, rgba(9,21,41,0.94) 100%)",
     color: "var(--text-main)",
@@ -3108,7 +3108,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     margin: "0 auto 28px auto",
-    border: "1px solid rgba(148,163,184,0.26)",
+    border: "2px solid rgba(186,230,253,0.5)",
     boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 22px 42px rgba(3,8,19,0.44)"
   },
   balanceCardPaid: { background: "var(--success)" },
