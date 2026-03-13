@@ -191,10 +191,10 @@ export default async function handler(req, res) {
       totalEventos += eventosGrupo.length;
 
       try {
-        const body = construirListaEventos(eventosGrupo);
+        const body = `Hoy tenemos ...\n\n${construirListaEventos(eventosGrupo)}`;
         const pushResult = await enviarPushAGrupo({
           grupoId,
-          title: eventosGrupo.length === 1 ? "Recordatorio de evento" : "Recordatorio de eventos",
+          title: "Buenos días 😊",
           body,
           link: APP_LINK,
         });
