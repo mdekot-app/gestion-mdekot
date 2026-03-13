@@ -137,7 +137,6 @@ export default async function handler(req, res) {
     const snap = await db
       .collectionGroup("eventos")
       .where("fecha", "==", ahora.ymd)
-      .where("notificado", "==", false)
       .get();
 
     if (snap.empty) {
@@ -155,6 +154,7 @@ export default async function handler(req, res) {
 
     snap.forEach((docu) => {
       const data = docu.data() || {};
+      if (data.notificado === true) return;
       const grupoId = docu.ref.parent?.parent?.id || String(data.grupoId || "").trim();
       if (!grupoId) return;
 
