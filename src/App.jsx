@@ -181,6 +181,7 @@ function App() {
   const [groupNameDraft, setGroupNameDraft] = useState("");
   const [groupSettingsBusy, setGroupSettingsBusy] = useState(false);
   const [groupSettingsError, setGroupSettingsError] = useState("");
+  const [memberToExpel, setMemberToExpel] = useState(null);
 
   const [productos, setProductos] = useState([]);
 
@@ -548,6 +549,7 @@ function App() {
 
   const abrirGestionGrupo = () => {
     setGroupSettingsError("");
+    setMemberToExpel(null);
     setGroupNameDraft(groupProfile?.nombre || "");
     setMenuAbierto(false);
     setGroupSettingsOpen(true);
@@ -601,9 +603,6 @@ function App() {
       return;
     }
 
-    const confirmado = window.confirm("¿Seguro que quieres expulsar a este miembro del grupo?");
-    if (!confirmado) return;
-
     try {
       setGroupSettingsBusy(true);
       setGroupSettingsError("");
@@ -620,6 +619,7 @@ function App() {
           updatedAt: new Date()
         });
       });
+      setMemberToExpel(null);
     } catch (e) {
       console.error(e);
       setGroupSettingsError("No se pudo expulsar al miembro.");
@@ -2121,7 +2121,7 @@ function App() {
                       <div style={{ opacity: 0.8, fontSize: "12px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.email || m.uid}</div>
                     </div>
                     {m.uid !== usuarioAuth?.uid ? (
-                      <button onClick={() => expulsarMiembro(m.uid)} style={styles.buttonDangerSmall} disabled={groupSettingsBusy}>
+                      <button onClick={() => setMemberToExpel(m)} style={styles.buttonDangerSmall} disabled={groupSettingsBusy}>
                         Expulsar
                       </button>
                     ) : (
@@ -2134,9 +2134,28 @@ function App() {
 
             {groupSettingsError ? <div style={styles.authErrorBox}>{groupSettingsError}</div> : null}
 
-            <button onClick={() => setGroupSettingsOpen(false)} style={{ ...styles.button, width: "100%" }} disabled={groupSettingsBusy}>
+            <button onClick={() => { setGroupSettingsOpen(false); setMemberToExpel(null); }} style={{ ...styles.button, width: "100%" }} disabled={groupSettingsBusy}>
               Cerrar
             </button>
+          </div>
+        </div>
+      )}
+
+      {memberToExpel && (
+        <div style={styles.modalOverlay}>
+          <div style={{ ...styles.modal, maxWidth: "360px" }}>
+            <h3 style={{ marginTop: 0 }}>Confirmar expulsión</h3>
+            <p style={{ marginBottom: "16px" }}>
+              ¿Seguro que quieres expulsar a <b>{memberToExpel.nombre || "este miembro"}</b> del grupo?
+            </p>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "10px" }}>
+              <button onClick={() => setMemberToExpel(null)} style={styles.button} disabled={groupSettingsBusy}>
+                Cancelar
+              </button>
+              <button onClick={() => expulsarMiembro(memberToExpel.uid)} style={styles.buttonDanger} disabled={groupSettingsBusy}>
+                Expulsar
+              </button>
+            </div>
           </div>
         </div>
       )}
