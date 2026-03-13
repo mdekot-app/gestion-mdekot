@@ -2424,42 +2424,45 @@ function App() {
 
           {diaDetalleOpen && (
             <div style={styles.modalOverlay}>
-              <div style={{ ...styles.modal, maxWidth: "420px" }}>
-                <h3 style={{ marginTop: 0 }}>
-                  📌{" "}
-                  {diaDetalleFecha
-                    ? new Date(diaDetalleFecha + "T00:00:00").toLocaleDateString("es-ES", { weekday: "long", day: "2-digit", month: "long" })
-                    : "Día"}
-                </h3>
-
-                <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px" }}>
-                  <button onClick={() => abrirNuevoEvento(diaDetalleFecha)} style={styles.buttonAddCalendar}>+ Añadir evento a este día</button>
+              <div style={styles.dayDetailModal}>
+                <div style={styles.dayDetailModalHeader}>
+                  <h3 style={{ margin: 0 }}>
+                    📌{" "}
+                    {diaDetalleFecha
+                      ? new Date(diaDetalleFecha + "T00:00:00").toLocaleDateString("es-ES", { weekday: "long", day: "2-digit", month: "long" })
+                      : "Día"}
+                  </h3>
+                  <div style={{ display: "flex", justifyContent: "center", marginTop: "10px" }}>
+                    <button onClick={() => abrirNuevoEvento(diaDetalleFecha)} style={styles.buttonAddCalendar}>+ Añadir evento a este día</button>
+                  </div>
                 </div>
 
-                {eventosDelDiaDetalle.length === 0 ? (
-                  <p>No hay eventos este día</p>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                    {eventosDelDiaDetalle.map((ev, idx) => (
-                      <div key={ev.id} style={{ ...styles.dayDetailRow, borderLeft: `10px solid ${colorEventoPorIndice(idx)}` }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "center" }}>
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontWeight: 900, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ev.titulo}</div>
-                            <div style={{ opacity: 0.9, fontSize: "13px", textAlign: "left" }}>{ev.hora ? `${ev.hora}` : "00:00"}</div>
-                            {ev.notas ? <div style={{ opacity: 0.9, fontSize: "13px", textAlign: "left", marginTop: "6px" }}>{ev.notas}</div> : null}
-                          </div>
+                <div style={styles.dayDetailModalBody}>
+                  {eventosDelDiaDetalle.length === 0 ? (
+                    <p>No hay eventos este día</p>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                      {eventosDelDiaDetalle.map((ev, idx) => (
+                        <div key={ev.id} style={{ ...styles.dayDetailRow, borderLeft: `10px solid ${colorEventoPorIndice(idx)}` }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "center" }}>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 900, textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ev.titulo}</div>
+                              <div style={{ opacity: 0.9, fontSize: "13px", textAlign: "left" }}>{ev.hora ? `${ev.hora}` : "00:00"}</div>
+                              {ev.notas ? <div style={{ opacity: 0.9, fontSize: "13px", textAlign: "left", marginTop: "6px" }}>{ev.notas}</div> : null}
+                            </div>
 
-                          <div style={isMobile ? styles.mobileIconButtonsColumn : { display: "flex", gap: "8px", flexShrink: 0 }}>
-                            <button onClick={() => abrirEditarEvento(ev)} style={styles.buttonEditMini}>✏</button>
-                            <button onClick={() => setEventoAEliminar(ev)} style={styles.buttonDeleteMini}>🗑</button>
+                            <div style={styles.dayDetailActions}>
+                              <button onClick={() => abrirEditarEvento(ev)} style={{ ...styles.buttonEditMini, ...styles.dayDetailActionButton }}>✏</button>
+                              <button onClick={() => setEventoAEliminar(ev)} style={{ ...styles.buttonDeleteMini, ...styles.dayDetailActionButton }}>🗑</button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "14px" }}>
+                <div style={styles.dayDetailModalFooter}>
                   <button onClick={() => setDiaDetalleOpen(false)} style={styles.button}>Cerrar</button>
                 </div>
               </div>
@@ -3553,6 +3556,52 @@ const styles = {
     maxWidth: "340px",
     border: "1px solid rgba(148,163,184,0.28)",
     boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 26px 56px rgba(0,0,0,0.5)"
+  },
+  dayDetailModal: {
+    background: "linear-gradient(156deg, rgba(12,27,51,0.99) 0%, rgba(10,21,40,0.99) 100%)",
+    borderRadius: "20px",
+    width: "92%",
+    maxWidth: "420px",
+    maxHeight: "86vh",
+    border: "1px solid rgba(148,163,184,0.28)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 26px 56px rgba(0,0,0,0.5)",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden"
+  },
+  dayDetailModalHeader: {
+    padding: "16px 16px 12px 16px",
+    flexShrink: 0
+  },
+  dayDetailModalBody: {
+    padding: "0 16px",
+    overflowY: "auto",
+    flex: 1,
+    minHeight: 0
+  },
+  dayDetailModalFooter: {
+    padding: "12px 16px 16px 16px",
+    flexShrink: 0
+  },
+  dayDetailActions: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "6px",
+    flexShrink: 0
+  },
+  dayDetailActionButton: {
+    width: "17px",
+    minWidth: "17px",
+    height: "17px",
+    padding: 0,
+    borderRadius: "5px",
+    fontSize: "9px",
+    lineHeight: 1,
+    boxShadow: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center"
   },
 
   buttonSuperEdit: { background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%)", color: "#02222c", border: "none", borderRadius: "999px", width: "36px", height: "36px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, boxShadow: "0 10px 20px rgba(45,212,191,0.36)" },
