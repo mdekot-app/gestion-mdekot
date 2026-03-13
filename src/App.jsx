@@ -3122,7 +3122,7 @@ const styles = {
     borderRadius: "24px",
     marginBottom: "34px",
     textAlign: "center",
-    border: "1px solid rgba(148,163,184,0.26)",
+    border: "2px solid rgba(186,230,253,0.5)",
     boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 28px 58px rgba(2,8,19,0.48)"
   },
   formContainer: {
@@ -3141,7 +3141,7 @@ const styles = {
     textAlign: "center",
     boxSizing: "border-box",
     width: "100%",
-    border: "1px solid rgba(148,163,184,0.22)",
+    border: "2px solid rgba(186,230,253,0.5)",
     boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 24px 48px rgba(2,8,19,0.42)"
   },
   kpiCloudTitle: {
