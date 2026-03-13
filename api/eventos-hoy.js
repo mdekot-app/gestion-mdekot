@@ -2,31 +2,37 @@
 import { admin, db } from "./_firebaseAdmin.js";
 const APP_LINK = "https://gestion-mdekot.vercel.app";
 
-function ymdMadrid(date = new Date()) {
+function partesMadrid(date = new Date()) {
   const partes = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Madrid",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
   }).formatToParts(date);
 
   const year = partes.find((p) => p.type === "year")?.value;
   const month = partes.find((p) => p.type === "month")?.value;
   const day = partes.find((p) => p.type === "day")?.value;
+  const hour = partes.find((p) => p.type === "hour")?.value || "00";
+  const minute = partes.find((p) => p.type === "minute")?.value || "00";
 
-  return `${year}-${month}-${day}`;
+  return {
+    ymd: `${year}-${month}-${day}`,
+    hm: `${hour}:${minute}`,
+  };
 }
 
-function construirTextoEventos(titulos) {
-  const limpios = titulos
-    .map((t) => String(t || "").trim())
-    .filter(Boolean);
-
-  if (limpios.length === 0) return null;
-  if (limpios.length === 1) return `Hoy tienes: ${limpios[0]}`;
-  if (limpios.length === 2) return `Hoy tienes: ${limpios[0]} y ${limpios[1]}`;
-
-  return `Hoy tienes: ${limpios.slice(0, -1).join(", ")} y ${limpios[limpios.length - 1]}`;
+function normalizarHora(valor) {
+  const raw = String(valor || "").trim();
+  const m = raw.match(/^(\d{1,2}):(\d{1,2})$/);
+  if (!m) return "00:00";
+  const hh = Number(m[1]);
+  const mm = Number(m[2]);
+  if (!Number.isFinite(hh) || !Number.isFinite(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) return "00:00";
+  return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
 }
 
 async function enviarPushAGrupo({ grupoId, title, body, link }) {
@@ -121,18 +127,19 @@ export default async function handler(req, res) {
       }
     }
 
-    const hoy = ymdMadrid();
+    const ahora = partesMadrid();
 
     const snap = await db
       .collectionGroup("eventos")
-      .where("fecha", "==", hoy)
+      .where("fecha", "==", ahora.ymd)
       .where("notificado", "==", false)
       .get();
 
     if (snap.empty) {
       return res.status(200).json({
         ok: true,
-        hoy,
+        hoy: ahora.ymd,
+        hora: ahora.hm,
         eventos: 0,
         grupos: 0,
         msg: "No hay eventos pendientes para hoy",
@@ -150,13 +157,15 @@ export default async function handler(req, res) {
       eventosPorGrupo.get(grupoId).push({
         ref: docu.ref,
         titulo: String(data.titulo || "").trim(),
+        hora: normalizarHora(data.hora),
       });
     });
 
     if (eventosPorGrupo.size === 0) {
       return res.status(200).json({
         ok: true,
-        hoy,
+        hoy: ahora.ymd,
+        hora: ahora.hm,
         eventos: 0,
         grupos: 0,
         msg: "No se pudo resolver grupoId en eventos pendientes",
@@ -166,57 +175,58 @@ export default async function handler(req, res) {
     const resultados = [];
     let totalEventos = 0;
     let totalMarcados = 0;
+    let totalEnviados = 0;
 
     for (const [grupoId, eventosGrupo] of eventosPorGrupo.entries()) {
       totalEventos += eventosGrupo.length;
 
-      const titulos = eventosGrupo.map((e) => e.titulo).filter(Boolean);
-      const body = construirTextoEventos(titulos);
-
-      if (!body) {
-        resultados.push({
-          grupoId,
-          eventos: eventosGrupo.length,
-          markedNotificado: 0,
-          pushResult: { ok: false, error: "Sin titulos validos" },
-        });
-        continue;
-      }
-
-      const title = titulos.length === 1 ? "Evento de hoy" : "Eventos de hoy";
+      const eventosVencidos = eventosGrupo.filter((ev) => ev.hora <= ahora.hm);
+      if (eventosVencidos.length === 0) continue;
 
       try {
-        const pushResult = await enviarPushAGrupo({
-          grupoId,
-          title,
-          body,
-          link: APP_LINK,
-        });
-
         let markedNotificado = 0;
-        if (pushResult.success > 0) {
-          const batch = db.batch();
-          eventosGrupo.forEach((ev) => {
-            batch.update(ev.ref, {
+        const detalles = [];
+
+        for (const ev of eventosVencidos) {
+          const tituloEvento = ev.titulo || "Evento";
+          const pushResult = await enviarPushAGrupo({
+            grupoId,
+            title: "Recordatorio de evento",
+            body: `${ev.hora} · ${tituloEvento}`,
+            link: APP_LINK,
+          });
+
+          let marcado = false;
+          if (pushResult.success > 0) {
+            await ev.ref.update({
               notificado: true,
               notifiedAt: new Date(),
             });
+            marcado = true;
+            markedNotificado += 1;
+            totalMarcados += 1;
+            totalEnviados += 1;
+          }
+
+          detalles.push({
+            titulo: tituloEvento,
+            hora: ev.hora,
+            marcado,
+            pushResult,
           });
-          await batch.commit();
-          markedNotificado = eventosGrupo.length;
-          totalMarcados += markedNotificado;
         }
 
         resultados.push({
           grupoId,
-          eventos: eventosGrupo.length,
+          eventosPendientesHoy: eventosGrupo.length,
+          eventosVencidos: eventosVencidos.length,
           markedNotificado,
-          pushResult,
+          detalles,
         });
       } catch (error) {
         resultados.push({
           grupoId,
-          eventos: eventosGrupo.length,
+          eventosPendientesHoy: eventosGrupo.length,
           markedNotificado: 0,
           pushResult: { ok: false, error: error?.message || String(error) },
         });
@@ -225,9 +235,11 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       ok: true,
-      hoy,
+      hoy: ahora.ymd,
+      hora: ahora.hm,
       grupos: resultados.length,
       eventos: totalEventos,
+      enviados: totalEnviados,
       marcadosNotificado: totalMarcados,
       resultados,
     });
