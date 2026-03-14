@@ -91,9 +91,9 @@ async function enviarPushAGrupo({ grupoId, title, body, link }) {
       grupoId: String(grupoId || ""),
       ts,
     },
-    android: { priority: "high" },
+    android: { priority: "high", ttl: 60 * 60 * 1000 },
     webpush: {
-      headers: { Urgency: "high" },
+      headers: { Urgency: "high", TTL: "3600" },
       fcmOptions: { link: String(link || APP_LINK) },
     },
   });
