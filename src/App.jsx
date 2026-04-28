@@ -31,7 +31,13 @@ const SUPERS = [
   { key: "MERCADONA", defaultName: "MERCADONA" },
   { key: "LIDL", defaultName: "LIDL" },
   { key: "ALCAMPO", defaultName: "ALCAMPO" },
-  { key: "CARREFOUR", defaultName: "CARREFOUR" }
+  { key: "CARREFOUR", defaultName: "CARREFOUR" },
+  { key: "EROSKI", defaultName: "EROSKI" },
+  { key: "HIPER", defaultName: "HIPER" },
+  { key: "DIA", defaultName: "DIA" },
+  { key: "CONSUM", defaultName: "CONSUM" },
+  { key: "FARMACIA", defaultName: "FARMACIA" },
+  { key: "OTROS", defaultName: "OTROS" }
 ];
 
 const MESES = [
@@ -190,7 +196,13 @@ function App() {
     MERCADONA: "",
     LIDL: "",
     ALCAMPO: "",
-    CARREFOUR: ""
+    CARREFOUR: "",
+    EROSKI: "",
+    HIPER: "",
+    DIA: "",
+    CONSUM: "",
+    FARMACIA: "",
+    OTROS: ""
   });
 
   const [productoEditando, setProductoEditando] = useState(null);
@@ -206,7 +218,13 @@ function App() {
     MERCADONA: "MERCADONA",
     LIDL: "LIDL",
     ALCAMPO: "ALCAMPO",
-    CARREFOUR: "CARREFOUR"
+    CARREFOUR: "CARREFOUR",
+    EROSKI: "EROSKI",
+    HIPER: "HIPER",
+    DIA: "DIA",
+    CONSUM: "CONSUM",
+    FARMACIA: "FARMACIA",
+    OTROS: "OTROS"
   });
 
   const [superEditando, setSuperEditando] = useState(null);
