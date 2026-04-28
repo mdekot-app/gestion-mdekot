@@ -1039,37 +1039,27 @@ function App() {
   }, [usuarioAuth, userProfile, grupoId, groupProfile]);
 
   const opcionesMesAnio = useMemo(() => {
-    const base = [];
-    const now = new Date();
-    const inicio = new Date(now.getFullYear(), now.getMonth(), 1);
+  const base = [];
+  const now = new Date();
+  const inicio = new Date(now.getFullYear(), 0, 1);
 
-    // Lista centrada en el mes actual para que el selector abra empezando por "ahora".
-    for (let offset = 0; offset <= 36; offset++) {
-      const d = new Date(inicio.getFullYear(), inicio.getMonth() + offset, 1);
-      const anio = d.getFullYear();
-      const mes = d.getMonth() + 1;
-      base.push({
-        value: `${anio}-${String(mes).padStart(2, "0")}`,
-        label: `${MESES[mes - 1]} ${anio}`,
-        anio,
-        mes
-      });
-    }
+  // Genera desde enero del año actual hasta 36 meses después.
+  // El mes actual sigue abriéndose seleccionado automáticamente por mesActual/anioActual.
+  for (let offset = 0; offset <= 47; offset++) {
+    const d = new Date(inicio.getFullYear(), inicio.getMonth() + offset, 1);
+    const anio = d.getFullYear();
+    const mes = d.getMonth() + 1;
 
-    for (let offset = 1; offset <= 24; offset++) {
-      const d = new Date(inicio.getFullYear(), inicio.getMonth() - offset, 1);
-      const anio = d.getFullYear();
-      const mes = d.getMonth() + 1;
-      base.push({
-        value: `${anio}-${String(mes).padStart(2, "0")}`,
-        label: `${MESES[mes - 1]} ${anio}`,
-        anio,
-        mes
-      });
-    }
+    base.push({
+      value: `${anio}-${String(mes).padStart(2, "0")}`,
+      label: `${MESES[mes - 1]} ${anio}`,
+      anio,
+      mes
+    });
+  }
 
-    return base;
-  }, []);
+  return base;
+}, []);
 
   const valorMesAnio = `${anioActual}-${String(mesActual).padStart(2, "0")}`;
   const valorCalMesAnio = `${calAnio}-${String(calMes).padStart(2, "0")}`;
